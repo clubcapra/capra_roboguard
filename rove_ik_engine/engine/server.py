@@ -22,6 +22,84 @@ from .transports import DriveUdpInput, HttpWsServer, StateBus, UdpInput, UdpOutp
 _log = logging.getLogger("forgebot.engine")
 
 
+def _apply_drive_ports(cfg: engine_config.EngineConfig, ports: dict) -> None:
+    """Apply discovered ports to the drive nodes + kinova. A node ABSENT from
+    /discover is DISABLED (ports zeroed) — never read, never commanded. We never
+    fall back to a configured port: a wrong port could drive the wrong motor (a
+    flipper's old fallback port was a drum's cmd port)."""
+    for n in cfg.flippers.nodes:
+        hit = ports.get(f"odrive_{n.node_id}")
+        if hit:
+            if (n.data_port, n.cmd_port) != hit:
+                _log.info("drive %d ports -> %s (discover)", n.node_id, hit)
+            n.data_port, n.cmd_port = hit
+        else:
+            if n.data_port or n.cmd_port:
+                _log.warning("drive node %d absent from /discover — disabled "
+                             "(won't read or command)", n.node_id)
+            n.data_port = 0
+            n.cmd_port = 0
+    km = ports.get("kinova_arm")
+    if km and cfg.hardware.enabled:
+        cfg.hardware.kinova_data_port, cfg.hardware.kinova_cmd_port = km
+
+
+def _post_sensor_reload(host: str, http_port: int) -> None:
+    """POST /reload to rove_sensor_api to kick it when /discover stays down."""
+    import urllib.request
+    url = f"http://{host}:{http_port}/reload"
+    try:
+        req = urllib.request.Request(url, data=b"", method="POST")
+        with urllib.request.urlopen(req, timeout=3.0) as r:  # noqa: S310 (trusted LAN)
+            r.read()
+        _log.info("POST %s -> sensor_api reload requested", url)
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("sensor_api reload POST to %s failed: %s", url, exc)
+
+
+async def _await_sensor_api(cfg: engine_config.EngineConfig) -> dict:
+    """Block until rove_sensor_api's GET /discover responds, returning its port
+    map. The drivetrain waits for autodiscover rather than ever using a fallback
+    port. Retries every few seconds; if /discover is still down after ~60s, POSTs
+    /reload to kick sensor_api (the documented recovery), then keeps trying.
+
+    Returns immediately on the first success — so when sensor_api is already up
+    (the normal case) there is no startup delay."""
+    from . import discover as _discover
+    loop = asyncio.get_running_loop()
+    host, port = cfg.flippers.sensor_api_host, cfg.flippers.discover_http_port
+    attempt = 0
+    while True:
+        ports = await loop.run_in_executor(None, _discover.fetch_ports, host, port)
+        if ports:
+            if attempt:
+                _log.info("sensor_api /discover up (%d sensors) after %d attempt(s)",
+                          len(ports), attempt)
+            return ports
+        attempt += 1
+        # Every ~60s (20 * 3s) of silence, kick sensor_api with a /reload.
+        if attempt % 20 == 0:
+            _log.warning("sensor_api /discover still down after ~%ds — POSTing /reload",
+                         attempt * 3)
+            await loop.run_in_executor(None, _post_sensor_reload, host, port)
+        elif attempt == 1 or attempt % 5 == 0:
+            _log.warning("waiting for sensor_api /discover at %s:%d (attempt %d)…",
+                         host, port, attempt)
+        await asyncio.sleep(3.0)
+
+
+def _offsets_filename(config_path: Path) -> str:
+    """Per-config sync-offsets filename. `engine.standard.toml` keeps the legacy
+    `sync_offsets.json` (the arm build's data); the caged default and any other
+    config get a `sync_offsets.<name>.json` of their own."""
+    name = config_path.name
+    if name == "engine.standard.toml":
+        return OFFSETS_FILENAME            # legacy arm offsets
+    if name == "engine.toml":
+        return "sync_offsets.caged.json"   # the default (caged) build
+    return f"sync_offsets.{config_path.stem}.json"
+
+
 async def run(config_path: Path) -> None:
     cfg = engine_config.load(config_path)
     project = load_robot(cfg)
@@ -32,30 +110,19 @@ async def run(config_path: Path) -> None:
     ik_loop.initialise_joint_values(state)
     # Restore sync offsets captured in a previous session so a synced robot
     # stays synced across restarts (mirrors resume once live frames arrive).
-    offsets_path = config_path.parent / OFFSETS_FILENAME
+    # Offsets are keyed by entity id, which differs per robot model, so each
+    # config gets its own file — a sync of one build must never clobber another's
+    # (and the caged ids would just be dropped against the arm's anyway). The
+    # legacy sync_offsets.json holds the arm/standard build's offsets.
+    offsets_path = config_path.parent / _offsets_filename(config_path)
     load_offsets(offsets_path, state, drive_gear_ratio=cfg.flippers.gear_ratio)
-    # Resolve served ports from the robot's /discover so reads/commands always
-    # hit the right sensor regardless of this boot's registration order.
+    # Resolve served ports from the robot's GET /discover. There are NO fallback
+    # ports: a stale/guessed port could map to a DIFFERENT motor, so the drivetrain
+    # WAITS for /discover to come up (retrying, with a /reload kick after ~60s)
+    # before commanding, and any node /discover doesn't list is left disabled.
     if cfg.flippers.enabled and cfg.flippers.discover:
-        from . import discover as _discover
-        ports = _discover.fetch_ports(cfg.flippers.sensor_api_host, cfg.flippers.discover_http_port)
-        if ports:
-            for n in cfg.flippers.nodes:
-                hit = ports.get(f"odrive_{n.node_id}")
-                if hit:
-                    if (n.data_port, n.cmd_port) != hit:
-                        _log.info("drive %d ports %s -> %s (discover)", n.node_id, (n.data_port, n.cmd_port), hit)
-                    n.data_port, n.cmd_port = hit
-            km = ports.get("kinova_arm")
-            if km and cfg.hardware.enabled:
-                cfg.hardware.kinova_data_port, cfg.hardware.kinova_cmd_port = km
-        elif cfg.flippers.output_enabled:
-            # Discovery was requested but failed: configured cmd ports may be
-            # stale and a stale COMMAND port could drive the wrong motor. Refuse
-            # to command rather than risk it (reads still use configured ports).
-            cfg.flippers.output_enabled = False
-            _log.error("DRIVE OUTPUT DISABLED: port discovery failed, won't command on "
-                       "possibly-stale ports. Fix /discover reachability and restart.")
+        ports = await _await_sensor_api(cfg)
+        _apply_drive_ports(cfg, ports)
     state.tcp_offsets = compute_tcp_offsets(project)
     _apply_tcp_extras(state, cfg.ik.tcp_offset_extra)
     if state.tcp_offsets:
@@ -70,6 +137,21 @@ async def run(config_path: Path) -> None:
                 "  %-25s %-30s (%+.4f, %+.4f, %+.4f)",
                 name, eid, off[0], off[1], off[2],
             )
+
+    # Warm the collision BVH cache now (synchronously, before any listener or the
+    # tick loop runs) so the first pose-move collision check is fast (~ms) rather
+    # than a multi-second BVH build mid-operation — and so it can't race the
+    # per-waypoint checks that share the cache.
+    if cfg.ik.collision_aware:
+        try:
+            from forgebot.core.validation.collision import check_collisions
+            t_warm = time.monotonic()
+            n_pairs = len(check_collisions(project, joint_values=dict(state.joint_values)))
+            _log.info("collision BVH cache warmed in %.1fs (%d baseline pairs at home)",
+                      time.monotonic() - t_warm, n_pairs)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("collision warm-up failed (checks will lazy-build on first use): %s", exc)
+
     bus = StateBus()
 
     stopping = asyncio.Event()
@@ -161,6 +243,52 @@ async def run(config_path: Path) -> None:
             cfg.hardware.kinova_cmd_port,
         )
 
+    async def reheal() -> dict:
+        """Recover from a rove_sensor_api reload / e-stop recovery WITHOUT
+        restarting the engine — the fix for "uninstall + reinstall after e-stop".
+
+        1. Re-discover served ports (boot order shuffles them) and re-point the
+           live listeners + command senders, so reads/commands keep hitting the
+           right sensor and never a stale COMMAND port (which could drive the
+           wrong motor).
+        2. Re-anchor every synced flipper to its live model angle. The ODrives
+           lose their encoder zero on a power-cycle (pos_estimate -> 0) but the
+           worm gear means the flipper hasn't physically moved — so we keep the
+           live angle and re-derive the offset from the first fresh frame. No
+           operator re-sync, and the model never lurches. Idempotent if the
+           encoder did NOT reset (it re-derives the same offset)."""
+        out: dict = {"rediscovered": False, "reanchored": 0}
+        if cfg.flippers.enabled and cfg.flippers.discover:
+            from . import discover as _discover
+            ports = _discover.fetch_ports(
+                cfg.flippers.sensor_api_host, cfg.flippers.discover_http_port
+            )
+            if ports:
+                out["rediscovered"] = True
+                # Same apply path as startup: discovered -> ports, absent -> disabled.
+                _apply_drive_ports(cfg, ports)
+                # Push the resolved ports into the live transports + reopen.
+                if flipper_bank is not None:
+                    flipper_bank.update_ports(cfg.flippers)
+                if flipper_sender is not None:
+                    flipper_sender.update_ports(cfg.flippers)
+                if kinova_listener is not None:
+                    kinova_listener.set_data_port(cfg.hardware.kinova_data_port)
+                if kinova_sender is not None:
+                    kinova_sender.set_cmd_port(cfg.hardware.kinova_cmd_port)
+        # Re-anchor synced flippers to their live angle (handles the encoder reset).
+        for eid in list(state.flipper_offsets.keys()):
+            if eid in state.flipper_joint_to_node:
+                state.flipper_phys_persisted[eid] = state.joint_values.get(eid, 0.0)
+                state.flipper_offsets.pop(eid, None)
+                state.flipper_reanchor.add(eid)
+                out["reanchored"] += 1
+        _log.info(
+            "reheal: rediscovered=%s port_changes=%d reanchored=%d",
+            out["rediscovered"], len(out["port_changes"]), out["reanchored"],
+        )
+        return out
+
     # The HTTP server runs whenever WS in/out is on OR a UI dist is bundled —
     # the UI needs scene + mesh HTTP routes even if it only uses WS for telemetry.
     ui_dir = config_path.parent / "ui"
@@ -179,6 +307,7 @@ async def run(config_path: Path) -> None:
             hardware=cfg.hardware,
             flippers=cfg.flippers,
             offsets_path=offsets_path,
+            reheal=reheal,
         )
         await http_server.start()
 

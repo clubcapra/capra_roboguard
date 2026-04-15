@@ -100,7 +100,9 @@ impl SafePoints {
                 let score = sp.confidence / (1.0 + 0.05 * d + sp.drift_m);
                 (score, sp.coord)
             })
-            .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+            // NaN-safe: a non-finite score (e.g. a bad safe-point coord) must not
+            // panic the control loop — treat incomparable as equal.
+            .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(_, c)| c)
     }
 

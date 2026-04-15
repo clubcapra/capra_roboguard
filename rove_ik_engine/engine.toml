@@ -1,42 +1,36 @@
-# ForgeBOT IK engine configuration.
+# ForgeBOT IK engine configuration — CAGED rover (no arm).
 #
-# Sections:
-#   [robot]     where to load the scene from
-#   [ik]        solver behaviour (collision toggle, twist frame, vel caps)
-#   [input]     how Ovis arrives (UDP, WebSocket, or both)
-#   [output]    where StateUpdate goes (UDP, WebSocket, stdout)
+# This is the DEFAULT config the systemd service runs (scripts/install.sh ->
+# run.py with no arg -> engine.toml). The arm/Kinova build lives in
+# engine.standard.toml; run it explicitly with `python3 run.py engine.standard.toml`.
+#
+# The caged rover has the drivetrain (4 drums + flippers) and a fixed cage in
+# place of the Kinova arm, so [hardware] (the arm bridge) is disabled here.
 #
 # Paths are resolved relative to this file.
 
 [robot]
-# Tried in order. First match wins.
-forgebot = "data/scene.forgebot"
-urdf     = "data/robot.urdf"
+# No .forgebot export exists for the caged model, so the URDF is loaded. The
+# forgebot path is intentionally a non-existent file: load_robot tries it first,
+# misses, and falls back to the URDF below.
+forgebot = "data/rove_caged.forgebot"   # absent -> falls back to urdf
+urdf     = "data/rove_caged.urdf"
 
 [ik]
-# Run python-fcl collision checks during IK; rejects steps that introduce
-# new collision pairs. python-fcl is always bundled in the export, so this
-# is a runtime toggle, not a build-time choice.
-collision_aware = false   # TEMP: turn back on once we confirm the stutter source
+# Collision-aware IK / motion ON for the caged rover (flippers vs cage/chassis).
+collision_aware = true
 
 # Frame Ovis position/orientation is expressed in.
-#   "world"  - world axes (matches the editor gizmo's default)
-#   "target" - tip's local frame (joystick-style: +x is "forward" for the tip)
 twist_frame = "world"     # MUST be "world" for the bundled UI (gizmo emits world-frame deltas)
 
-# Ovis values are normalised to [-1, 1]. These caps map 1.0 to a real
-# velocity. Per-target overrides live in data/ik_profile.json.
-max_lin_vel = 60.0   # metres/second at |position| = 1 (UI-tracking default)
-max_ang_vel = 80.0   # radians/second at |orientation| = 1 (UI-tracking default)
+# Ovis velocity caps (only relevant if an arm/IK target is driven; harmless here).
+max_lin_vel = 60.0
+max_ang_vel = 80.0
 
-# Engine tick rate. State is emitted at this rate; the latest Ovis is
-# applied each tick (older Ovis messages are dropped — they're velocities,
-# not a queue).
+# Engine tick rate.
 rate_hz = 60.0
 
-# Per-tick IK trace (one line per non-idle tick at DEBUG level). With the
-# engine's default log_level=INFO these lines are dropped; raise the log
-# level to DEBUG for short bug-hunt sessions, never in a long-running service.
+# Per-tick IK trace (DEBUG only). Off in the long-running service.
 debug = false
 
 [input]
@@ -47,52 +41,23 @@ ws_bind     = "0.0.0.0:9101"
 ws_path     = "/ovis"
 
 [output]
-# StateUpdate per tick. Multiple outputs can be on simultaneously.
 udp_enabled    = false
 udp_target     = "127.0.0.1:9200"
-ws_enabled     = true              # reuses the input WS server when both on
+ws_enabled     = true
 ws_path        = "/state"
-stdout_enabled = false             # length-prefixed proto frames on stdout
+stdout_enabled = false
 
 [hardware]
-# When enabled, the engine sends a SUBSCRIBE packet to rove_sensor_api's
-# kinova_arm data port at startup; sensor_api then pushes joint state back
-# at subscribe_interval_ms. The UI's "Sync" button reads the latest frame
-# and snaps the model to the real arm.
-enabled = true
-sensor_api_host = "192.168.2.2"
-kinova_data_port = 5002
-subscribe_interval_ms = 100
-
-# CHAIN MODE: engine walks the kinematic tree from arm_base to arm_tip and
-# assigns the joints it finds to kinova actuators 1..N (in chain order).
-# Works regardless of joint names — useful when all joints share the
-# default "joint_revolute" name in the editor.
-arm_base_entity_id = "ent_link_1d47ab1d"   # Core (chassis — first joint above this is the kinova j1)
-arm_tip_entity_id  = "ent_link_07ca91a1"   # JointGripper
-
-# NAME MODE (alternative — used only if the two ids above are empty).
-joint_names = []
-
-# Kinova actuator indices (1..N) whose rotation axis is inverted relative
-# to the model's URDF axis. After Sync the engine multiplies readings for
-# these joints by -1 so model rotation direction matches the real arm.
-inverted_joints = [2, 3, 4, 5, 6]
-
-# ---- velocity output to kinova_arm ----
-# SAFETY: keep `vel_output_enabled = false` until mirror direction is
-# verified for every joint (drag the gizmo, watch each joint move the
-# correct way). Set to true to close the loop: gizmo -> IK -> qdot -> arm.
-vel_output_enabled = true    # OUTPUT ON (operator-enabled for go-home test). Requires kinova Sync first.
-kinova_cmd_port = 5003
-max_kinova_vel_deg_s = 40.0   # per-joint cap, deg/s
-min_vel_deg_s = 0.05          # below this we send nothing (kinova auto-halts)
+# No Kinova arm on the caged rover — the arm bridge is disabled entirely.
+enabled = false
+vel_output_enabled = false
 
 [drives]
 # READ-ONLY mirror of the drivetrain ODrives — 4 drums (31-34) + flippers
 # (41/42). The engine SUBSCRIBEs to each node's data port and reads
 # `pos_estimate` (motor revolutions); the model joint = sign * (2*pi /
-# gear_ratio) * pos, offset captured at /api/v1/flippers/sync. No commands sent.
+# gear_ratio) * pos, offset captured at /api/v1/flippers/sync. No commands sent
+# while output_enabled = false.
 #
 # WORKFLOW: jog the model joint to match the real one
 #   POST /api/v1/joints/set  {"joint":"FlipperFL","angle_deg":30}
@@ -102,83 +67,77 @@ min_vel_deg_s = 0.05          # below this we send nothing (kinova auto-halts)
 enabled = true
 sensor_api_host = "192.168.2.2"
 subscribe_interval_ms = 100
-# Motor revs per JOINT revolution. MEASURED: the flipper drive turns 540 motor
-# revs for one full flipper revolution (540:1 worm gearbox). scale = 2*pi/540
-# rad per motor rev.
+# Motor revs per JOINT revolution. MEASURED: 540:1 worm gearbox.
 gear_ratio = 540.0
 
 # ---- position OUTPUT (commanding) ----
-# MASTER SAFETY GATE. true = the engine sends flipper position commands.
-# Operator-enabled for the go-home test. Requires flipper Sync first (the sender
-# needs the offset to map model->motor; unsynced flippers are skipped). Ports are
-# resolved from /discover at startup; if discovery fails, output auto-disables.
+# MASTER SAFETY GATE. true = the engine sends flipper/drum commands.
+# ENABLED for live robot testing. Drums (velocity) drive as soon as a teleop
+# packet arrives; flippers (position servo) need a Sync first — POST
+# /api/v1/flippers/sync — or they're skipped (commanded-but-not-synced).
 output_enabled = true
 # How fast a held +1/-1 step ramps a drive (model joint deg per second).
 step_rate_deg_s = 20.0
-# Each node below opts in with output=true + its served COMMAND port
-# (curl http://192.168.2.2:8080/discover). Drums are normally velocity-driven
-# by the control bridge; position-commanding them is mainly meaningful for
-# flippers, but the capability is wired for all per request.
 
-# Data ports are the REAL robot's served ports (curl
-# http://192.168.2.2:8080/discover; the sim uses different ports).
+# PORTS ARE NOT CONFIGURED HERE. Every node's data/cmd port is resolved from the
+# robot's GET /discover at startup (data_port/cmd_port left 0 = "ask /discover").
+# There are NO fallback ports on purpose: a stale/guessed port could map to a
+# DIFFERENT motor (a flipper's old fallback port was literally a drum's cmd port,
+# so commanding the flipper drove a drum). The engine WAITS for /discover to come
+# up before commanding, and a node /discover doesn't list is left disabled — never
+# read, never commanded — until it appears.
 #
-# DRUMS: 31/34 = LEFT side, 32/33 = RIGHT side (the sim only maps them L/R, not
-# to a specific corner). The node->corner pairing below is a best guess; swap
-# the `joint` names if a wheel mirrors to the wrong corner. Drums are continuous
-# wheels, so a mirrored position mostly shows the wheel spinning to match.
+# DRUMS: 31/34 = LEFT side, 32/33 = RIGHT side.
 [[drives.node]]
 node_id = 31
 mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumFL"
-data_port = 5006
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5007
+cmd_port = 0
 
 [[drives.node]]
 node_id = 34
 mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumBL"
-data_port = 5014
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5015
+cmd_port = 0
 
 [[drives.node]]
 node_id = 32
 mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumFR"
-data_port = 5012
+data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
 output = true
-cmd_port = 5013
+cmd_port = 0
 
 [[drives.node]]
 node_id = 33
 mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumBR"
-data_port = 5016
+data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
 output = true
-cmd_port = 5017
+cmd_port = 0
 
 # FLIPPERS: only 41/42 are wired (43/44 are fried — absent from /discover).
-# mode="position" now means "velocity-servo to a position target": the engine
-# increments a target from the operator's steps and drives the ODrive in VELOCITY
-# (input_vel, capped at max_vel_rev_s) to reach it — no input_pos is ever sent.
+# mode="position" = velocity-servo to a position target (no input_pos sent).
 [[drives.node]]
 node_id = 41
 mode = "position"
 joint = "FlipperFL"
-data_port = 5012   # fallback only — overridden by /discover at startup
-sign = -1.0        # FL mirror-flipped to match FR (was 1.0: FL drove in sync w/ FR; should mirror)
+data_port = 0
+sign = -1.0
 output = true
-cmd_port = 5013
+cmd_port = 0
 max_vel_rev_s = 20.0  # cap on the servo's velocity command (motor rev/s)
 min_deg = -90.0    # soft travel limits (clamp the target)
 max_deg = 90.0
@@ -187,10 +146,10 @@ max_deg = 90.0
 node_id = 42
 mode = "position"
 joint = "FlipperFR"
-data_port = 5016   # fallback only — overridden by /discover at startup
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5017
+cmd_port = 0
 max_vel_rev_s = 20.0
 min_deg = -90.0
 max_deg = 90.0

@@ -92,6 +92,10 @@ class EngineState:
     # Velocity command (normalised -1..1) per ODrive node for velocity-mode
     # drives (drums). Held until changed; scaled by the node's max_vel_rev_s.
     drive_vel_cmd: dict[int, float] = field(default_factory=dict)
+    # JOINT entity ids of velocity-mode drives (the drums). These are continuous
+    # wheels — never posed as joint-space positions — so pose-to-pose moves skip
+    # them. Position-mode flippers are NOT here, so a saved pose DOES move them.
+    drive_velocity_joints: set[str] = field(default_factory=set)
     # Monotonic time of the last drive frame (drums + flipper steps) received on
     # the drive UDP input. The drive watchdog stops the ODrives when this goes
     # stale — drive_vel_cmd / flipper_cmd_steps PERSIST (unlike consume-once

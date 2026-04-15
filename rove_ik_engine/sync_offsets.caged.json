@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "kinova": {
+    "chain_joint_ids": [],
+    "offsets": {},
+    "signs": {}
+  },
+  "drives": {
+    "gear_ratio": 540.0,
+    "signs": {},
+    "offsets": {
+      "ent_joint_4d0f9bc8": -84.83239865651716,
+      "ent_joint_51c621c1": -80.88319056975926,
+      "ent_joint_afc1f10f": -0.46350627262421734,
+      "ent_joint_2189e300": -80.8822008531436,
+      "ent_joint_fd7a554a": -84.85560147976368,
+      "ent_joint_3157f731": 0.49755466336550147
+    },
+    "positions": {
+      "ent_joint_4d0f9bc8": 85.01691663817066,
+      "ent_joint_51c621c1": 80.82881028503844,
+      "ent_joint_afc1f10f": 0.46351765789795174,
+      "ent_joint_2189e300": 80.82926570504705,
+      "ent_joint_fd7a554a": 85.03944441665986,
+      "ent_joint_3157f731": -0.4975020791110715
+    }
+  },
+  "poses": {
+    "home": {
+      "ent_joint_4d0f9bc8": 1.599197025673558e-06,
+      "ent_joint_51c621c1": 5.059312539616673e-07,
+      "ent_joint_fd7a554a": 9.189292823841116e-07,
+      "ent_joint_2189e300": 2.0879633741718677e-07,
+      "ent_joint_69640947": 0.0,
+      "ent_joint_3157f731": 0.0,
+      "ent_joint_afc1f10f": 0.0,
+      "ent_joint_938d953b": 0.0,
+      "ent_joint_eef9fd5f": 0.0
+    }
+  }
+}

@@ -16,41 +16,34 @@ import math
 
 from forgebot.core.model import JointComponent
 
+from .chain import first_movable_joint_at_or_above
 from .state import EngineState
 
 
 def resolve_joint(state: EngineState, ref: str) -> str | None:
-    """Resolve a joint entity id from: a joint entity id, a link entity id
-    (-> its parent joint), a joint NAME, or a link NAME (-> its parent joint).
+    """Resolve a movable joint entity id from: a joint entity id, a link entity
+    id (-> its actuating joint), a joint NAME, or a link NAME (-> its actuating
+    joint).
 
-    Lets callers refer to a joint however is convenient — the flipper joints
-    have no name (the link carries it), while arm joints are named."""
+    Lets callers refer to a joint however is convenient — the flipper/drum joints
+    have no name (the link carries it), while arm joints are named. Resolution
+    walks up to the nearest MOVABLE joint, so a named link resolves to the
+    revolute that moves it even when the URDF export inserts a fixed `_offset`
+    joint + `_pivot` link in between (the caged model)."""
     ref = ref.strip()
     if not ref:
         return None
     scene = state.project.scene
 
-    def joint_of(eid: str) -> str | None:
-        ent = scene.entities.get(eid)
-        if ent is None:
-            return None
-        if ent.get("joint") is not None:
-            return eid
-        # A link: its parent is usually the joint that moves it.
-        parent = scene.entities.get(ent.parent) if ent.parent else None
-        if parent is not None and parent.get("joint") is not None:
-            return ent.parent
-        return None
-
     # 1. Direct entity-id reference.
     if ref in scene.entities:
-        return joint_of(ref)
+        return first_movable_joint_at_or_above(state.project, ref)
 
-    # 2. Name reference (joint name, else link name -> parent joint).
+    # 2. Name reference (joint name, else link name -> actuating joint).
     target = ref.lower()
     for eid, ent in scene.entities.items():
         if (ent.name or "").strip().lower() == target:
-            j = joint_of(eid)
+            j = first_movable_joint_at_or_above(state.project, eid)
             if j is not None:
                 return j
     return None

@@ -135,6 +135,12 @@ def _extract_positions(body: dict, expected_n: int) -> list[float] | None:
 
 _MSG_COMMAND = 0x10
 
+# How stale the latest kinova feedback frame can be before the command sender
+# refuses to drive. Matches the mirror's freshness window (ik_loop._KINOVA_FRESH_S):
+# if the mirror won't trust the frame to update the model, the sender must not
+# drive the arm blind against it.
+_KINOVA_CMD_FRESH_S = 0.5
+
 
 class _CmdSenderProtocol(asyncio.DatagramProtocol):
     """Datagram protocol for the kinova command socket — surfaces ICMP /
@@ -210,6 +216,14 @@ class KinovaCommandSender:
     def _mark_broken(self) -> None:
         self._broken = True
 
+    def set_cmd_port(self, port: int) -> None:
+        """Re-point the command socket at a new cmd port (after a sensor_api
+        reload re-discovered ports) and force a reopen on the next send."""
+        if port and port != self.cmd_port:
+            _log.info("kinova cmd port %d -> %d (reload)", self.cmd_port, port)
+            self.cmd_port = port
+            self._broken = True
+
     def maybe_send(self) -> None:
         """Build the COMMAND packet for this tick. No-op when not synced or
         when every joint velocity rounds to zero.
@@ -245,6 +259,20 @@ class KinovaCommandSender:
         if not self.state.kinova_offsets:
             return
 
+        # Don't drive blind: if the arm feedback is stale (sensor_api down or
+        # reloading), the mirror has frozen the model and we have no live view of
+        # the real arm — refuse to command. Kinova's own 300 ms velocity-hold
+        # timeout halts the arm on our silence. This is the arm-side counterpart
+        # to the flipper stale-encoder gate: it stops "ghost" velocities being
+        # streamed at the arm on a dropped link (the mirror freezes, but IK on a
+        # frozen model would otherwise still emit qdot the instant an Ovis frame
+        # arrives, lurching the real arm when feedback returns).
+        if (
+            self.state.latest_kinova_positions is None
+            or time.monotonic() - self.state.latest_kinova_t > _KINOVA_CMD_FRESH_S
+        ):
+            return
+
         # First pass: compute signed deg/s for every joint, no clamp.
         raw: list[float] = []
         for i, eid in enumerate(self.state.kinova_chain_joint_ids):
@@ -253,6 +281,10 @@ class KinovaCommandSender:
             sign = self.state.kinova_signs.get(eid, 1.0)
             qdot_rad = self.state.joint_velocities.get(eid, 0.0)
             raw.append(sign * qdot_rad * 180.0 / math.pi)
+
+        # Never command NaN/Inf at the arm (a degenerate solve could produce it,
+        # and min/max below don't reject NaN). Treat non-finite as zero.
+        raw = [v if math.isfinite(v) else 0.0 for v in raw]
 
         # Uniform scale-down if any joint exceeds the cap.
         max_mag = max((abs(v) for v in raw), default=0.0)
@@ -415,6 +447,15 @@ class KinovaStateListener:
     def _mark_broken(self) -> None:
         """Called from the protocol when ICMP/connection_lost fires."""
         self._transport_broken = True
+
+    def set_data_port(self, port: int) -> None:
+        """Re-point the subscriber at a new data port (after a sensor_api reload
+        re-discovered ports). Marks the transport broken so the watchdog tears it
+        down and re-subscribes to the new port within a tick."""
+        if port and port != self.data_port:
+            _log.info("kinova data port %d -> %d (reload)", self.data_port, port)
+            self.data_port = port
+            self._transport_broken = True
 
     async def _close_transport(self) -> None:
         if self._transport is not None:

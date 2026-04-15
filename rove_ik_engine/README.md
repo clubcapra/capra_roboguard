@@ -52,6 +52,29 @@ The engine listens on:
 
 Defaults are in `engine.toml`.
 
+## Configurations (caged vs arm)
+
+Two robot builds share this engine; pick one with the config file:
+
+- **`engine.toml` — CAGED rover (the default the systemd service runs).** Loads
+  `data/rove_caged.urdf` (drivetrain + a fixed cage, no Kinova arm), so
+  `[hardware]` is off. Collision-aware IK/motion is on. Run: `python3 run.py`.
+- **`engine.standard.toml` — arm build.** Loads `data/scene.forgebot` (the
+  Kinova arm + drivetrain). Run: `python3 run.py engine.standard.toml`.
+
+Each config keeps its own `sync_offsets.*.json` (offsets are keyed by entity id,
+which differs per model). The standard build keeps the legacy `sync_offsets.json`.
+
+**Safety posture.** Real motor output is gated by master switches that ship
+**OFF**: `[drives].output_enabled` (flippers/drums) and
+`[hardware].vel_output_enabled` (arm). With them off the engine mirrors and
+visualises everything but sends no motor packets — flip them on only after
+verifying mirror direction. The command paths refuse to drive on stale feedback
+(no "ghost" motion on a dropped link), drum and flipper command channels are
+fully segmented, and `POST /api/v1/reload` re-discovers ports + re-anchors the
+flippers after an e-stop/sensor_api reload (the arm e-stop watchdog calls it on
+recovery) so the engine self-heals instead of needing a reinstall.
+
 ## Module layout
 
 ```
