@@ -44,6 +44,33 @@ fn as_route(v: &proto::Value) -> Option<&proto::Route> {
     }
 }
 
+/// Pose-goto command names (case-insensitive) that relay a named joint-space pose
+/// to the IK engine instead of compiling to a nav waypoint.
+const POSE_COMMANDS: &[&str] = &["pose", "gotopose", "goto_pose", "arm_pose"];
+
+/// Extract a pose-goto command from a step: one of [`POSE_COMMANDS`] with a
+/// `pose`/`name`/`target` text param and an optional `speed_deg_s` number.
+/// Returns `(pose_name, speed_deg_s)` or `None` if it isn't a pose command (or
+/// has no name). Pose moves relay to the engine over HTTP — they're position-free
+/// (no GNSS fix needed), so the mission listener fires them on receipt.
+pub fn pose_command(step: &proto::Step) -> Option<(String, Option<f64>)> {
+    if !POSE_COMMANDS.contains(&step.command.to_ascii_lowercase().as_str()) {
+        return None;
+    }
+    let name = ["pose", "name", "target"]
+        .iter()
+        .find_map(|n| value(step, n).and_then(as_text))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())?;
+    let speed = value(step, "speed_deg_s").and_then(as_number);
+    Some((name, speed))
+}
+
+/// Every pose-goto command in a mission, in sequence order.
+pub fn pose_steps(m: &proto::Mission) -> Vec<(String, Option<f64>)> {
+    m.sequence.iter().filter_map(pose_command).collect()
+}
+
 /// Map one mission Step to a SAR [`Behavior`]. `None` = unknown or vision-driven.
 pub fn behavior_from_step(step: &proto::Step, d: &Datum) -> Option<Behavior> {
     let coord = |names: &[&str]| names.iter().find_map(|n| value(step, n).and_then(as_coord));
@@ -114,6 +141,71 @@ pub fn compile_mission(
     (wps, terminal, compiled)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::comms::proto;
+
+    fn text_param(name: &str, val: &str) -> proto::Param {
+        proto::Param {
+            name: name.into(),
+            value: Some(proto::Value {
+                kind: Some(proto::value::Kind::Text(val.into())),
+            }),
+        }
+    }
+    fn num_param(name: &str, val: f64) -> proto::Param {
+        proto::Param {
+            name: name.into(),
+            value: Some(proto::Value { kind: Some(proto::value::Kind::Number(val)) }),
+        }
+    }
+    fn step(command: &str, params: Vec<proto::Param>) -> proto::Step {
+        proto::Step { command: command.into(), params, binds: String::new(), transition: None }
+    }
+
+    #[test]
+    fn pose_command_extracts_name_and_speed() {
+        let s = step("pose", vec![text_param("name", "home"), num_param("speed_deg_s", 25.0)]);
+        assert_eq!(pose_command(&s), Some(("home".to_string(), Some(25.0))));
+    }
+
+    #[test]
+    fn pose_command_accepts_aliases_and_pose_param() {
+        let s = step("GotoPose", vec![text_param("pose", " stow ")]);
+        assert_eq!(pose_command(&s), Some(("stow".to_string(), None)));
+    }
+
+    #[test]
+    fn pose_command_rejects_non_pose_and_empty_name() {
+        assert_eq!(pose_command(&step("goto", vec![text_param("name", "home")])), None);
+        assert_eq!(pose_command(&step("pose", vec![text_param("name", "  ")])), None);
+        assert_eq!(pose_command(&step("pose", vec![])), None);
+    }
+
+    #[test]
+    fn pose_only_mission_is_position_free() {
+        let m = proto::Mission {
+            sequence: vec![step("pose", vec![text_param("name", "home")])],
+            ..Default::default()
+        };
+        assert!(!requires_position(&m));
+        assert_eq!(pose_steps(&m), vec![("home".to_string(), None)]);
+    }
+
+    #[test]
+    fn mixed_mission_requires_position() {
+        let m = proto::Mission {
+            sequence: vec![
+                step("pose", vec![text_param("name", "home")]),
+                step("goto", vec![]),
+            ],
+            ..Default::default()
+        };
+        assert!(requires_position(&m));
+    }
+}
+
 /// Whether a mission needs a trustworthy position fix before it may start — the
 /// GNSS pre-flight reflex. Every navigation behaviour compiles to ENU waypoints
 /// about the datum (and several are relative to the current position), so they
@@ -121,10 +213,9 @@ pub fn compile_mission(
 /// `wait` step) opts out by being listed in `POSITION_FREE`.
 #[allow(dead_code)] // wired into the mission-start pre-flight (control-loop refactor, in progress)
 pub fn requires_position(m: &proto::Mission) -> bool {
-    /// Commands that can run with no position fix (none yet).
-    const POSITION_FREE: &[&str] = &[];
     m.sequence.iter().any(|s| {
-        let cmd = s.command.to_ascii_lowercase();
-        !POSITION_FREE.contains(&cmd.as_str())
+        // Pose-goto is an arm/flipper command relayed to the IK engine — it needs
+        // no position fix. Everything else navigates and does.
+        pose_command(s).is_none()
     })
 }

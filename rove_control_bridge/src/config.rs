@@ -43,6 +43,9 @@ pub struct Comms {
     /// Engine drive-teleop UDP port (flipper steps + drum velocities as JSON).
     #[serde(default = "default_engine_drive_port")]
     pub engine_drive_port: u16,
+    /// Engine HTTP port (named pose-goto relay: POST /api/v1/poses/goto).
+    #[serde(default = "default_engine_http_port")]
+    pub engine_http_port: u16,
     /// Tip entity the engine drives for the arm. Empty disables arm forwarding.
     #[serde(default)]
     pub arm_target_entity: String,
@@ -59,6 +62,7 @@ impl Default for Comms {
             engine_host: default_engine_host(),
             engine_port: default_engine_port(),
             engine_drive_port: default_engine_drive_port(),
+            engine_http_port: default_engine_http_port(),
             arm_target_entity: String::new(),
         }
     }
@@ -79,6 +83,9 @@ fn default_engine_port() -> u16 {
 }
 fn default_engine_drive_port() -> u16 {
     9102
+}
+fn default_engine_http_port() -> u16 {
+    9101
 }
 
 // Front-door ports stay clear of rove_sensor_api's served block (5000-5017):

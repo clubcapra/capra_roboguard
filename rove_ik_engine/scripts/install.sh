@@ -63,6 +63,11 @@ cat > "$SERVICE_FILE" <<EOF
 Description=Rove IK Engine (ForgeBOT IK solver + simulation layer)
 After=network.target
 Wants=network.target
+# Never give up restarting: the engine self-exits after a run of solver failures
+# so systemd hands it a fresh process. The default start-rate limit would instead
+# park it in a permanent 'failed' state (needing a manual reset / reinstall after
+# an e-stop) — disable it so it always comes back.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -70,7 +75,8 @@ User=${RUN_AS_USER}
 WorkingDirectory=${PKG_ROOT}
 Environment=FORGEBOT_NO_BOOTSTRAP=1
 ExecStart=${VENV_PY} ${PKG_ROOT}/run.py
-Restart=on-failure
+# Restart on ANY exit (not just failure) so a crash/clean-exit both recover.
+Restart=always
 RestartSec=3
 StandardOutput=journal
 StandardError=journal

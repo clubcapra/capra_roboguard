@@ -18,9 +18,11 @@ drives the tower light by priority, most -> least important:
     solid GREEN     everything up
 
 The buzzer beeps once on every state change. On an arm down->up transition
-(e-stop recovery) it POSTs /reload to the sensor API so every driver re-runs its
-connect path -- the documented fix for the arm not answering after a power-cycle.
-/reload is tied to arm recovery only.
+(e-stop recovery) it POSTs /reload to BOTH the sensor API (so every driver
+re-runs its connect path -- the documented fix for the arm not answering after a
+power-cycle) AND the IK engine (so it re-discovers ports + re-anchors the
+power-cycled flippers, instead of needing a reinstall). Reloads are tied to arm
+recovery only.
 
 Runs on the Jetson. Tower API is local; the sensor API is on the Pi.
 Stdlib only -- no third-party deps.
@@ -45,8 +47,8 @@ ARM_IP = os.environ.get("ARM_IP", "192.168.2.50")
 
 # Single-host watchdogs, each with its own priority + color (see decide_state).
 STEAMDECK_IP = os.environ.get("STEAMDECK_IP", "192.168.2.4")        # solid yellow
-STATION_COMM_IP = os.environ.get("STATION_COMM_IP", "10.10.62.21")  # blinking yellow
-LOCAL_COMM_IP = os.environ.get("LOCAL_COMM_IP", "10.10.62.22")      # blinking orange
+STATION_COMM_IP = os.environ.get("STATION_COMM_IP", "10.10.61.21")  # blinking yellow
+LOCAL_COMM_IP = os.environ.get("LOCAL_COMM_IP", "10.10.61.22")      # blinking orange
 
 # Local device health set -> solid ORANGE if any are down (lowest-priority fault).
 _DEFAULT_DEVICES = (
@@ -59,6 +61,10 @@ DEVICE_IPS = [ip.strip() for ip in os.environ.get("DEVICE_IPS", _DEFAULT_DEVICES
 
 TOWER_URL = os.environ.get("TOWER_URL", "http://192.168.2.3:3000").rstrip("/")
 SENSOR_API_URL = os.environ.get("SENSOR_API_URL", "http://192.168.2.2:8080").rstrip("/")
+# The IK engine self-heals (re-discovers ports + re-anchors flippers) on this
+# POST instead of needing a reinstall after an e-stop. Runs on the Jetson with
+# the watchdog by default. Set empty to disable the engine reload.
+IK_ENGINE_URL = os.environ.get("IK_ENGINE_URL", "http://127.0.0.1:9101").rstrip("/")
 
 PING_INTERVAL = float(os.environ.get("PING_INTERVAL", "5"))
 PING_TIMEOUT = int(float(os.environ.get("PING_TIMEOUT", "1")))
@@ -148,6 +154,18 @@ def reload_sensors() -> bool:
     return False
 
 
+def reload_ik_engine() -> bool:
+    """POST /api/v1/reload to the IK engine so it re-discovers ports + re-anchors
+    the flippers after the e-stop power-cycle, instead of needing a reinstall.
+    No-op (returns True) when IK_ENGINE_URL is blank."""
+    if not IK_ENGINE_URL:
+        return True
+    if _post(f"{IK_ENGINE_URL}/api/v1/reload"):
+        log.info("POST /api/v1/reload -> IK engine accepted (re-discover + re-anchor)")
+        return True
+    return False
+
+
 def sweep(pool: ThreadPoolExecutor) -> Obs:
     """Ping the arm, the three single-host watchdogs, and the device set.
 
@@ -227,8 +245,9 @@ class Watchdog:
         # E-stop recovery: arm came back after being down. None->True
         # (first run) does NOT count.
         if obs.arm_up and self.last_arm_up is False:
-            log.info("arm recovered (e-stop released) -- reloading sensors")
-            reload_sensors()
+            log.info("arm recovered (e-stop released) -- reloading sensors + IK engine")
+            #reload_sensors()
+            #reload_ik_engine()
         self.last_arm_up = obs.arm_up
 
         if desired != self.last_state:
@@ -256,9 +275,9 @@ def main() -> int:
 
     log.info(
         "starting: arm=%s local_comm=%s station_comm=%s steamdeck=%s devices=%d "
-        "tower=%s sensor_api=%s interval=%ss",
+        "tower=%s sensor_api=%s ik_engine=%s interval=%ss",
         ARM_IP, LOCAL_COMM_IP, STATION_COMM_IP, STEAMDECK_IP, len(DEVICE_IPS),
-        TOWER_URL, SENSOR_API_URL, PING_INTERVAL,
+        TOWER_URL, SENSOR_API_URL, IK_ENGINE_URL or "(disabled)", PING_INTERVAL,
     )
     if "192.168.2.X" in SENSOR_API_URL:
         log.warning("SENSOR_API_URL still has placeholder IP (192.168.2.X) -- /reload will fail")

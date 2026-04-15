@@ -104,6 +104,7 @@ telemetry_out_port = 5053  # RoveTelemetry out     — was 5010 (== odrive_41 da
 engine_host  = "127.0.0.1"
 engine_port  = 9100                        # arm (Ovis) UDP
 engine_drive_port = 9102                   # flippers + drums (JSON) UDP
+engine_http_port = 9101                    # named pose-goto relay (POST /api/v1/poses/goto)
 arm_target_entity = "ent_link_07ca91a1"    # JointGripper tip; "" disables arm->engine
 # All control-proto motion (RoveControl tracks + flippers + arm ovis) routes through the
 # IK engine; the gripper goes straight to the robot API. The bridge never drives the drums

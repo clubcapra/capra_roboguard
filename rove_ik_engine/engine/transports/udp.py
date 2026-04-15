@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 
 from ..config import parse_bind
 from ..proto import Ovis
@@ -111,12 +112,14 @@ class _DriveInProtocol(asyncio.DatagramProtocol):
         tr = body.get("tracks")
         if isinstance(tr, dict):
             lv, rv = tr.get("left"), tr.get("right")
-            if isinstance(lv, (int, float)):
+            # Reject non-finite (json.loads accepts NaN/Infinity by default) and
+            # clamp to the normalised [-1, 1] teleop range at ingress.
+            if isinstance(lv, (int, float)) and math.isfinite(lv):
                 for n in self._LEFT_DRUMS:
-                    self.state.drive_vel_cmd[n] = float(lv)
-            if isinstance(rv, (int, float)):
+                    self.state.drive_vel_cmd[n] = max(-1.0, min(1.0, float(lv)))
+            if isinstance(rv, (int, float)) and math.isfinite(rv):
                 for n in self._RIGHT_DRUMS:
-                    self.state.drive_vel_cmd[n] = float(rv)
+                    self.state.drive_vel_cmd[n] = max(-1.0, min(1.0, float(rv)))
 
 
 class DriveUdpInput:

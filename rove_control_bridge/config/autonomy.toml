@@ -103,6 +103,7 @@ telemetry_out_port = 5053
 engine_host  = "127.0.0.1"
 engine_port  = 9100                       # arm (Ovis) UDP
 engine_drive_port = 9102                  # tracks (drums) + flippers (JSON) UDP
+engine_http_port = 9101                   # named pose-goto relay (POST /api/v1/poses/goto)
 arm_target_entity = "ent_link_07ca91a1"   # JointGripper tip; "" disables arm->engine
 # Control-proto teleop (tracks + flippers + arm ovis) routes through the IK engine; the
 # gripper goes direct to the API. Autonomy missions still drive the drums directly.

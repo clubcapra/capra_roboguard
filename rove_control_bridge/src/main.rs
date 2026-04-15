@@ -77,6 +77,26 @@ fn parse_args() -> Args {
     Args { config, dry_run, lidar_probe, no_reset, calibrate }
 }
 
+/// Resolve when the process is asked to stop — SIGINT (Ctrl-C, interactive) OR
+/// SIGTERM (what `systemctl stop`/`restart` sends). Catching SIGTERM is what lets
+/// the service run its clean shutdown (idle + disarm the tracks, close sockets)
+/// instead of being killed mid-operation.
+async fn shutdown_signal() {
+    use tokio::signal::unix::{signal, SignalKind};
+    match signal(SignalKind::terminate()) {
+        Ok(mut term) => {
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => {}
+                _ = term.recv() => {}
+            }
+        }
+        Err(e) => {
+            tracing::warn!("could not install SIGTERM handler ({e}) — Ctrl-C only");
+            let _ = tokio::signal::ctrl_c().await;
+        }
+    }
+}
+
 /// Ask the sim to respawn the robot at the start pose (sim_server reset port).
 async fn reset_robot(host: &str) -> Result<()> {
     const RESET_PORT: u16 = 5099;
@@ -104,8 +124,47 @@ async fn main() -> Result<()> {
     );
 
     // --- resolve ports off the live API -----------------------------------
-    let disc = discover::discover(&cfg.robot_host, cfg.http_port)
-        .context("/discover failed — is rove_sensor_api up?")?;
+    // Wait for rove_sensor_api's /discover rather than exiting if it isn't up yet
+    // — as a service we may boot before it. Retry until it answers (or we're asked
+    // to stop), so systemd doesn't crash-loop us at boot. (Teleop can't do anything
+    // useful before sensor_api + the engine are up anyway.)
+    let disc = {
+        let host = cfg.robot_host.clone();
+        let port = cfg.http_port;
+        let mut attempt = 0u32;
+        loop {
+            let res = tokio::task::spawn_blocking({
+                let host = host.clone();
+                move || discover::discover(&host, port)
+            })
+            .await
+            .context("discover task")?;
+            match res {
+                Ok(d) => {
+                    if attempt > 0 {
+                        tracing::info!("/discover up after {attempt} attempt(s)");
+                    }
+                    break d;
+                }
+                Err(e) => {
+                    attempt += 1;
+                    if attempt == 1 || attempt % 5 == 0 {
+                        tracing::warn!(
+                            "/discover not ready ({e:#}) — waiting for rove_sensor_api at {}:{} (attempt {attempt})",
+                            cfg.robot_host, cfg.http_port,
+                        );
+                    }
+                }
+            }
+            tokio::select! {
+                _ = shutdown_signal() => {
+                    tracing::info!("stop requested before sensor_api came up — exiting cleanly");
+                    return Ok(());
+                }
+                _ = tokio::time::sleep(Duration::from_secs(3)) => {}
+            }
+        }
+    };
     let vn = disc
         .get(&cfg.telemetry.vectornav_id)
         .with_context(|| format!("{} not in /discover", cfg.telemetry.vectornav_id))?;
@@ -228,6 +287,7 @@ async fn main() -> Result<()> {
         &cfg.comms.engine_host,
         cfg.comms.engine_port,
         cfg.comms.engine_drive_port,
+        cfg.comms.engine_http_port,
         cfg.comms.arm_target_entity.clone(),
     )
     .await
@@ -254,8 +314,9 @@ async fn main() -> Result<()> {
     }
     {
         let port = cfg.comms.mission_port;
+        let ik_fwd = ik_fwd.clone();
         tokio::spawn(async move {
-            if let Err(e) = comms::run_mission_listener(port, mission_tx).await {
+            if let Err(e) = comms::run_mission_listener(port, mission_tx, ik_fwd).await {
                 tracing::warn!("mission listener ended: {e:#}");
             }
         });
@@ -281,8 +342,10 @@ async fn main() -> Result<()> {
         cfg.comms.teleop_port, cfg.comms.mission_port, cfg.comms.estop_port,
     );
     let start = tokio::select! {
-        _ = tokio::signal::ctrl_c() => {
-            tracing::info!("Ctrl-C before a fix — ending teleop-only session");
+        _ = shutdown_signal() => {
+            // SIGINT (Ctrl-C) or SIGTERM (systemctl stop) during the teleop-only
+            // wait: idle the tracks and exit cleanly so the drives don't stay armed.
+            tracing::info!("stop requested before a fix — ending teleop session (idling tracks)");
             tracks.idle().await.ok();
             return Ok(());
         }
@@ -415,8 +478,8 @@ async fn run_control_loop(
 
     loop {
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
-                tracing::info!("ctrl-c — stopping");
+            _ = shutdown_signal() => {
+                tracing::info!("stop requested (SIGINT/SIGTERM) — disarming and exiting");
                 break;
             }
             _ = interval.tick() => {

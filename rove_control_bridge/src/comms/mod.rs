@@ -73,9 +73,15 @@ pub async fn run_estop_listener(
 
 /// Listen for Mission datagrams (operator uploads a behaviour graph), publish the
 /// decoded proto for the control loop to compile, and reply MissionResult.
+///
+/// Pose-goto steps (a named arm/flipper move) are relayed to the IK engine over
+/// HTTP right here on receipt — they're position-free, so unlike nav steps they
+/// don't wait on the control loop arming behind a GNSS fix. Nav steps are still
+/// compiled to waypoints by the control loop (pose steps are ignored there).
 pub async fn run_mission_listener(
     port: u16,
     tx: watch::Sender<Option<proto::Mission>>,
+    ik: Option<std::sync::Arc<crate::ik::IkForwarder>>,
 ) -> anyhow::Result<()> {
     let sock = UdpSocket::bind(("0.0.0.0", port)).await?;
     tracing::info!("mission front door: listening for Mission on :{port}");
@@ -85,6 +91,29 @@ pub async fn run_mission_listener(
         match proto::Mission::decode(&buf[..n]) {
             Ok(m) => {
                 tracing::info!("MISSION received: '{}' ({} steps)", m.name, m.sequence.len());
+                // Relay any named pose moves to the IK engine immediately. One
+                // task drives them sequentially so order is preserved and a mission
+                // can't spawn unbounded work.
+                let poses = crate::mission::wire::pose_steps(&m);
+                if !poses.is_empty() {
+                    match &ik {
+                        Some(ik) => {
+                            let ik = ik.clone();
+                            tokio::spawn(async move {
+                                for (name, speed) in poses {
+                                    match ik.send_pose(name.clone(), speed).await {
+                                        Ok(resp) => tracing::info!("pose '{name}' -> IK engine: {}", resp.trim()),
+                                        Err(e) => tracing::warn!("pose '{name}' -> IK engine FAILED: {e:#}"),
+                                    }
+                                }
+                            });
+                        }
+                        None => tracing::warn!(
+                            "{} pose step(s) requested but IK forwarder disabled (engine unreachable)",
+                            poses.len()
+                        ),
+                    }
+                }
                 let _ = tx.send(Some(m));
                 let res = proto::MissionResult {
                     status: proto::mission_result::Status::Accepted as i32,
