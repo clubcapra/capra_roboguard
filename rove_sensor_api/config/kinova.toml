@@ -1,0 +1,32 @@
+# Kinova Gen2 6DOF arm — Ethernet driver configuration.
+# Delete this file to skip the Kinova driver at startup.
+
+# Path to the directory containing the SDK .so files.
+# Optional: if commented out, the driver walks up from the executable looking
+# for `vendor/kinova/aarch64`, which keeps `cargo run` working from any CWD.
+# lib_dir = "/home/capra/data/capra_rove_stack/capra_roboguard/rove_sensor_api/vendor/kinova/aarch64"
+
+# This Pi on the arm subnet (Capra Roboguard).
+local_ip = "192.168.2.2"
+
+# Subnet mask for the arm interface.
+local_subnet = "255.255.255.0"
+
+# Arm IP. Capra default is 192.168.2.50; some units are configured to
+# 192.168.2.5 instead — change here if discovery fails.
+robot_ip = "192.168.2.50"
+
+# UDP ports for the Kinova Ethernet protocol (defaults match the SDK).
+local_cmd_port   = 25015
+local_bcast_port = 25025
+robot_port       = 55000
+
+rx_timeout_ms = 12
+command_rate_hz = 75
+# use_usb = false
+
+# Kinova firmware reports its zero pose as 180° on each joint (per the SDK
+# user guide). Set offsets to [180, 180, 180, 180, 180, 180] if you want
+# the user frame to read 0 at the calibrated zero pose; leave at zeros if
+# you prefer to work directly in arm frame.
+joint_offsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

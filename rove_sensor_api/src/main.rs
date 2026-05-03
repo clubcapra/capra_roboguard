@@ -4,14 +4,19 @@ use std::time::Duration;
 mod core;
 mod drivers;
 mod http;
+mod logging;
 mod protocol;
 mod udp;
 
+use std::path::PathBuf;
+
 use core::registry::SensorRegistry;
-use drivers::kinova;
+use drivers::kinova::{self, config::KinovaConfig};
 use drivers::odrive::{discover_nodes, endpoints::SharedEndpointMap, node::WatchdogConfig};
-use drivers::vectornav;
+use drivers::robotiq::{self, config::RobotiqConfig};
+use drivers::vectornav::{self, config::VectorNavConfig};
 use http::routes::build_router;
+use logging::LogManager;
 use udp::server::spawn_sensor_udp;
 
 #[tokio::main]
@@ -27,39 +32,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let registry = Arc::new(SensorRegistry::new(5000));
 
     // --- VectorNav VN-300 ---
-    // Defaults match the udev rule in README.md (/dev/ttyUSB_VN300 at 115200 baud).
-    // Override with VN_PORT and VN_BAUD env vars if needed.
-    let vn_port = std::env::var("VN_PORT").unwrap_or_else(|_| "/dev/ttyUSB_VN300".to_string());
-    let vn_baud: u32 = std::env::var("VN_BAUD")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(115200);
-    match vectornav::connect(&vn_port, vn_baud).await {
-        Ok(sensor) => {
-            registry.register(sensor);
+    // Configured via config/vectornav.toml. Missing file → driver skipped.
+    match VectorNavConfig::load() {
+        Ok(Some(cfg)) => match vectornav::connect(&cfg.port, cfg.baudrate).await {
+            Ok(sensor) => {
+                registry.register(sensor);
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, port = cfg.port, "VectorNav connect failed — continuing without it");
+            }
+        },
+        Ok(None) => {
+            tracing::info!("config/vectornav.toml not found — skipping VectorNav.");
         }
         Err(e) => {
-            tracing::warn!(error = %e, port = vn_port, "VectorNav connect failed — continuing without it");
+            tracing::warn!(error = %e, "VectorNav config load failed — skipping.");
         }
     }
 
     // --- Kinova Gen2 6DOF arm (legacy SDK over Ethernet) ---
-    // Set KINOVA_LOCAL_IP (and optionally other KINOVA_* vars) to enable.
-    // Without KINOVA_LOCAL_IP we skip silently — same graceful pattern as
-    // VectorNav. The .so files are vendored at vendor/kinova/aarch64/.
-    if std::env::var("KINOVA_LOCAL_IP").is_ok() {
-        match kinova::connect() {
+    // Configured via config/kinova.toml. Missing file → driver skipped.
+    // The .so files are vendored at vendor/kinova/aarch64/.
+    match KinovaConfig::load() {
+        Ok(Some(cfg)) => match kinova::connect(&cfg) {
             Ok(arm) => {
                 registry.register(arm);
             }
             Err(e) => {
                 tracing::warn!(error = %e, "Kinova connect failed — continuing without the arm");
             }
+        },
+        Ok(None) => {
+            tracing::info!("config/kinova.toml not found — skipping Kinova arm.");
         }
-    } else {
-        tracing::info!(
-            "KINOVA_LOCAL_IP not set — skipping Kinova arm. Set KINOVA_LOCAL_IP=192.168.2.37 (Roboguard Pi) to enable."
-        );
+        Err(e) => {
+            tracing::warn!(error = %e, "Kinova config load failed — skipping.");
+        }
+    }
+
+    // --- Robotiq 2F-140 gripper (Modbus RTU over USB→RS-485) ---
+    // Configured via config/robotiq.toml. Missing file → driver skipped.
+    match RobotiqConfig::load() {
+        Ok(Some(cfg)) => match robotiq::connect(&cfg).await {
+            Ok(gripper) => {
+                registry.register(gripper);
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Robotiq connect failed — continuing without the gripper");
+            }
+        },
+        Ok(None) => {
+            tracing::info!("config/robotiq.toml not found — skipping Robotiq gripper.");
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "Robotiq config load failed — skipping.");
+        }
     }
 
     // --- ODrive Discovery ---
@@ -81,14 +108,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // --- Logging ---
+    // CSV files live under LOG_DIR (default ./logs). Per-sensor files split
+    // hourly: logs/<YYYY-MM-DD>/<HH>/<sensor>.csv. Commands go to the same
+    // hour bucket as logs/<YYYY-MM-DD>/<HH>/inputs.csv.
+    let log_dir: PathBuf = std::env::var("LOG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("./logs"));
+    let log_mgr = Arc::new(LogManager::new(log_dir.clone())?);
+    let poll_hz: u64 = std::env::var("LOG_POLL_HZ")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(10);
+    let poll_period = Duration::from_millis(1000 / poll_hz.max(1));
+    log_mgr
+        .clone()
+        .spawn_polling(registry.clone(), poll_period);
+    tracing::info!(dir = %log_dir.display(), poll_hz, "logging started");
+
     // --- Start UDP listeners ---
     for (id, driver) in registry.iter_drivers() {
         let (data_port, cmd_port) = registry.ports(&id).unwrap();
-        spawn_sensor_udp(driver, data_port, cmd_port).await?;
+        spawn_sensor_udp(driver, data_port, cmd_port, log_mgr.clone()).await?;
     }
 
     // --- Start HTTP server with Scalar UI ---
-    let app = build_router(registry.clone(), shared_endpoints);
+    let app = build_router(registry.clone(), shared_endpoints, log_mgr.clone());
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
 
     tracing::info!("Scalar UI:   http://localhost:8080/docs");
@@ -96,7 +141,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Discover:    http://localhost:8080/discover");
     tracing::info!("{} sensors registered", registry.len());
 
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

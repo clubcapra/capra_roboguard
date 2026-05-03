@@ -1,0 +1,9 @@
+# VectorNav VN-300 — serial driver configuration.
+# Delete this file to skip the VectorNav driver at startup.
+
+# Serial device path. The udev rule in README.md creates the
+# `/dev/ttyUSB_VN300` symlink so this stays stable across reboots.
+port = "/dev/ttyUSB_VN300"
+
+# Factory default baudrate.
+baudrate = 115200

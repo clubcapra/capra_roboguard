@@ -12,6 +12,7 @@
 //! device is already configured to emit.
 
 pub mod binary;
+pub mod config;
 pub mod protocol;
 pub mod sensor;
 pub mod serial;

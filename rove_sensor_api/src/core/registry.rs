@@ -21,8 +21,10 @@ pub struct SensorInfo {
     pub has_config: bool,
     /// Whether this sensor supports triggering a calibration sequence.
     pub has_calibrate: bool,
-    /// Whether this sensor supports individual endpoint read/write by path.
-    pub has_endpoint_access: bool,
+    /// Whether this sensor supports *writing* individual endpoints by path.
+    /// Reads (`list_endpoints`, `read_endpoint`) are available on every driver
+    /// via the default trait impl, so they don't need a flag.
+    pub has_endpoint_write: bool,
 }
 
 /// Central store for all registered sensor drivers.
@@ -98,7 +100,7 @@ impl SensorRegistry {
                     has_estop: driver.has_estop(),
                     has_config: driver.has_config(),
                     has_calibrate: driver.has_calibrate(),
-                    has_endpoint_access: driver.has_endpoint_access(),
+                    has_endpoint_write: driver.has_endpoint_write(),
                 }
             })
             .collect()

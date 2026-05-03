@@ -16,6 +16,7 @@ Wire format matches src/protocol/packet.rs.
 """
 
 import argparse
+import collections
 import json
 import socket
 import struct
@@ -65,13 +66,23 @@ class State:
         self.sent = 0
         self.errors = 0
         self.last_error = None
+        # Diagnostics — bounded ring buffers so an idle session doesn't grow
+        # memory unboundedly. Used by the UI's Diagnostics panel to compute
+        # actual send/telem rates and surface recent driver errors.
+        self.send_times = collections.deque(maxlen=200)   # monotonic seconds
+        self.telem_times = collections.deque(maxlen=200)  # monotonic seconds
+        # (timestamp, message) tuples. Newest first when read for display.
+        self.recent_errors = collections.deque(maxlen=20)
 
 
 def stream_thread(host, cmd_port, rate_hz, st: State, stop):
     """Tight UDP-stream loop, mode-aware.
 
-    - **Velocity mode**: sends `joint_*_vel` at `rate_hz` continuously. The
-      arm's DSP needs continuous packets to track the commanded velocity.
+    - **Velocity mode**: streams `joint_*_vel` at `rate_hz` *only while at
+      least one joint is non-zero*. Pure streaming semantics — when the
+      operator zeros the sliders we simply stop sending; the rove_sensor_api
+      worker's velocity hold timeout (~300 ms) lapses and the arm halts on
+      its own. Sending continuous zeros would be redundant.
     - **Position mode**: sends `joint_*_pos` *only when the target changes*.
       Position is FIFO-driven — repeating the same target every tick would
       pile redundant entries onto the arm's 2000-entry trajectory queue.
@@ -103,7 +114,14 @@ def stream_thread(host, cmd_port, rate_hz, st: State, stop):
 
         payload: dict = {}
         if mode == "velocity":
-            payload = {f"joint_{i + 1}_vel": vels[i] for i in range(NUM_JOINTS)}
+            # Pure streaming: only send while at least one joint is non-zero.
+            # When the operator zeros the sliders we stop sending; the
+            # rove_sensor_api worker's velocity hold timeout halts the arm.
+            # Continuously streaming zeros was causing instability (the SDK
+            # appears to handle a stream of zero setpoints differently than
+            # an absence of stream).
+            if any(v != 0.0 for v in vels):
+                payload = {f"joint_{i + 1}_vel": vels[i] for i in range(NUM_JOINTS)}
         else:  # position
             if positions != last_pos_sent:
                 payload = {f"joint_{i + 1}_pos": positions[i] for i in range(NUM_JOINTS)}
@@ -114,11 +132,16 @@ def stream_thread(host, cmd_port, rate_hz, st: State, stop):
         if payload:
             try:
                 sock.sendto(encode(MSG_COMMAND, seq, payload), addr)
-                st.sent += 1
+                now_mono = time.monotonic()
+                with st.lock:
+                    st.sent += 1
+                    st.send_times.append(now_mono)
                 seq = (seq + 1) & 0xFFFF
             except OSError as e:
-                st.errors += 1
-                st.last_error = f"send: {e}"
+                with st.lock:
+                    st.errors += 1
+                    st.last_error = f"send: {e}"
+                    st.recent_errors.append((time.time(), f"send: {e}"))
 
         # Always drain acks non-blockingly to surface driver errors.
         while True:
@@ -127,15 +150,22 @@ def stream_thread(host, cmd_port, rate_hz, st: State, stop):
             except BlockingIOError:
                 break
             except OSError as e:
-                st.last_error = f"recv: {e}"
+                with st.lock:
+                    st.last_error = f"recv: {e}"
+                    st.recent_errors.append((time.time(), f"recv: {e}"))
                 break
             try:
                 mt, _, body = decode(ack)
                 if mt == MSG_ERROR and isinstance(body, dict):
-                    st.errors += 1
-                    st.last_error = f"driver: {body.get('error', body)}"
+                    msg = f"driver: {body.get('error', body)}"
+                    with st.lock:
+                        st.errors += 1
+                        st.last_error = msg
+                        st.recent_errors.append((time.time(), msg))
             except Exception as e:
-                st.last_error = f"decode: {e}"
+                with st.lock:
+                    st.last_error = f"decode: {e}"
+                    st.recent_errors.append((time.time(), f"decode: {e}"))
 
         next_tick += interval
         sleep_for = next_tick - time.monotonic()
@@ -145,15 +175,8 @@ def stream_thread(host, cmd_port, rate_hz, st: State, stop):
             # Fell behind — skip ahead so we don't burst-catch-up.
             next_tick = time.monotonic()
 
-    # Final shutdown packet: zero velocities. (If we were in position mode,
-    # we don't send anything — the arm will hold its current target.)
-    try:
-        sock.sendto(
-            encode(MSG_COMMAND, seq, {f"joint_{i + 1}_vel": 0.0 for i in range(NUM_JOINTS)}),
-            addr,
-        )
-    except OSError:
-        pass
+    # No final zero packet — pure streaming model. The worker's velocity
+    # hold timeout (~300 ms) fires once the stream stops and halts the arm.
     sock.close()
 
 
@@ -172,7 +195,10 @@ def telem_thread(host, data_port, interval_ms, st: State, stop):
         except Exception:
             continue
         if mt == MSG_DATA and isinstance(body, dict):
-            st.telem = body
+            now_mono = time.monotonic()
+            with st.lock:
+                st.telem = body
+                st.telem_times.append(now_mono)
     try:
         sock.sendto(encode(MSG_UNSUBSCRIBE, 0, None), addr)
     except OSError:
@@ -219,11 +245,8 @@ table.t td:first-child{color:var(--muted);width:18ch}
 
 <div class="panel"><div class="row">
   <button onclick="zeroAll()">Zero sliders</button>
-  <button onclick="action('move_home')">Move home</button>
-  <button onclick="action('clear_errors')">Clear errors</button>
-  <button onclick="action('start_control')">Start control</button>
+  <button onclick="action('move_home', {move_home: true})">Move home</button>
   <button onclick="halt()">Halt motion</button>
-  <button class="estop" onclick="estop()">E-STOP</button>
 </div></div>
 
 <div class="panel">
@@ -231,7 +254,7 @@ table.t td:first-child{color:var(--muted);width:18ch}
     <span style="color:var(--muted)">Control mode:</span>
     <label id="m-vel" class="active"><input type="radio" name="mode" value="velocity" checked> Velocity (deg/s, streaming)</label>
     <label id="m-pos"><input type="radio" name="mode" value="position"> Position (deg, FIFO)</label>
-    <button onclick="setAllZeroHere()" title="Persist current arm pose as the new zero on every joint (writes to actuator flash)" style="margin-left:auto">⊘ Set all joint zeros here</button>
+    <button onclick="setAllZeroHere()" title="Persist current arm pose as the new zero on every joint (writes to actuator flash). Each joint will read ~180° afterward — that's the Kinova zero reference." style="margin-left:auto">⊘ Set all joint zeros here</button>
   </div>
   <div id="sliders"></div>
 </div>
@@ -241,8 +264,15 @@ table.t td:first-child{color:var(--muted);width:18ch}
   <table class="t"><tbody id="telem"></tbody></table>
 </div>
 
+<div class="panel">
+  <div style="font-weight:bold;margin-bottom:8px">Diagnostics — stutter debugging</div>
+  <table class="t"><tbody id="diag"></tbody></table>
+  <div style="margin-top:10px;font-weight:bold;color:var(--muted);font-size:.85em">Recent driver errors (most recent first)</div>
+  <div id="errlog" style="max-height:160px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:.78em;color:#f99;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;padding:6px;margin-top:4px">no errors yet</div>
+</div>
+
 <div class="panel" id="control-warn" style="display:none;background:#3a1010;border-color:var(--danger);color:#fff">
-  <strong>⚠ Control is OFF.</strong> The arm is rejecting velocity / position commands (SDK error 1022) and most calibration ops will fail. Click <em>Start control</em> to re-arm.
+  <strong>⚠ Arm reports control is OFF.</strong> The driver no longer manages control state — if this banner persists, restart the rove_sensor_api process so its connect() re-runs StartControlAPI.
 </div>
 <div class="panel"><div class="status" id="status">connecting…</div></div>
 
@@ -273,7 +303,7 @@ function rebuildSliders(initial){
       <span style="color:var(--muted);font-size:.85em">+${max.toFixed(0)}</span>
       <span class="val">${initVal.toFixed(2)} ${unit}</span>
       <button title="Reset slider to 0">0</button>
-      <button class="zero-here" title="Persist this joint's current position as its new zero (writes to actuator flash)">⊘ zero here</button>`;
+      <button class="zero-here" title="Persist this joint's current physical position as its new zero (writes to actuator flash). Reads as ~180° afterward — Kinova zero reference.">⊘ zero here</button>`;
     wrap.appendChild(r);
     const cells=r.querySelectorAll('input, .val, button');
     const s=cells[0], v=r.querySelector('.val'), bReset=cells[2], bZero=cells[3];
@@ -312,7 +342,6 @@ async function action(name, extra){
 }
 function zeroAll(){sliders.forEach((s,i)=>{s.value=0;vals[i].textContent='0.00 '+modeUnit();});push();}
 async function halt(){zeroAll();await action('halt');setStatus('Halt — trajectories erased, sliders zeroed','err');}
-async function estop(){zeroAll();await action('estop');setStatus('E-STOP — control stopped. Click "Start control" to resume.','err');}
 // `poll()` runs every 200 ms and overwrites the status bar with the current
 // stream rate / error count. Important messages (zero-set progress, action
 // rejections, mode switches) need to outlive that — `flashUntil` blocks
@@ -369,39 +398,44 @@ document.querySelectorAll('input[name=mode]').forEach(r=>{
   r.addEventListener('change', e=>setMode(e.target.value));
 });
 
-// SetJointZero needs:
-//   1. Control to be ON (otherwise the SDK NACKs with code 1022 and nothing
-//      reaches the actuator's flash);
-//   2. The actuator to be at rest (no active velocity command).
-// Sequence: re-arm control → zero velocities → erase queued trajectories →
-// brief settle so the actuator's encoder reading is stable.
-async function ensureHaltedForCalibration(){
+// Per-joint commanded velocity, kept in sync with the slider state so the
+// Diagnostics panel can render commanded-vs-actual side-by-side.
+function commandedVels(){
+  return mode==='velocity' ? sliders.map(s=>parseFloat(s.value)) : Array(N).fill(0);
+}
+
+// SetJointZero writes the current physical joint position into the
+// actuator's flash as its new zero reference. The driver no longer
+// manages control state, so all we need to do is zero the sliders (so the
+// streaming worker doesn't fight the calibration with a stale velocity)
+// and let the driver issue the SDK call. After a successful set_zero the
+// joint reads as ~180° because Kinova uses 180° as its zero reference.
+async function quiescentBeforeCalibration(){
+  // Zero the sliders, send one explicit halt, briefly settle so the
+  // actuator's encoder reading is stable before flashing it.
   sliders.forEach((s,i)=>{s.value=0;vals[i].textContent='0.00 '+modeUnit();});
-  await action('start_control');
   await fetch('/vel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vels:Array(N).fill(0)})});
-  await action('halt');
+  await action('halt',{erase_trajectories:true});
   await new Promise(r=>setTimeout(r,400));
 }
+// IMPORTANT empirical finding: SetJointZero writes the new zero to actuator
+// flash, but the running firmware does NOT pick it up — it keeps using the
+// previous zero until the arm is electrically power-cycled. So after a
+// successful set_joint_zero the telemetry will still report the OLD
+// reference frame; only after a reboot will the joints read from the new
+// zero. The status messages and confirms below are explicit about that.
 async function setJointZeroHere(joint){
-  if(!confirm(`Set joint ${joint}'s current position as its new zero?\n\nThis writes to actuator flash and persists across power cycles.\nThe arm will halt while the zero is written.`))return;
+  if(!confirm(`Set joint ${joint}'s current physical position as its new zero?\n\nWrites to actuator flash. IMPORTANT: the new zero will NOT take effect until the arm is electrically power-cycled — the running firmware keeps using the old zero until reboot.`))return;
   setStatus(`Halting before zero-set for joint ${joint}…`,'',true);
-  await ensureHaltedForCalibration();
-  if(await action('set_joint_zero',{joint})){
-    // Pause briefly, then check telemetry's last_error for any SDK rejection.
-    await new Promise(r=>setTimeout(r,300));
-    try{
-      const j=await(await fetch('/telem')).json();
-      const err=(j.status||{}).last_error;
-      const newPos = (j.telemetry||{})[`joint_${joint}_pos`];
-      if(err && /SetJointZero/.test(err)){setStatus(`Joint ${joint} zero rejected by SDK: ${err}`,'err',true);return;}
-      setStatus(`Joint ${joint} zero issued — telemetry now reads joint_${joint}_pos = ${typeof newPos==='number'?newPos.toFixed(2)+'°':'—'}`,'ok',true);
-    }catch(e){setStatus(`Joint ${joint} zero issued`,'ok',true);}
+  await quiescentBeforeCalibration();
+  if(await action('set_joint_zero',{joint:joint})){
+    setStatus(`Joint ${joint} zero written to flash. ⚠ POWER-CYCLE THE ARM to activate it — telemetry still reflects the old zero until reboot.`,'ok',true);
   }
 }
 async function setAllZeroHere(){
-  if(!confirm(`Set ALL six joints' current positions as their new zeros?\n\nThis writes to all six actuators' flash and persists across power cycles.\nThe arm will halt while the zeros are written.`))return;
+  if(!confirm(`Set ALL six joints' current positions as their new zeros?\n\nWrites to all six actuators' flash. IMPORTANT: the new zeros will NOT take effect until the arm is electrically power-cycled — the running firmware keeps using the previous zeros until reboot.`))return;
   setStatus('Halting before zero-set for all joints…','',true);
-  await ensureHaltedForCalibration();
+  await quiescentBeforeCalibration();
   for(let j=1;j<=N;j++){
     setStatus(`Setting zero on joint ${j}/${N}…`,'',true);
     if(!await action('set_joint_zero',{joint:j})){
@@ -409,24 +443,15 @@ async function setAllZeroHere(){
       return;
     }
     // Each SetJointZero writes to actuator flash — give the actuator time
-    // to complete the write before issuing the next one. Earlier 200 ms
-    // proved too short: only joint 1 actually persisted, joints 2-6 read
-    // their pre-call angles afterward.
+    // to complete the write before issuing the next one. ~1 s is what
+    // proved reliable in earlier testing.
     await new Promise(r=>setTimeout(r,1000));
   }
-  // Wait one more poll cycle for telemetry to reflect the new zeros.
-  await new Promise(r=>setTimeout(r,400));
-  try{
-    const j=await(await fetch('/telem')).json();
-    const positions = Array.from({length:N},(_,i)=>j.telemetry?.[`joint_${i+1}_pos`]);
-    const fmt = positions.map(p=>typeof p==='number'?p.toFixed(1):'—').join(', ');
-    setStatus(`All joint zeros issued. New joint_*_pos = [${fmt}]`,'ok',true);
-  }catch(e){
-    setStatus('All joint zeros issued','ok',true);
-  }
+  setStatus('All six joint zeros written to flash. ⚠ POWER-CYCLE THE ARM to activate them — telemetry still reflects the previous zeros until reboot.','ok',true);
 }
 
 function fmtJ(d,suf,fn){return Array.from({length:N},(_,i)=>{const v=d[`joint_${i+1}_${suf}`];return typeof v==='number'?fn(v):'  —  ';}).join(' ');}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function poll(){try{
   const j=await(await fetch('/telem')).json();
   const d=j.telemetry||{};
@@ -435,7 +460,6 @@ async function poll(){try{
   const skipStatus = Date.now() < flashUntil;
   const f=v=>v.toFixed(2).padStart(7);
   const enabled=d.control_enabled?'<span class="pill on">on</span>':'<span class="pill off">off</span>';
-  const estopped=d.estopped?'<span class="pill estop">E-STOPPED</span>':'';
   const rows=[
     ['joint_*_pos (deg)',     fmtJ(d,'pos',f)],
     ['joint_*_vel (deg/s)',   fmtJ(d,'vel',f)],
@@ -443,17 +467,56 @@ async function poll(){try{
     ['joint_*_current (A)',   fmtJ(d,'current',f)],
     ['joint_*_temp (°C)',     fmtJ(d,'temp',f)],
     ['bus', `${(d.bus_voltage||0).toFixed(2)} V   ${(d.bus_current||0).toFixed(2)} A`],
-    ['status', `control_enabled ${enabled}  retract=${d.retract_state}  torque_sensors=${d.torque_sensors_available}  ${estopped}`],
+    ['status', `control_enabled ${enabled}  retract=${d.retract_state}  torque_sensors=${d.torque_sensors_available}`],
     ['timestamp_ns', String(d.timestamp_ns??'—')],
   ];
   document.getElementById('telem').innerHTML=rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  // Flash a big red banner whenever the arm reports control disabled — that
-  // state silently rejects velocity setpoints and most calibration calls.
+
+  // Diagnostics panel — actual rates (not the configured target), telemetry
+  // freshness, and per-joint tracking gap (commanded velocity − actual). A
+  // persistent gap when sliders are held nonzero is the clearest signal of
+  // a stutter/lag problem; a missing or stale telemetry rate is the next.
+  const diag=j.diagnostics||{};
+  const sendHz=(diag.send_hz??0).toFixed(1);
+  const telemHz=(diag.telem_hz??0).toFixed(1);
+  const ageMs=(diag.last_telem_age_ms??0).toFixed(0);
+  const cmdVels=mode==='velocity' ? sliders.map(s=>parseFloat(s.value)) : Array(N).fill(0);
+  const trackingGap=Array.from({length:N},(_,i)=>{
+    const actual=d[`joint_${i+1}_vel`];
+    if(typeof actual!=='number')return '  —  ';
+    return (cmdVels[i]-actual).toFixed(2).padStart(7);
+  }).join(' ');
+  const diagRows=[
+    ['actual send rate',     `${sendHz} Hz   (target: ${HZ.toFixed(0)} Hz)`],
+    ['actual telem rate',    `${telemHz} Hz   (last packet ${ageMs} ms ago)`],
+    ['cmd − actual vel',     trackingGap + '   (deg/s, persistent ≠0 ⇒ tracking lag)'],
+    ['error count',          String(diag.errors??0)],
+  ];
+  document.getElementById('diag').innerHTML=diagRows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  const errs=diag.recent_errors||[];
+  const errlogEl=document.getElementById('errlog');
+  if(errs.length===0){errlogEl.textContent='no errors yet';}
+  else{
+    errlogEl.innerHTML=errs.slice().reverse().map(([ts,msg])=>{
+      const dt=new Date(ts*1000);
+      const hh=String(dt.getHours()).padStart(2,'0');
+      const mm=String(dt.getMinutes()).padStart(2,'0');
+      const ss=String(dt.getSeconds()).padStart(2,'0');
+      const ms=String(dt.getMilliseconds()).padStart(3,'0');
+      return `<div>${hh}:${mm}:${ss}.${ms}  ${escapeHtml(msg)}</div>`;
+    }).join('');
+  }
+
+  // Banner: only fires now on the arm's own control_enabled telemetry going
+  // false — driver no longer mutates an estopped flag. If it stays on, the
+  // arm needs a power cycle / process restart, not a button click.
   const cw=document.getElementById('control-warn');
-  cw.style.display = (d.control_enabled===false || d.estopped===true) ? 'block' : 'none';
+  cw.style.display = (d.control_enabled===false) ? 'block' : 'none';
   if(!skipStatus){
-    const s=j.status||{};let t=`streaming @ ${HZ.toFixed(0)} Hz | sent=${s.sent} errors=${s.errors}`;
-    if(s.last_error)t+=`  |  last error: ${s.last_error}`;
+    const s=j.status||{};
+    let t=`streaming @ ${sendHz} Hz (target ${HZ.toFixed(0)}) | sent=${s.sent} errors=${s.errors}`;
+    if(s.last_error)t+=`  |  last: ${s.last_error}`;
     setStatus(t,s.last_error?'err':'ok');
   }
 }catch(e){setStatus('UI server unreachable: '+e,'err');}}
@@ -520,14 +583,12 @@ def make_app(
     @app.post("/action")
     def post_action():
         body = request.get_json(force=True, silent=True) or {}
+        # The driver no longer manages control state (no clear_errors /
+        # start_control / hard_stop) — those would just return 400 from
+        # the sensor command surface and are removed here too.
         mapping = {
             "move_home": {"move_home": True},
-            "clear_errors": {"clear_errors": True},
-            "start_control": {"start_control": True},
             "halt": {"erase_trajectories": True},
-            # Hard stop: StopControlAPI + EraseAllTrajectories. Short-circuits
-            # any setpoint in the same packet; recover with start_control.
-            "estop": {"hard_stop": True},
         }
         name = body.get("action")
         # set_joint_zero takes a joint argument (1..6); persists current
@@ -548,12 +609,38 @@ def make_app(
 
     @app.get("/telem")
     def get_telem():
+        # Compute rates over a 2-second sliding window — long enough that an
+        # idle browser tab doesn't see the rate snap to 0 between polls,
+        # short enough that a stutter shows up immediately. We snapshot
+        # under the lock and compute outside to keep the lock window small.
+        now_mono = time.monotonic()
+        window = 2.0
+        with state.lock:
+            send_times = list(state.send_times)
+            telem_times = list(state.telem_times)
+            recent_errors = list(state.recent_errors)
+            telem = state.telem
+            sent = state.sent
+            errors = state.errors
+            last_error = state.last_error
+        send_in_window = sum(1 for t in send_times if now_mono - t <= window)
+        telem_in_window = sum(1 for t in telem_times if now_mono - t <= window)
+        send_hz = send_in_window / window
+        telem_hz = telem_in_window / window
+        last_telem_age_ms = (now_mono - telem_times[-1]) * 1000.0 if telem_times else None
         return jsonify({
-            "telemetry": state.telem,
+            "telemetry": telem,
             "status": {
-                "sent": state.sent,
-                "errors": state.errors,
-                "last_error": state.last_error,
+                "sent": sent,
+                "errors": errors,
+                "last_error": last_error,
+            },
+            "diagnostics": {
+                "send_hz": send_hz,
+                "telem_hz": telem_hz,
+                "last_telem_age_ms": last_telem_age_ms,
+                "errors": errors,
+                "recent_errors": recent_errors,
             },
         })
 
@@ -584,8 +671,8 @@ def main():
     p.add_argument(
         "--rate",
         type=float,
-        default=100.0,
-        help="UDP stream rate Hz. Kinova DSP loops at 100Hz and the arm cannot track requested velocities below that. Stay at 100; the worker won't double-send if the API has its own resend.",
+        default=75.0,
+        help="UDP stream rate Hz to the rove_sensor_api. The worker on that side already re-sends the held velocity to the arm at 100 Hz internally, so this rate only governs how quickly slider changes propagate from the browser to the worker. 30–100 Hz is fine; below ~10 Hz the velocity hold (300 ms) will lapse between user inputs.",
     )
     args = p.parse_args()
 

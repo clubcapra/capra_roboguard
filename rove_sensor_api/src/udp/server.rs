@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 use crate::core::driver::SensorDriver;
+use crate::logging::LogManager;
 use crate::protocol::packet::{MessageType, Packet, DEFAULT_PUSH_INTERVAL_MS};
 
 const MAX_PACKET_SIZE: usize = 4096;
@@ -21,8 +22,10 @@ pub async fn spawn_sensor_udp(
     driver: Arc<dyn SensorDriver>,
     data_port: u16,
     cmd_port: u16,
+    log_mgr: Arc<LogManager>,
 ) -> Result<(), std::io::Error> {
     let sensor_id = driver.id();
+    let sensor_id_owned = sensor_id.to_string();
 
     // --- Data port: subscription-based push ---
     let data_driver = driver.clone();
@@ -173,7 +176,29 @@ pub async fn spawn_sensor_udp(
                             continue;
                         }
                     };
-                    match cmd_driver.execute_command(&payload) {
+                    let outcome = cmd_driver.execute_command(&payload);
+                    let client = addr.to_string();
+                    match &outcome {
+                        Ok(result) => log_mgr.log_input(
+                            &sensor_id_owned,
+                            "udp",
+                            &client,
+                            "",
+                            "command",
+                            &payload,
+                            Ok(result),
+                        ),
+                        Err(e) => log_mgr.log_input(
+                            &sensor_id_owned,
+                            "udp",
+                            &client,
+                            "",
+                            "command",
+                            &payload,
+                            Err(&e.to_string()),
+                        ),
+                    }
+                    match outcome {
                         Ok(result) => Packet::command_ack(packet.seq_num, &result),
                         Err(e) => Packet::error(packet.seq_num, &e.to_string()),
                     }

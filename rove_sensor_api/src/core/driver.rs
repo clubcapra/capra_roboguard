@@ -131,23 +131,67 @@ pub trait SensorDriver: Send + Sync + 'static {
         Err(DriverError::CommandFailed("calibration not supported".into()))
     }
 
-    /// Whether this driver supports individual endpoint read/write by path.
-    fn has_endpoint_access(&self) -> bool {
+    /// Whether this driver supports writing individual endpoints by path.
+    /// Reads (`list_endpoints`, `read_endpoint`) are available on every driver
+    /// via the default impls; writes need an explicit override.
+    fn has_endpoint_write(&self) -> bool {
         false
     }
 
-    /// List all endpoints in the loaded map (no CAN I/O — just metadata).
+    /// List the commands this driver accepts as a `name → {type, description, unit}`
+    /// map. Default is derived from `command_schema()` so every driver gets a
+    /// uniform `GET /{id}/commands` endpoint.
+    fn list_commands(&self) -> Result<Value, DriverError> {
+        Ok(field_descriptors_to_map(&self.command_schema()))
+    }
+
+    /// List the readable endpoints exposed by this driver. Default is derived
+    /// from `data_schema()` so every driver gets a uniform `GET /{id}/endpoints`.
+    /// Drivers with a richer addressing scheme (ODrive's flat-endpoint map)
+    /// override this to expose more.
     fn list_endpoints(&self) -> Result<Value, DriverError> {
-        Err(DriverError::CommandFailed("endpoint access not supported".into()))
+        Ok(field_descriptors_to_map(&self.data_schema()))
     }
 
-    /// Read a single endpoint by its flat-endpoint path (e.g. `"axis0.config.motor.vel_limit"`).
-    fn read_endpoint(&self, _path: &str) -> Result<Value, DriverError> {
-        Err(DriverError::CommandFailed("endpoint access not supported".into()))
+    /// Read a single endpoint by path. Default extracts the field from the
+    /// latest `read_data()` snapshot, so it works for any driver whose data
+    /// schema fields can be looked up by name. Drivers that need live device
+    /// I/O (e.g. ODrive SDO) override this.
+    fn read_endpoint(&self, path: &str) -> Result<Value, DriverError> {
+        let snapshot = self.read_data()?;
+        let value = snapshot.get(path).cloned().ok_or_else(|| {
+            DriverError::CommandFailed(format!("endpoint '{path}' not found"))
+        })?;
+        let dtype = self
+            .data_schema()
+            .iter()
+            .find(|f| f.name == path)
+            .map(|f| f.type_name.clone())
+            .unwrap_or_else(|| "unknown".to_string());
+        Ok(serde_json::json!({
+            "path":  path,
+            "value": value,
+            "type":  dtype,
+        }))
     }
 
-    /// Write a single endpoint. Body: `{"value": <number|bool>}`.
+    /// Write a single endpoint. Body: `{"value": <number|bool>}`. Only drivers
+    /// that override `has_endpoint_write()` to `true` should implement this.
     fn write_endpoint(&self, _path: &str, _val: &Value) -> Result<Value, DriverError> {
-        Err(DriverError::CommandFailed("endpoint access not supported".into()))
+        Err(DriverError::CommandFailed("endpoint write not supported".into()))
     }
+}
+
+fn field_descriptors_to_map(fields: &[FieldDescriptor]) -> Value {
+    let mut map = serde_json::Map::with_capacity(fields.len());
+    for f in fields {
+        let mut entry = serde_json::Map::new();
+        entry.insert("type".into(), Value::from(f.type_name.clone()));
+        entry.insert("description".into(), Value::from(f.description.clone()));
+        if let Some(unit) = &f.unit {
+            entry.insert("unit".into(), Value::from(unit.clone()));
+        }
+        map.insert(f.name.clone(), Value::Object(entry));
+    }
+    Value::Object(map)
 }

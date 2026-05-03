@@ -643,7 +643,7 @@ impl SensorDriver for OdriveNode {
         Ok(serde_json::json!({ "written": written, "errors": errors }))
     }
 
-    fn has_endpoint_access(&self) -> bool {
+    fn has_endpoint_write(&self) -> bool {
         true
     }
 

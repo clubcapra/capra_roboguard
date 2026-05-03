@@ -1,7 +1,8 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::extract::{ConnectInfo, Path, State};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::Html;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -10,6 +11,7 @@ use serde_json::Value;
 use crate::core::driver::{CommandMode, FieldDescriptor, SensorDriver};
 use crate::core::registry::{SensorInfo, SensorRegistry};
 use crate::drivers::odrive::endpoints::{load_from_str, SharedEndpointMap};
+use crate::logging::LogManager;
 use crate::protocol::packet;
 
 // ── Response types ──────────────────────────────────────────────────────────
@@ -35,14 +37,15 @@ pub struct SensorEndpoints {
     pub info: String,
     pub data: String,
     pub command: String,
+    pub commands: String,
+    pub endpoints: String,
+    pub endpoint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estop: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub calibrate: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub endpoints: Option<String>,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
@@ -105,6 +108,7 @@ pub struct ErrorResponse {
 struct SensorState {
     driver: Arc<dyn SensorDriver>,
     info: Arc<SensorInfo>,
+    log_mgr: Arc<LogManager>,
 }
 
 // ── Protocol info builder ───────────────────────────────────────────────────
@@ -214,10 +218,12 @@ async fn discover(State(reg): State<Arc<SensorRegistry>>) -> Json<DiscoverRespon
                 info: format!("/{}/info", s.id),
                 data: format!("/{}/data", s.id),
                 command: format!("/{}/command", s.id),
+                commands: format!("/{}/commands", s.id),
+                endpoints: format!("/{}/endpoints", s.id),
+                endpoint: format!("/{}/endpoint/{{path}}", s.id),
                 estop: s.has_estop.then(|| format!("/{}/estop", s.id)),
                 config: s.has_config.then(|| format!("/{}/config", s.id)),
                 calibrate: s.has_calibrate.then(|| format!("/{}/calibrate", s.id)),
-                endpoints: s.has_endpoint_access.then(|| format!("/{}/endpoints", s.id)),
             };
             SensorSummary {
                 id: s.id,
@@ -263,16 +269,13 @@ async fn sensor_data(
 
 async fn sensor_command(
     State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<Value>,
 ) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
-    let result = state.driver.execute_command(&payload).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: e.to_string(),
-            }),
-        )
-    })?;
+    let outcome = state.driver.execute_command(&payload);
+    log_outcome(&state, addr, &headers, "command", &payload, &outcome);
+    let result = outcome.map_err(internal_err)?;
     Ok(Json(CommandResult {
         status: "ok".to_string(),
         result,
@@ -281,19 +284,56 @@ async fn sensor_command(
 
 async fn sensor_estop(
     State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
 ) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
-    let result = state.driver.estop().map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: e.to_string(),
-            }),
-        )
-    })?;
+    let outcome = state.driver.estop();
+    log_outcome(&state, addr, &headers, "estop", &Value::Null, &outcome);
+    let result = outcome.map_err(internal_err)?;
     Ok(Json(CommandResult {
         status: "ok".to_string(),
         result,
     }))
+}
+
+fn internal_err(e: crate::core::error::DriverError) -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse { error: e.to_string() }),
+    )
+}
+
+fn user_agent(headers: &HeaderMap) -> &str {
+    headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+}
+
+fn log_outcome(
+    state: &SensorState,
+    addr: SocketAddr,
+    headers: &HeaderMap,
+    kind: &str,
+    payload: &Value,
+    outcome: &Result<Value, crate::core::error::DriverError>,
+) {
+    let client = addr.to_string();
+    let ua = user_agent(headers);
+    match outcome {
+        Ok(v) => state
+            .log_mgr
+            .log_input(&state.info.id, "http", &client, ua, kind, payload, Ok(v)),
+        Err(e) => state.log_mgr.log_input(
+            &state.info.id,
+            "http",
+            &client,
+            ua,
+            kind,
+            payload,
+            Err(&e.to_string()),
+        ),
+    }
 }
 
 async fn upload_endpoints(
@@ -331,16 +371,13 @@ async fn sensor_read_config(
 
 async fn sensor_write_config(
     State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<Value>,
 ) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
-    let result = state.driver.write_config(&payload).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: e.to_string(),
-            }),
-        )
-    })?;
+    let outcome = state.driver.write_config(&payload);
+    log_outcome(&state, addr, &headers, "write_config", &payload, &outcome);
+    let result = outcome.map_err(internal_err)?;
     Ok(Json(CommandResult {
         status: "ok".to_string(),
         result,
@@ -349,20 +386,26 @@ async fn sensor_write_config(
 
 async fn sensor_calibrate(
     State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<Value>,
 ) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
-    let result = state.driver.calibrate(&payload).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: e.to_string(),
-            }),
-        )
-    })?;
+    let outcome = state.driver.calibrate(&payload);
+    log_outcome(&state, addr, &headers, "calibrate", &payload, &outcome);
+    let result = outcome.map_err(internal_err)?;
     Ok(Json(CommandResult {
         status: "ok".to_string(),
         result,
     }))
+}
+
+async fn sensor_list_commands(
+    State(state): State<SensorState>,
+) -> Result<Json<Value>, (StatusCode, Json<ErrorResponse>)> {
+    let result = state.driver.list_commands().map_err(|e| {
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: e.to_string() }))
+    })?;
+    Ok(Json(result))
 }
 
 async fn sensor_list_endpoints(
@@ -386,13 +429,159 @@ async fn sensor_read_endpoint(
 
 async fn sensor_write_endpoint(
     State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Path(path): Path<String>,
     Json(payload): Json<Value>,
 ) -> Result<Json<Value>, (StatusCode, Json<ErrorResponse>)> {
-    let result = state.driver.write_endpoint(&path, &payload).map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: e.to_string() }))
-    })?;
+    let outcome = state.driver.write_endpoint(&path, &payload);
+    let logged_payload = serde_json::json!({"path": path, "body": payload});
+    log_outcome(&state, addr, &headers, "write_endpoint", &logged_payload, &outcome);
+    let result = outcome.map_err(internal_err)?;
     Ok(Json(result))
+}
+
+// ── Log file routes ─────────────────────────────────────────────────────────
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct LogIndex {
+    pub root: String,
+    pub days: Vec<LogDay>,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct LogDay {
+    pub date: String,
+    pub hours: Vec<LogHour>,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct LogHour {
+    pub hour: String,
+    pub sensors: Vec<String>,
+    pub inputs: Option<String>,
+}
+
+async fn logs_index(
+    State(log_mgr): State<Arc<LogManager>>,
+) -> Result<Json<LogIndex>, (StatusCode, Json<ErrorResponse>)> {
+    let root = log_mgr.log_dir().to_path_buf();
+    let mut days: Vec<LogDay> = Vec::new();
+
+    let day_entries = std::fs::read_dir(&root).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: format!("read log dir: {e}") }),
+        )
+    })?;
+
+    let mut day_names: Vec<String> = day_entries
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+        .filter_map(|e| e.file_name().into_string().ok())
+        .collect();
+    day_names.sort();
+
+    for date in day_names {
+        let day_dir = root.join(&date);
+        let mut hour_names: Vec<String> = std::fs::read_dir(&day_dir)
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+            .filter_map(|e| e.file_name().into_string().ok())
+            .collect();
+        hour_names.sort();
+
+        let mut hours: Vec<LogHour> = Vec::new();
+        for hour in hour_names {
+            let hour_dir = day_dir.join(&hour);
+            let mut sensors: Vec<String> = Vec::new();
+            let mut inputs: Option<String> = None;
+            for entry in std::fs::read_dir(&hour_dir).into_iter().flatten().flatten() {
+                let name = match entry.file_name().into_string() {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                let rel = format!("{date}/{hour}/{name}");
+                if name == "inputs.csv" {
+                    inputs = Some(rel);
+                } else if name.ends_with(".csv") {
+                    let id = name.trim_end_matches(".csv").to_string();
+                    sensors.push(id);
+                }
+            }
+            sensors.sort();
+            hours.push(LogHour { hour, sensors, inputs });
+        }
+        days.push(LogDay { date, hours });
+    }
+
+    Ok(Json(LogIndex {
+        root: root.display().to_string(),
+        days,
+    }))
+}
+
+async fn logs_file(
+    State(log_mgr): State<Arc<LogManager>>,
+    Path(path): Path<String>,
+) -> Result<axum::response::Response, (StatusCode, Json<ErrorResponse>)> {
+    use axum::body::Body;
+    use axum::http::header;
+    use axum::response::IntoResponse;
+
+    // Resolve and validate: the requested path must canonicalize to something
+    // inside the configured log directory. Refuses absolute paths, traversal,
+    // and symlinks pointing outside the tree.
+    if path.contains("..") || path.starts_with('/') {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "invalid path".into() }),
+        ));
+    }
+    let candidate = log_mgr.log_dir().join(&path);
+    let root = log_mgr.log_dir().canonicalize().map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: format!("log root: {e}") }),
+        )
+    })?;
+    let resolved = candidate.canonicalize().map_err(|_| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse { error: format!("not found: {path}") }),
+        )
+    })?;
+    if !resolved.starts_with(&root) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "path escapes log directory".into() }),
+        ));
+    }
+
+    let bytes = std::fs::read(&resolved).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: e.to_string() }),
+        )
+    })?;
+    let filename = resolved
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("log.csv")
+        .to_string();
+    let disposition = format!("attachment; filename=\"{filename}\"");
+    let mut response = (Body::from(bytes)).into_response();
+    response
+        .headers_mut()
+        .insert(header::CONTENT_TYPE, "text/csv".parse().unwrap());
+    if let Ok(v) = disposition.parse() {
+        response
+            .headers_mut()
+            .insert(header::CONTENT_DISPOSITION, v);
+    }
+    Ok(response)
 }
 
 // ── Scalar UI ───────────────────────────────────────────────────────────────
@@ -417,7 +606,11 @@ async fn serve_scalar() -> Html<String> {
 
 // ── Router builder ──────────────────────────────────────────────────────────
 
-pub fn build_router(registry: Arc<SensorRegistry>, endpoint_map: SharedEndpointMap) -> Router {
+pub fn build_router(
+    registry: Arc<SensorRegistry>,
+    endpoint_map: SharedEndpointMap,
+    log_mgr: Arc<LogManager>,
+) -> Router {
     let openapi = build_openapi(&registry);
     let openapi = Arc::new(openapi);
 
@@ -427,18 +620,39 @@ pub fn build_router(registry: Arc<SensorRegistry>, endpoint_map: SharedEndpointM
         .route("/odrive/endpoints", post(upload_endpoints))
         .with_state(endpoint_map);
 
+    // /logs/* routes — share the log manager.
+    let logs_router: Router = Router::new()
+        .route("/logs", get(logs_index))
+        .route("/logs/file/{*path}", get(logs_file))
+        .with_state(log_mgr.clone());
+    app = app.merge(logs_router);
+
     // Generate per-sensor routes: /{sensor_id}/info, /{sensor_id}/data, /{sensor_id}/command
     for sensor in registry.list() {
         let driver = registry.get(&sensor.id).unwrap();
         let state = SensorState {
             driver,
             info: Arc::new(sensor.clone()),
+            log_mgr: log_mgr.clone(),
         };
 
         let mut sensor_router = Router::new()
             .route("/info", get(sensor_info))
             .route("/data", get(sensor_data))
-            .route("/command", post(sensor_command));
+            .route("/command", post(sensor_command))
+            .route("/commands", get(sensor_list_commands))
+            .route("/endpoints", get(sensor_list_endpoints));
+
+        // Endpoint reads are uniform across drivers (default impl extracts
+        // from `read_data` for non-ODrive drivers). Writes need an opt-in.
+        sensor_router = if sensor.has_endpoint_write {
+            sensor_router.route(
+                "/endpoint/{*path}",
+                get(sensor_read_endpoint).post(sensor_write_endpoint),
+            )
+        } else {
+            sensor_router.route("/endpoint/{*path}", get(sensor_read_endpoint))
+        };
 
         if sensor.has_estop {
             sensor_router = sensor_router.route("/estop", post(sensor_estop));
@@ -450,11 +664,6 @@ pub fn build_router(registry: Arc<SensorRegistry>, endpoint_map: SharedEndpointM
         }
         if sensor.has_calibrate {
             sensor_router = sensor_router.route("/calibrate", post(sensor_calibrate));
-        }
-        if sensor.has_endpoint_access {
-            sensor_router = sensor_router
-                .route("/endpoints", get(sensor_list_endpoints))
-                .route("/endpoint/{*path}", get(sensor_read_endpoint).post(sensor_write_endpoint));
         }
 
         let sensor_router = sensor_router.with_state(state);
@@ -503,6 +712,9 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
             ErrorResponse,
             FieldDescriptor,
             CommandMode,
+            LogIndex,
+            LogDay,
+            LogHour,
         )),
         info(
             title = "Capra Rove Sensor Interface",
@@ -608,6 +820,81 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
             .operation(HttpMethod::Get, discover_op)
             .build(),
     );
+
+    // /logs paths — index + per-file download
+    doc.tags.get_or_insert_with(Vec::new).push(
+        utoipa::openapi::tag::TagBuilder::new()
+            .name("logs")
+            .description(Some(
+                "Time-series CSV logs. Sensor snapshots and commands are written to \
+                 LOG_DIR/<YYYY-MM-DD>/<HH>/<sensor>.csv and inputs.csv, split hourly.",
+            ))
+            .build(),
+    );
+
+    let logs_index_op = OperationBuilder::new()
+        .tag("logs")
+        .summary(Some("List available log files"))
+        .description(Some(
+            "Returns the directory tree under `LOG_DIR` as `{date → {hour → {sensors[], inputs}}}`. \
+             Use `GET /logs/file/{path}` with the relative path to download a specific CSV.",
+        ))
+        .response(
+            "200",
+            ResponseBuilder::new()
+                .description("Available log files")
+                .content(
+                    "application/json",
+                    ContentBuilder::new()
+                        .schema(Some(RefOr::Ref(utoipa::openapi::Ref::from_schema_name(
+                            "LogIndex",
+                        ))))
+                        .build(),
+                )
+                .build(),
+        )
+        .build();
+
+    let logs_file_op = OperationBuilder::new()
+        .tag("logs")
+        .summary(Some("Download a log file"))
+        .description(Some(
+            "Download a CSV file from the log tree. `path` is a forward-slash-separated \
+             path relative to `LOG_DIR`, e.g. `2026-05-02/14/kinova_arm.csv` or \
+             `2026-05-02/14/inputs.csv`. Path traversal (`..`) is rejected.",
+        ))
+        .parameter(
+            utoipa::openapi::path::ParameterBuilder::new()
+                .name("path")
+                .parameter_in(utoipa::openapi::path::ParameterIn::Path)
+                .required(utoipa::openapi::Required::True)
+                .description(Some(
+                    "Relative path under LOG_DIR, e.g. 2026-05-02/14/kinova_arm.csv",
+                ))
+                .build(),
+        )
+        .response(
+            "200",
+            ResponseBuilder::new()
+                .description("CSV file contents")
+                .content("text/csv", ContentBuilder::new().build())
+                .build(),
+        )
+        .build();
+
+    paths = paths
+        .path(
+            "/logs",
+            PathItemBuilder::new()
+                .operation(HttpMethod::Get, logs_index_op)
+                .build(),
+        )
+        .path(
+            "/logs/file/{path}",
+            PathItemBuilder::new()
+                .operation(HttpMethod::Get, logs_file_op)
+                .build(),
+        );
 
     // Generate per-sensor paths
     for sensor in registry.list() {
@@ -820,49 +1107,63 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
                 );
         }
 
-        if sensor.has_endpoint_access {
-            let list_op = OperationBuilder::new()
-                .tag(tag)
-                .summary(Some(format!("{} - List Endpoints", sensor.display_name)))
-                .description(Some(
-                    "List all endpoints in the loaded `flat_endpoints.json` map — \
-                     no CAN I/O, just metadata. Each entry shows `id`, `type`, and `access`.\n\n\
-                     Use `GET /{id}/endpoint/{path}` to read a specific value, \
-                     or `POST /{id}/endpoint/{path}` with `{\"value\": X}` to write one.".to_string()
-                ))
-                .response("200", ResponseBuilder::new()
-                    .description("Map of path → {id, type, access}")
-                    .content("application/json", ContentBuilder::new().build())
-                    .build())
-                .build();
+        // /commands — uniform across all drivers
+        let commands_op = OperationBuilder::new()
+            .tag(tag)
+            .summary(Some(format!("{} - List Commands", sensor.display_name)))
+            .description(Some(format!(
+                "List the commands accepted by **{}** as a `name → {{type, description, unit}}` map. \
+                 Same fields as `command_schema` in `/info`, presented as a lookup table.",
+                sensor.display_name
+            )))
+            .response("200", ResponseBuilder::new()
+                .description("Map of command name → metadata")
+                .content("application/json", ContentBuilder::new().build())
+                .build())
+            .build();
 
-            let read_ep_op = OperationBuilder::new()
-                .tag(tag)
-                .summary(Some(format!("{} - Read Endpoint", sensor.display_name)))
-                .description(Some(
-                    "Read a single ODrive endpoint by its flat-endpoint path via CAN SDO.\n\n\
-                     **Example paths** (from `flat_endpoints.json`):\n\
-                     - `axis0.controller.config.vel_limit`\n\
-                     - `axis0.config.motor.phase_resistance`\n\
-                     - `inc_encoder0.config.cpr`\n\n\
-                     Returns `{path, value, type}`.".to_string()
-                ))
-                .response("200", ResponseBuilder::new()
-                    .description("Endpoint value")
-                    .content("application/json", ContentBuilder::new()
-                        .example(Some(serde_json::json!({"path": "axis0.controller.config.vel_limit", "value": 20.0, "type": "float"})))
-                        .build())
-                    .build())
-                .build();
+        // /endpoints — uniform across all drivers
+        let list_op = OperationBuilder::new()
+            .tag(tag)
+            .summary(Some(format!("{} - List Endpoints", sensor.display_name)))
+            .description(Some(format!(
+                "List the readable endpoints exposed by **{}**. \
+                 For most drivers this is the data-schema field set; for ODrive it is the loaded \
+                 `flat_endpoints.json` map. Use `GET /{}/endpoint/{{path}}` to read a single value.",
+                sensor.display_name, sensor.id
+            )))
+            .response("200", ResponseBuilder::new()
+                .description("Map of path → endpoint metadata")
+                .content("application/json", ContentBuilder::new().build())
+                .build())
+            .build();
 
+        let read_ep_op = OperationBuilder::new()
+            .tag(tag)
+            .summary(Some(format!("{} - Read Endpoint", sensor.display_name)))
+            .description(Some(format!(
+                "Read a single endpoint from **{}** by path. Returns `{{path, value, type}}`.\n\n\
+                 Paths come from `GET /{}/endpoints`.",
+                sensor.display_name, sensor.id
+            )))
+            .response("200", ResponseBuilder::new()
+                .description("Endpoint value")
+                .content("application/json", ContentBuilder::new().build())
+                .build())
+            .build();
+
+        let mut endpoint_path_item = PathItemBuilder::new()
+            .operation(HttpMethod::Get, read_ep_op);
+
+        if sensor.has_endpoint_write {
             let write_ep_op = OperationBuilder::new()
                 .tag(tag)
                 .summary(Some(format!("{} - Write Endpoint", sensor.display_name)))
-                .description(Some(
-                    "Write a single ODrive endpoint by its flat-endpoint path via CAN SDO.\n\n\
-                     Body must be `{\"value\": <number|bool>}` matching the endpoint type.\n\n\
-                     **Example**: `POST /{id}/endpoint/axis0.controller.config.vel_limit` with `{\"value\": 20.0}`".to_string()
-                ))
+                .description(Some(format!(
+                    "Write a single endpoint on **{}** by path. \
+                     Body must be `{{\"value\": <number|bool>}}` matching the endpoint type.",
+                    sensor.display_name
+                )))
                 .request_body(Some(RequestBodyBuilder::new()
                     .content("application/json", ContentBuilder::new()
                         .example(Some(serde_json::json!({"value": 20.0})))
@@ -871,21 +1172,20 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
                     .build()))
                 .response("200", ResponseBuilder::new()
                     .description("Write confirmed")
-                    .content("application/json", ContentBuilder::new()
-                        .example(Some(serde_json::json!({"path": "axis0.controller.config.vel_limit", "written": true})))
-                        .build())
+                    .content("application/json", ContentBuilder::new().build())
                     .build())
                 .build();
-
-            paths = paths
-                .path(format!("{}/endpoints", base), PathItemBuilder::new()
-                    .operation(HttpMethod::Get, list_op)
-                    .build())
-                .path(format!("{}/endpoint/{{path}}", base), PathItemBuilder::new()
-                    .operation(HttpMethod::Get, read_ep_op)
-                    .operation(HttpMethod::Post, write_ep_op)
-                    .build());
+            endpoint_path_item = endpoint_path_item.operation(HttpMethod::Post, write_ep_op);
         }
+
+        paths = paths
+            .path(format!("{}/commands", base), PathItemBuilder::new()
+                .operation(HttpMethod::Get, commands_op)
+                .build())
+            .path(format!("{}/endpoints", base), PathItemBuilder::new()
+                .operation(HttpMethod::Get, list_op)
+                .build())
+            .path(format!("{}/endpoint/{{path}}", base), endpoint_path_item.build());
 
         if sensor.has_calibrate {
             let cal_op = OperationBuilder::new()

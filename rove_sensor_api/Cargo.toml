@@ -19,3 +19,7 @@ socketcan = { version = "3", features = ["tokio"] }
 dirs = "5"
 tokio-serial = "5"
 libloading = "0.8"
+toml = "0.8"
+tokio-modbus = { version = "0.16", default-features = false, features = ["rtu"] }
+futures = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
