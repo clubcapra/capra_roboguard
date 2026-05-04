@@ -1,0 +1,2950 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Capra Rove Sensor Interface",
+    "description": "Robot sensor API with UDP transport and HTTP documentation.\n\n## Discovery\n\n`GET /discover` lists all sensors with their endpoints and UDP ports.\n\n## Per-Sensor Endpoints\n\nEach sensor has its own routes:\n- `GET /{sensor_id}/info` - schema, commands, UDP packet format\n- `GET /{sensor_id}/data` - current data snapshot\n- `POST /{sensor_id}/command` - send a command\n- `POST /{sensor_id}/estop` - emergency stop (supported drivers only)\n\n## UDP Protocol\n\nPackets: `| version (1B) | msg_type (1B) | seq_num (2B LE) | JSON payload |`\n\n### Data Subscription\nSend **Subscribe (0x01)** to the sensor's data port. The robot pushes **Data (0x03)** packets to your address continuously. Send **Unsubscribe (0x02)** to stop.\n\n### Commands\n- **REST sensors**: Send **Command (0x10)**, get **CommandAck (0x11)**.\n- **Stream sensors** (CAN watchdog): Send **StreamStart (0x12)** once, robot re-sends to hardware at interval. **StreamStop (0x13)** to cancel.",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/discover": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "List all available sensors",
+        "description": "Returns every registered sensor with its ID, name, UDP ports, command mode, and HTTP endpoint paths.",
+        "responses": {
+          "200": {
+            "description": "List of sensors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/calibrate": {
+      "post": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - Calibrate",
+        "description": "Start a calibration sequence on **Kinova Gen2 6DOF (Custom Spherical)**.\n\n**Body**: `{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "full"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Calibration started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/command": {
+      "post": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - Send Command",
+        "description": "Send a command to **Kinova Gen2 6DOF (Custom Spherical)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 5003\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "erase_trajectories": {
+                    "type": "boolean"
+                  },
+                  "joint_1_pos": {
+                    "type": "number"
+                  },
+                  "joint_1_vel": {
+                    "type": "number"
+                  },
+                  "joint_2_pos": {
+                    "type": "number"
+                  },
+                  "joint_2_vel": {
+                    "type": "number"
+                  },
+                  "joint_3_pos": {
+                    "type": "number"
+                  },
+                  "joint_3_vel": {
+                    "type": "number"
+                  },
+                  "joint_4_pos": {
+                    "type": "number"
+                  },
+                  "joint_4_vel": {
+                    "type": "number"
+                  },
+                  "joint_5_pos": {
+                    "type": "number"
+                  },
+                  "joint_5_vel": {
+                    "type": "number"
+                  },
+                  "joint_6_pos": {
+                    "type": "number"
+                  },
+                  "joint_6_vel": {
+                    "type": "number"
+                  },
+                  "move_home": {
+                    "type": "boolean"
+                  },
+                  "set_joint_zero": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "erase_trajectories": false,
+                "joint_1_pos": 0,
+                "joint_1_vel": 0,
+                "joint_2_pos": 0,
+                "joint_2_vel": 0,
+                "joint_3_pos": 0,
+                "joint_3_vel": 0,
+                "joint_4_pos": 0,
+                "joint_4_vel": 0,
+                "joint_5_pos": 0,
+                "joint_5_vel": 0,
+                "joint_6_pos": 0,
+                "joint_6_vel": 0,
+                "move_home": false,
+                "set_joint_zero": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/commands": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - List Commands",
+        "description": "List the commands accepted by **Kinova Gen2 6DOF (Custom Spherical)** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/data": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - Read Data",
+        "description": "Read current data from **Kinova Gen2 6DOF (Custom Spherical)**.\n\nThis mirrors what you'd get via UDP subscription on port 5002.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel_x": {
+                      "type": "number"
+                    },
+                    "accel_y": {
+                      "type": "number"
+                    },
+                    "accel_z": {
+                      "type": "number"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "joint_1_current": {
+                      "type": "number"
+                    },
+                    "joint_1_pos": {
+                      "type": "number"
+                    },
+                    "joint_1_temp": {
+                      "type": "number"
+                    },
+                    "joint_1_vel": {
+                      "type": "number"
+                    },
+                    "joint_2_current": {
+                      "type": "number"
+                    },
+                    "joint_2_pos": {
+                      "type": "number"
+                    },
+                    "joint_2_temp": {
+                      "type": "number"
+                    },
+                    "joint_2_vel": {
+                      "type": "number"
+                    },
+                    "joint_3_current": {
+                      "type": "number"
+                    },
+                    "joint_3_pos": {
+                      "type": "number"
+                    },
+                    "joint_3_temp": {
+                      "type": "number"
+                    },
+                    "joint_3_vel": {
+                      "type": "number"
+                    },
+                    "joint_4_current": {
+                      "type": "number"
+                    },
+                    "joint_4_pos": {
+                      "type": "number"
+                    },
+                    "joint_4_temp": {
+                      "type": "number"
+                    },
+                    "joint_4_vel": {
+                      "type": "number"
+                    },
+                    "joint_5_current": {
+                      "type": "number"
+                    },
+                    "joint_5_pos": {
+                      "type": "number"
+                    },
+                    "joint_5_temp": {
+                      "type": "number"
+                    },
+                    "joint_5_vel": {
+                      "type": "number"
+                    },
+                    "joint_6_current": {
+                      "type": "number"
+                    },
+                    "joint_6_pos": {
+                      "type": "number"
+                    },
+                    "joint_6_temp": {
+                      "type": "number"
+                    },
+                    "joint_6_vel": {
+                      "type": "number"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - Read Endpoint",
+        "description": "Read a single endpoint from **Kinova Gen2 6DOF (Custom Spherical)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /kinova_arm/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/endpoints": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - List Endpoints",
+        "description": "List the readable endpoints exposed by **Kinova Gen2 6DOF (Custom Spherical)**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /kinova_arm/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/info": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (Custom Spherical) - Info",
+        "description": "Full schema and UDP protocol details for **Kinova Gen2 6DOF (Custom Spherical)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 5002\nCommand UDP port: 5003",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "List available log files",
+        "description": "Returns the directory tree under `LOG_DIR` as `{date → {hour → {sensors[], inputs}}}`. Use `GET /logs/file/{path}` with the relative path to download a specific CSV.",
+        "responses": {
+          "200": {
+            "description": "Available log files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogIndex"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs/file/{path}": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "Download a log file",
+        "description": "Download a CSV file from the log tree. `path` is a forward-slash-separated path relative to `LOG_DIR`, e.g. `2026-05-02/14/kinova_arm.csv` or `2026-05-02/14/inputs.csv`. Path traversal (`..`) is rejected.",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "description": "Relative path under LOG_DIR, e.g. 2026-05-02/14/kinova_arm.csv",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file contents",
+            "content": {
+              "text/csv": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive/endpoints": {
+      "post": {
+        "tags": [
+          "odrive"
+        ],
+        "summary": "Upload flat_endpoints.json",
+        "description": "Upload the ODrive `flat_endpoints.json` file to enable config read/write on all nodes.\n\n**How to get the file** (on your dev machine where odrivetool is installed):\n```\npython3 -c \"import odrive, os; print(os.path.dirname(odrive.__file__))\"\n```Then find `flat_endpoints.json` in that directory.\n\n**Upload via curl:**\n```\ncurl -X POST http://raspberrypi.local:8080/odrive/endpoints \\\n  -H 'Content-Type: application/json' \\\n  --data-binary @flat_endpoints.json\n```\n\nOr paste the file contents directly in the request body below.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "endpoints": {
+                  "axis0.controller.config.vel_limit": {
+                    "id": 456,
+                    "type": "float"
+                  },
+                  "axis0.motor.config.phase_resistance": {
+                    "id": 123,
+                    "type": "float"
+                  }
+                },
+                "fw_version": "0.6.11",
+                "hw_version": "1.0.0"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoints loaded",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loaded": 1234,
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/calibrate": {
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Calibrate",
+        "description": "Start a calibration sequence on **ODrive Node 31**.\n\n**Body**: `{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "full"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Calibration started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/command": {
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Send Command",
+        "description": "Send a command to **ODrive Node 31**.\n\nMode: Stream (250ms watchdog)\nUDP command port: 5009\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0,
+                "input_mode": 0,
+                "input_pos": 0,
+                "input_torque": 0,
+                "input_torque_ff": 0,
+                "input_vel": 0,
+                "input_vel_ff": 0,
+                "pos_gain": 0,
+                "reboot": false,
+                "traj_accel_limit": 0,
+                "traj_decel_limit": 0,
+                "traj_inertia": 0,
+                "traj_vel_limit": 0,
+                "vel_gain": 0,
+                "vel_integrator_gain": 0,
+                "velocity_limit": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/commands": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - List Commands",
+        "description": "List the commands accepted by **ODrive Node 31** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/config": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Read Config",
+        "description": "Read calibration/configuration parameters from **ODrive Node 31** via CAN SDO.\n\nReturns float and integer fields read from the drive firmware using `flat_endpoints.json`. Requires `ODRIVE_ENDPOINTS` env var at startup.",
+        "responses": {
+          "200": {
+            "description": "Config parameters",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Write Config",
+        "description": "Write configuration parameters to **ODrive Node 31** via CAN SDO.\n\n**Supported keys** (all optional):\n- `phase_resistance` (float, Ω)\n- `phase_inductance` (float, H)\n- `current_lim` (float, A)\n- `vel_limit` (float, rev/s)\n- `pos_gain` (float)\n- `vel_gain` (float)\n- `vel_integrator_gain` (float)\n- `pole_pairs` (int)\n- `cpr` (int, counts per revolution)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "current_lim": 40,
+                "vel_gain": 0.16,
+                "vel_integrator_gain": 0.32,
+                "vel_limit": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Written keys and any errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/data": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Read Data",
+        "description": "Read current data from **ODrive Node 31**.\n\nThis mirrors what you'd get via UDP subscription on port 5008.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 31** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_31/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Write Endpoint",
+        "description": "Write a single endpoint on **ODrive Node 31** by path. Body must be `{\"value\": <number|bool>}` matching the endpoint type.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Write confirmed",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 31**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /odrive_31/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/estop": {
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 31**.\n\nDisarms the motor with `ESTOP_REQUESTED`. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/info": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 31**.\n\nMode: Stream (250ms watchdog)\nData UDP port: 5008\nCommand UDP port: 5009",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/calibrate": {
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Calibrate",
+        "description": "Start a calibration sequence on **ODrive Node 32**.\n\n**Body**: `{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "full"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Calibration started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/command": {
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Send Command",
+        "description": "Send a command to **ODrive Node 32**.\n\nMode: Stream (250ms watchdog)\nUDP command port: 5013\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0,
+                "input_mode": 0,
+                "input_pos": 0,
+                "input_torque": 0,
+                "input_torque_ff": 0,
+                "input_vel": 0,
+                "input_vel_ff": 0,
+                "pos_gain": 0,
+                "reboot": false,
+                "traj_accel_limit": 0,
+                "traj_decel_limit": 0,
+                "traj_inertia": 0,
+                "traj_vel_limit": 0,
+                "vel_gain": 0,
+                "vel_integrator_gain": 0,
+                "velocity_limit": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/commands": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - List Commands",
+        "description": "List the commands accepted by **ODrive Node 32** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/config": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Read Config",
+        "description": "Read calibration/configuration parameters from **ODrive Node 32** via CAN SDO.\n\nReturns float and integer fields read from the drive firmware using `flat_endpoints.json`. Requires `ODRIVE_ENDPOINTS` env var at startup.",
+        "responses": {
+          "200": {
+            "description": "Config parameters",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Write Config",
+        "description": "Write configuration parameters to **ODrive Node 32** via CAN SDO.\n\n**Supported keys** (all optional):\n- `phase_resistance` (float, Ω)\n- `phase_inductance` (float, H)\n- `current_lim` (float, A)\n- `vel_limit` (float, rev/s)\n- `pos_gain` (float)\n- `vel_gain` (float)\n- `vel_integrator_gain` (float)\n- `pole_pairs` (int)\n- `cpr` (int, counts per revolution)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "current_lim": 40,
+                "vel_gain": 0.16,
+                "vel_integrator_gain": 0.32,
+                "vel_limit": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Written keys and any errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/data": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Read Data",
+        "description": "Read current data from **ODrive Node 32**.\n\nThis mirrors what you'd get via UDP subscription on port 5012.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 32** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_32/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Write Endpoint",
+        "description": "Write a single endpoint on **ODrive Node 32** by path. Body must be `{\"value\": <number|bool>}` matching the endpoint type.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Write confirmed",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 32**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /odrive_32/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/estop": {
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 32**.\n\nDisarms the motor with `ESTOP_REQUESTED`. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/info": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 32**.\n\nMode: Stream (250ms watchdog)\nData UDP port: 5012\nCommand UDP port: 5013",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/calibrate": {
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Calibrate",
+        "description": "Start a calibration sequence on **ODrive Node 33**.\n\n**Body**: `{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "full"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Calibration started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/command": {
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Send Command",
+        "description": "Send a command to **ODrive Node 33**.\n\nMode: Stream (250ms watchdog)\nUDP command port: 5007\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0,
+                "input_mode": 0,
+                "input_pos": 0,
+                "input_torque": 0,
+                "input_torque_ff": 0,
+                "input_vel": 0,
+                "input_vel_ff": 0,
+                "pos_gain": 0,
+                "reboot": false,
+                "traj_accel_limit": 0,
+                "traj_decel_limit": 0,
+                "traj_inertia": 0,
+                "traj_vel_limit": 0,
+                "vel_gain": 0,
+                "vel_integrator_gain": 0,
+                "velocity_limit": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/commands": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - List Commands",
+        "description": "List the commands accepted by **ODrive Node 33** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/config": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Read Config",
+        "description": "Read calibration/configuration parameters from **ODrive Node 33** via CAN SDO.\n\nReturns float and integer fields read from the drive firmware using `flat_endpoints.json`. Requires `ODRIVE_ENDPOINTS` env var at startup.",
+        "responses": {
+          "200": {
+            "description": "Config parameters",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Write Config",
+        "description": "Write configuration parameters to **ODrive Node 33** via CAN SDO.\n\n**Supported keys** (all optional):\n- `phase_resistance` (float, Ω)\n- `phase_inductance` (float, H)\n- `current_lim` (float, A)\n- `vel_limit` (float, rev/s)\n- `pos_gain` (float)\n- `vel_gain` (float)\n- `vel_integrator_gain` (float)\n- `pole_pairs` (int)\n- `cpr` (int, counts per revolution)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "current_lim": 40,
+                "vel_gain": 0.16,
+                "vel_integrator_gain": 0.32,
+                "vel_limit": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Written keys and any errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/data": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Read Data",
+        "description": "Read current data from **ODrive Node 33**.\n\nThis mirrors what you'd get via UDP subscription on port 5006.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 33** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_33/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Write Endpoint",
+        "description": "Write a single endpoint on **ODrive Node 33** by path. Body must be `{\"value\": <number|bool>}` matching the endpoint type.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Write confirmed",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 33**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /odrive_33/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/estop": {
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 33**.\n\nDisarms the motor with `ESTOP_REQUESTED`. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/info": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 33**.\n\nMode: Stream (250ms watchdog)\nData UDP port: 5006\nCommand UDP port: 5007",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/calibrate": {
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Calibrate",
+        "description": "Start a calibration sequence on **ODrive Node 34**.\n\n**Body**: `{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "full"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Calibration started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/command": {
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Send Command",
+        "description": "Send a command to **ODrive Node 34**.\n\nMode: Stream (250ms watchdog)\nUDP command port: 5011\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0,
+                "input_mode": 0,
+                "input_pos": 0,
+                "input_torque": 0,
+                "input_torque_ff": 0,
+                "input_vel": 0,
+                "input_vel_ff": 0,
+                "pos_gain": 0,
+                "reboot": false,
+                "traj_accel_limit": 0,
+                "traj_decel_limit": 0,
+                "traj_inertia": 0,
+                "traj_vel_limit": 0,
+                "vel_gain": 0,
+                "vel_integrator_gain": 0,
+                "velocity_limit": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/commands": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - List Commands",
+        "description": "List the commands accepted by **ODrive Node 34** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/config": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Read Config",
+        "description": "Read calibration/configuration parameters from **ODrive Node 34** via CAN SDO.\n\nReturns float and integer fields read from the drive firmware using `flat_endpoints.json`. Requires `ODRIVE_ENDPOINTS` env var at startup.",
+        "responses": {
+          "200": {
+            "description": "Config parameters",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Write Config",
+        "description": "Write configuration parameters to **ODrive Node 34** via CAN SDO.\n\n**Supported keys** (all optional):\n- `phase_resistance` (float, Ω)\n- `phase_inductance` (float, H)\n- `current_lim` (float, A)\n- `vel_limit` (float, rev/s)\n- `pos_gain` (float)\n- `vel_gain` (float)\n- `vel_integrator_gain` (float)\n- `pole_pairs` (int)\n- `cpr` (int, counts per revolution)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "current_lim": 40,
+                "vel_gain": 0.16,
+                "vel_integrator_gain": 0.32,
+                "vel_limit": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Written keys and any errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/data": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Read Data",
+        "description": "Read current data from **ODrive Node 34**.\n\nThis mirrors what you'd get via UDP subscription on port 5010.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 34** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_34/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Write Endpoint",
+        "description": "Write a single endpoint on **ODrive Node 34** by path. Body must be `{\"value\": <number|bool>}` matching the endpoint type.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": 20
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Write confirmed",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 34**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /odrive_34/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/estop": {
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 34**.\n\nDisarms the motor with `ESTOP_REQUESTED`. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/info": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 34**.\n\nMode: Stream (250ms watchdog)\nData UDP port: 5010\nCommand UDP port: 5011",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/command": {
+      "post": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - Send Command",
+        "description": "Send a command to **Robotiq 2F-140 Gripper**.\n\nMode: REST (one-shot)\nUDP command port: 5005\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "activate": {
+                    "type": "boolean"
+                  },
+                  "auto_release": {
+                    "type": "integer"
+                  },
+                  "force": {
+                    "type": "integer"
+                  },
+                  "goto": {
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "type": "integer"
+                  },
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "stop": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "example": {
+                "activate": false,
+                "auto_release": 0,
+                "force": 0,
+                "goto": false,
+                "position": 0,
+                "speed": 0,
+                "stop": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/commands": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - List Commands",
+        "description": "List the commands accepted by **Robotiq 2F-140 Gripper** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/data": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - Read Data",
+        "description": "Read current data from **Robotiq 2F-140 Gripper**.\n\nThis mirrors what you'd get via UDP subscription on port 5004.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "activated": {
+                      "type": "boolean"
+                    },
+                    "current_a": {
+                      "type": "number"
+                    },
+                    "current_raw": {
+                      "type": "integer"
+                    },
+                    "fault": {
+                      "type": "integer"
+                    },
+                    "going_to_position": {
+                      "type": "boolean"
+                    },
+                    "link_up": {
+                      "type": "boolean"
+                    },
+                    "object_status": {
+                      "type": "integer"
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "position_request_echo": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - Read Endpoint",
+        "description": "Read a single endpoint from **Robotiq 2F-140 Gripper** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /robotiq_gripper/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/endpoints": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - List Endpoints",
+        "description": "List the readable endpoints exposed by **Robotiq 2F-140 Gripper**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /robotiq_gripper/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/estop": {
+      "post": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **Robotiq 2F-140 Gripper**.\n\nDisarms the motor with `ESTOP_REQUESTED`. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/info": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper - Info",
+        "description": "Full schema and UDP protocol details for **Robotiq 2F-140 Gripper**.\n\nMode: REST (one-shot)\nData UDP port: 5004\nCommand UDP port: 5005",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/command": {
+      "post": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - Send Command",
+        "description": "Send a command to **VectorNav VN-300 (/dev/ttyUSB_VN300)**.\n\nMode: REST (one-shot)\nUDP command port: 5001\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "string"
+                  },
+                  "reset": {
+                    "type": "boolean"
+                  },
+                  "restore_factory_settings": {
+                    "type": "boolean"
+                  },
+                  "set_async_freq": {
+                    "type": "integer"
+                  },
+                  "set_async_type": {
+                    "type": "integer"
+                  },
+                  "set_initial_heading": {
+                    "type": "number"
+                  },
+                  "tare": {
+                    "type": "boolean"
+                  },
+                  "write_settings": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "example": {
+                "raw": "",
+                "reset": false,
+                "restore_factory_settings": false,
+                "set_async_freq": 0,
+                "set_async_type": 0,
+                "set_initial_heading": 0,
+                "tare": false,
+                "write_settings": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/commands": {
+      "get": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - List Commands",
+        "description": "List the commands accepted by **VectorNav VN-300 (/dev/ttyUSB_VN300)** as a `name → {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name → metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/data": {
+      "get": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - Read Data",
+        "description": "Read current data from **VectorNav VN-300 (/dev/ttyUSB_VN300)**.\n\nThis mirrors what you'd get via UDP subscription on port 5000.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel_x": {
+                      "type": "number"
+                    },
+                    "accel_y": {
+                      "type": "number"
+                    },
+                    "accel_z": {
+                      "type": "number"
+                    },
+                    "altitude": {
+                      "type": "number"
+                    },
+                    "att_uncertainty": {
+                      "type": "number"
+                    },
+                    "gnss_compass_active": {
+                      "type": "boolean"
+                    },
+                    "gnss_fix": {
+                      "type": "boolean"
+                    },
+                    "gnss_fix_type": {
+                      "type": "integer"
+                    },
+                    "gnss_heading_aiding": {
+                      "type": "boolean"
+                    },
+                    "gnss_num_sats": {
+                      "type": "integer"
+                    },
+                    "gps_tow": {
+                      "type": "number"
+                    },
+                    "gps_week": {
+                      "type": "integer"
+                    },
+                    "gyro_x": {
+                      "type": "number"
+                    },
+                    "gyro_y": {
+                      "type": "number"
+                    },
+                    "gyro_z": {
+                      "type": "number"
+                    },
+                    "ins_error": {
+                      "type": "integer"
+                    },
+                    "ins_mode": {
+                      "type": "integer"
+                    },
+                    "ins_status_raw": {
+                      "type": "integer"
+                    },
+                    "last_async_header": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "number"
+                    },
+                    "longitude": {
+                      "type": "number"
+                    },
+                    "mag_x": {
+                      "type": "number"
+                    },
+                    "mag_y": {
+                      "type": "number"
+                    },
+                    "mag_z": {
+                      "type": "number"
+                    },
+                    "messages_dropped": {
+                      "type": "integer"
+                    },
+                    "messages_parsed": {
+                      "type": "integer"
+                    },
+                    "pitch": {
+                      "type": "number"
+                    },
+                    "port": {
+                      "type": "string"
+                    },
+                    "pos_uncertainty": {
+                      "type": "number"
+                    },
+                    "pressure": {
+                      "type": "number"
+                    },
+                    "roll": {
+                      "type": "number"
+                    },
+                    "temperature": {
+                      "type": "number"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "vel_down": {
+                      "type": "number"
+                    },
+                    "vel_east": {
+                      "type": "number"
+                    },
+                    "vel_north": {
+                      "type": "number"
+                    },
+                    "vel_uncertainty": {
+                      "type": "number"
+                    },
+                    "yaw": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - Read Endpoint",
+        "description": "Read a single endpoint from **VectorNav VN-300 (/dev/ttyUSB_VN300)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /vectornav_ttyUSB_VN300/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/endpoints": {
+      "get": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - List Endpoints",
+        "description": "List the readable endpoints exposed by **VectorNav VN-300 (/dev/ttyUSB_VN300)**. For most drivers this is the data-schema field set; for ODrive it is the loaded `flat_endpoints.json` map. Use `GET /vectornav_ttyUSB_VN300/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path → endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_ttyUSB_VN300/info": {
+      "get": {
+        "tags": [
+          "vectornav_ttyUSB_VN300"
+        ],
+        "summary": "VectorNav VN-300 (/dev/ttyUSB_VN300) - Info",
+        "description": "Full schema and UDP protocol details for **VectorNav VN-300 (/dev/ttyUSB_VN300)**.\n\nMode: REST (one-shot)\nData UDP port: 5000\nCommand UDP port: 5001",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommandMode": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Request/response: client sends a single command, server replies once.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Rest"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Streaming: client sends Command packets continuously at `interval_ms`.\nEach packet is processed as it arrives — the server does not loop or\nre-send anything. Typical use: CAN control loops sending ODrive setpoints.",
+            "required": [
+              "interval_ms",
+              "type"
+            ],
+            "properties": {
+              "interval_ms": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Expected client send interval in milliseconds.",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Stream"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Whether commands are one-shot or arrive as a continuous stream."
+      },
+      "CommandProtocolInfo": {
+        "type": "object",
+        "required": [
+          "description",
+          "flow",
+          "packets"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "flow": {
+            "type": "string"
+          },
+          "packets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PacketExample"
+            }
+          }
+        }
+      },
+      "CommandResult": {
+        "type": "object",
+        "required": [
+          "status",
+          "result"
+        ],
+        "properties": {
+          "result": {},
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "DataSubscriptionInfo": {
+        "type": "object",
+        "required": [
+          "description",
+          "flow",
+          "subscribe_packet",
+          "unsubscribe_packet",
+          "data_push_packet"
+        ],
+        "properties": {
+          "data_push_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          },
+          "description": {
+            "type": "string"
+          },
+          "flow": {
+            "type": "string"
+          },
+          "subscribe_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          },
+          "unsubscribe_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          }
+        }
+      },
+      "DiscoverResponse": {
+        "type": "object",
+        "required": [
+          "sensors"
+        ],
+        "properties": {
+          "sensors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensorSummary"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "FieldDescriptor": {
+        "type": "object",
+        "description": "Describes one field in a data or command schema (for OpenAPI/Scalar docs).",
+        "required": [
+          "name",
+          "description",
+          "type_name"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type_name": {
+            "type": "string",
+            "description": "Rust type name: \"f64\", \"u16\", \"bool\", \"String\", etc."
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Physical unit if applicable: \"degrees\", \"rpm\", \"m/s\"."
+          }
+        }
+      },
+      "LogDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "hours"
+        ],
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogHour"
+            }
+          }
+        }
+      },
+      "LogHour": {
+        "type": "object",
+        "required": [
+          "hour",
+          "sensors"
+        ],
+        "properties": {
+          "hour": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sensors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LogIndex": {
+        "type": "object",
+        "required": [
+          "root",
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogDay"
+            }
+          },
+          "root": {
+            "type": "string"
+          }
+        }
+      },
+      "PacketExample": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "header_hex"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "header_hex": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "payload_example": {}
+        }
+      },
+      "SensorEndpoints": {
+        "type": "object",
+        "required": [
+          "info",
+          "data",
+          "command",
+          "commands",
+          "endpoints",
+          "endpoint"
+        ],
+        "properties": {
+          "calibrate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "command": {
+            "type": "string"
+          },
+          "commands": {
+            "type": "string"
+          },
+          "config": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "endpoints": {
+            "type": "string"
+          },
+          "estop": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "info": {
+            "type": "string"
+          }
+        }
+      },
+      "SensorInfoResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "command_mode",
+          "data_port",
+          "command_port",
+          "data_schema",
+          "command_schema",
+          "udp_protocol"
+        ],
+        "properties": {
+          "command_mode": {
+            "$ref": "#/components/schemas/CommandMode"
+          },
+          "command_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "command_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            }
+          },
+          "data_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "data_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            }
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "udp_protocol": {
+            "$ref": "#/components/schemas/UdpProtocolInfo"
+          }
+        }
+      },
+      "SensorSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "command_mode",
+          "data_port",
+          "command_port",
+          "endpoints"
+        ],
+        "properties": {
+          "command_mode": {
+            "$ref": "#/components/schemas/CommandMode"
+          },
+          "command_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "data_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "endpoints": {
+            "$ref": "#/components/schemas/SensorEndpoints",
+            "description": "HTTP paths for this sensor."
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "UdpProtocolInfo": {
+        "type": "object",
+        "required": [
+          "header_format",
+          "data_subscription",
+          "command_protocol"
+        ],
+        "properties": {
+          "command_protocol": {
+            "$ref": "#/components/schemas/CommandProtocolInfo"
+          },
+          "data_subscription": {
+            "$ref": "#/components/schemas/DataSubscriptionInfo"
+          },
+          "header_format": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "discovery",
+      "description": "Discover available sensors"
+    },
+    {
+      "name": "odrive",
+      "description": "ODrive global operations (endpoint map upload)"
+    },
+    {
+      "name": "logs",
+      "description": "Time-series CSV logs. Sensor snapshots and commands are written to LOG_DIR/<YYYY-MM-DD>/<HH>/<sensor>.csv and inputs.csv, split hourly."
+    },
+    {
+      "name": "vectornav_ttyUSB_VN300",
+      "description": "VectorNav VN-300 (/dev/ttyUSB_VN300) | REST (one-shot) | Data UDP:5000 | Cmd UDP:5001"
+    },
+    {
+      "name": "kinova_arm",
+      "description": "Kinova Gen2 6DOF (Custom Spherical) | Stream (100ms watchdog) | Data UDP:5002 | Cmd UDP:5003"
+    },
+    {
+      "name": "robotiq_gripper",
+      "description": "Robotiq 2F-140 Gripper | REST (one-shot) | Data UDP:5004 | Cmd UDP:5005"
+    },
+    {
+      "name": "odrive_31",
+      "description": "ODrive Node 31 | Stream (250ms watchdog) | Data UDP:5008 | Cmd UDP:5009"
+    },
+    {
+      "name": "odrive_33",
+      "description": "ODrive Node 33 | Stream (250ms watchdog) | Data UDP:5006 | Cmd UDP:5007"
+    },
+    {
+      "name": "odrive_34",
+      "description": "ODrive Node 34 | Stream (250ms watchdog) | Data UDP:5010 | Cmd UDP:5011"
+    },
+    {
+      "name": "odrive_32",
+      "description": "ODrive Node 32 | Stream (250ms watchdog) | Data UDP:5012 | Cmd UDP:5013"
+    }
+  ]
+}

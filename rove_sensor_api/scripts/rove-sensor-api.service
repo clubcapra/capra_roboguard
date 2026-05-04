@@ -1,0 +1,42 @@
+[Unit]
+Description=Capra Roboguard sensor & actuator API (rove_sensor_api)
+Documentation=file:///home/capra/data/capra_rove_stack/capra_roboguard/rove_sensor_api/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=capra
+Group=capra
+WorkingDirectory=/home/capra/data/capra_rove_stack/capra_roboguard/rove_sensor_api
+
+# Bring can0 up before launching. Bitrate is 500 kbit/s — change here if your
+# bus runs at a different rate. Failure is non-fatal so the service still
+# starts on rigs without CAN connected.
+ExecStartPre=/bin/sh -c '/usr/sbin/ip link set can0 down 2>/dev/null || true'
+ExecStartPre=/bin/sh -c '/usr/sbin/ip link set can0 type can bitrate 500000 2>/dev/null || true'
+ExecStartPre=/bin/sh -c '/usr/sbin/ip link set can0 up 2>/dev/null || true'
+
+ExecStart=/home/capra/data/capra_rove_stack/capra_roboguard/rove_sensor_api/target/release/capra-rove-interface
+
+Environment=RUST_LOG=capra_rove_interface=info
+Environment=CAN_IFACE=can0
+Environment=LOG_DIR=/var/log/rove-sensor-api
+Environment=LOG_POLL_HZ=10
+
+Restart=on-failure
+RestartSec=2s
+
+# Allow binding to ports < 1024 if you ever change the HTTP port, and access
+# to raw CAN sockets without root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_RAW CAP_NET_ADMIN
+NoNewPrivileges=true
+
+# Sensor/serial/CAN access — capra needs to be in the dialout group already.
+SupplementaryGroups=dialout
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
