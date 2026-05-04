@@ -185,9 +185,16 @@ POST /{id}/estop                     — e-stop (if supported)
 GET  /{id}/config | POST /{id}/config — config read/write (if supported)
 POST /{id}/calibrate {…params…}      — trigger calibration (if supported)
 POST /odrive/endpoints  {…json…}     — upload flat-endpoint map (firmware)
+POST /reload                         — bounce the process; systemd restarts it
 GET  /logs                           — list CSV log files
 GET  /logs/file/{*path}              — download a CSV
 ```
+
+`POST /reload` is the recovery hatch when a driver didn't connect on cold boot
+(typically the Kinova arm). It exits the process; the systemd unit restarts it
+in ~2 s and every driver re-runs its connect path. The API is unavailable
+during the bounce, and active UDP subscriptions / streaming command sessions
+are dropped.
 
 ### Smoke test
 

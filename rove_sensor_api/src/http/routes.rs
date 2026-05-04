@@ -584,6 +584,26 @@ async fn logs_file(
     Ok(response)
 }
 
+// ── Reload (process bounce) ─────────────────────────────────────────────────
+
+// Drivers connect once at startup. The Kinova arm in particular is finicky
+// on a cold boot — sometimes it doesn't answer the SDK's discover broadcast
+// the first time. POST /reload exits the process with a non-zero code; the
+// systemd unit (Restart=on-failure) brings it back up, which re-runs every
+// driver's connect path. Service is unavailable for ~3–5 s during the bounce.
+async fn reload() -> Json<Value> {
+    tracing::warn!("/reload requested — exiting so systemd restarts the service");
+    tokio::spawn(async {
+        // Let axum flush the response before we drop the listener.
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        std::process::exit(1);
+    });
+    Json(serde_json::json!({
+        "status": "restarting",
+        "message": "process is exiting; systemd will restart the service in ~2s",
+    }))
+}
+
 // ── Scalar UI ───────────────────────────────────────────────────────────────
 
 async fn serve_scalar() -> Html<String> {
@@ -618,7 +638,8 @@ pub fn build_router(
         .route("/discover", get(discover))
         .with_state(registry.clone())
         .route("/odrive/endpoints", post(upload_endpoints))
-        .with_state(endpoint_map);
+        .with_state(endpoint_map)
+        .route("/reload", post(reload));
 
     // /logs/* routes — share the log manager.
     let logs_router: Router = Router::new()
@@ -818,6 +839,40 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
         "/discover",
         PathItemBuilder::new()
             .operation(HttpMethod::Get, discover_op)
+            .build(),
+    );
+
+    // /reload — process bounce so every driver re-runs its connect path.
+    let reload_op = OperationBuilder::new()
+        .tag("discovery")
+        .summary(Some("Reload all sensors (process bounce)"))
+        .description(Some(
+            "Exits the API process so the systemd unit restarts it. Every driver re-runs its \
+             connect path, which is the reliable fix when one device (typically the Kinova arm) \
+             didn't answer on cold boot. The API is unavailable for ~3–5 s during the bounce, and \
+             active UDP subscriptions / streaming command sessions are dropped.",
+        ))
+        .response(
+            "200",
+            ResponseBuilder::new()
+                .description("Restart scheduled")
+                .content(
+                    "application/json",
+                    ContentBuilder::new()
+                        .example(Some(serde_json::json!({
+                            "status": "restarting",
+                            "message": "process is exiting; systemd will restart the service in ~2s"
+                        })))
+                        .build(),
+                )
+                .build(),
+        )
+        .build();
+
+    paths = paths.path(
+        "/reload",
+        PathItemBuilder::new()
+            .operation(HttpMethod::Post, reload_op)
             .build(),
     );
 

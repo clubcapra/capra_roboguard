@@ -10,6 +10,11 @@ User=capra
 Group=capra
 WorkingDirectory=/home/capra/data/capra_rove_stack/capra_roboguard/rove_sensor_api
 
+# Hold off 15 s after boot so udev symlinks (/dev/ttyUSB_VN300,
+# /dev/ttyUSB_gripper), the Kinova subnet, and the CAN interface are all
+# settled before the API starts probing them.
+ExecStartPre=/bin/sleep 15
+
 # Bring can0 up before launching. Bitrate is 500 kbit/s — change here if your
 # bus runs at a different rate. Failure is non-fatal so the service still
 # starts on rigs without CAN connected.
