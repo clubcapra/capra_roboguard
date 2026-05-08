@@ -52,7 +52,6 @@ impl MessageType {
 
 pub const PROTOCOL_VERSION: u8 = 1;
 pub const HEADER_SIZE: usize = 4;
-pub const DEFAULT_PUSH_INTERVAL_MS: u64 = 100;
 
 /// A UDP packet with a 4-byte header and JSON payload.
 #[derive(Debug, Clone)]

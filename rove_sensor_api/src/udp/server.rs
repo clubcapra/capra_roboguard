@@ -9,7 +9,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::core::driver::SensorDriver;
 use crate::logging::LogManager;
-use crate::protocol::packet::{MessageType, Packet, DEFAULT_PUSH_INTERVAL_MS};
+use crate::protocol::packet::{MessageType, Packet};
 
 const MAX_PACKET_SIZE: usize = 4096;
 
@@ -18,11 +18,15 @@ struct Subscriber {
 }
 
 /// Spawn UDP listeners for a single sensor: one for data subscriptions, one for commands.
+///
+/// `default_push_interval_ms` is the fallback push rate used when a Subscribe
+/// packet doesn't carry its own `interval_ms` — comes from `config/server.toml`.
 pub async fn spawn_sensor_udp(
     driver: Arc<dyn SensorDriver>,
     data_port: u16,
     cmd_port: u16,
     log_mgr: Arc<LogManager>,
+    default_push_interval_ms: u64,
 ) -> Result<(), std::io::Error> {
     let sensor_id = driver.id();
     let sensor_id_owned = sensor_id.to_string();
@@ -66,7 +70,7 @@ pub async fn spawn_sensor_udp(
                             .json_payload()
                             .ok()
                             .and_then(|v| v.get("interval_ms")?.as_u64())
-                            .unwrap_or(DEFAULT_PUSH_INTERVAL_MS);
+                            .unwrap_or(default_push_interval_ms);
                         let interval = Duration::from_millis(interval_ms);
 
                         let mut subs = subscribers.lock().await;

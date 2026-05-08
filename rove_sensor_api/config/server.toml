@@ -1,0 +1,12 @@
+# Server-wide settings for capra-rove-interface.
+#
+# Per-driver settings live in <driver>.toml files; this file is only for
+# settings that apply to the API server itself.
+
+# Default UDP push interval (ms) used when a Subscribe packet does not include
+# `interval_ms`. Subscribers that send their own `interval_ms` always win, so
+# this only affects clients that subscribe with an empty payload.
+#   100 ms = 10 Hz
+#    50 ms = 20 Hz
+#    20 ms = 50 Hz
+default_push_interval_ms = 20

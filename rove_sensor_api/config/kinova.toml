@@ -21,8 +21,15 @@ local_cmd_port   = 25015
 local_bcast_port = 25025
 robot_port       = 55000
 
-rx_timeout_ms = 12
+# Each Ethernet SDK call sends a UDP request to the controller, which then
+# polls the actuators over its internal CAN bus and replies. If this timeout
+# expires before a per-actuator response comes back, the SDK still returns
+# success but fills the missing slots with sentinel bit patterns
+# (e.g. 0x80000001 → -1.401e-45). 12 ms was too tight — bumped so per-joint
+# velocity / current reads complete for all six actuators each call.
+rx_timeout_ms = 50
 command_rate_hz = 75
+# USB not working right now
 # use_usb = false
 
 # Kinova firmware reports its zero pose as 180° on each joint (per the SDK

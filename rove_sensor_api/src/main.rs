@@ -11,6 +11,7 @@ mod udp;
 use std::path::PathBuf;
 
 use core::registry::SensorRegistry;
+use core::server_config;
 use drivers::kinova::{self, config::KinovaConfig};
 use drivers::odrive::{discover_nodes, endpoints::SharedEndpointMap, node::WatchdogConfig};
 use drivers::robotiq::{self, config::RobotiqConfig};
@@ -127,9 +128,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(dir = %log_dir.display(), poll_hz, "logging started");
 
     // --- Start UDP listeners ---
+    let server_cfg = server_config::load()?;
+    tracing::info!(
+        default_push_interval_ms = server_cfg.default_push_interval_ms,
+        "server config loaded"
+    );
     for (id, driver) in registry.iter_drivers() {
         let (data_port, cmd_port) = registry.ports(&id).unwrap();
-        spawn_sensor_udp(driver, data_port, cmd_port, log_mgr.clone()).await?;
+        spawn_sensor_udp(
+            driver,
+            data_port,
+            cmd_port,
+            log_mgr.clone(),
+            server_cfg.default_push_interval_ms,
+        )
+        .await?;
     }
 
     // --- Start HTTP server with Scalar UI ---

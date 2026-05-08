@@ -6,14 +6,16 @@ use super::ffi::{angular_position_point, angular_velocity_point};
 use super::sdk::KinovaSdk;
 use super::state::KinovaState;
 
-// Telemetry is polled only when the arm is idle (no active velocity hold).
-// During velocity streaming we skip it: GetGeneralInformations blocks for up
-// to rx_timeout_ms and delays the 100 Hz velocity resend loop, causing stutter.
-// The SDK also shares one UDP socket — polling during streaming risks consuming
-// a velocity ACK as a telemetry response.  Clients that need live position
-// during streaming should read from the last-known state (updated immediately
-// when streaming stops).
+// Telemetry cadence. Idle (no velocity hold) polls aggressively so the UI feels
+// responsive. Streaming polls slower so each GetGeneralInformations call
+// (~rx_timeout_ms) doesn't starve the velocity resend loop — operators still
+// need live joint pos / current while teleoping.
+//
+// Both calls share the SDK's single UDP socket; serializing them on this one
+// worker thread is what keeps responses from aliasing. Don't introduce a
+// second SDK-calling thread.
 pub const TELEMETRY_INTERVAL_IDLE: Duration = Duration::from_millis(100); // 10 Hz idle
+pub const TELEMETRY_INTERVAL_STREAMING: Duration = Duration::from_millis(200); // 5 Hz while streaming
 
 pub const DEFAULT_COMMAND_RATE_HZ: u32 = 100;
 
@@ -57,16 +59,22 @@ pub fn run(
     let mut last_resend = Instant::now() - velocity_resend_interval;
     let mut last_keepalive = Instant::now();
     let mut consecutive_vel_failures: u32 = 0;
+    // Numerical-differentiation state for joint_vel. The Kinova firmware caches
+    // sub-threshold velocity readings (so GetAngularVelocity returns the last
+    // non-zero value indefinitely after motion stops). Diffing successive
+    // joint_pos samples gives a true zero when the arm is stationary.
+    let mut prev_pos_sample: Option<([f32; 6], Instant)> = None;
 
     loop {
         let now = Instant::now();
 
         let mut wake_at;
         if held_velocity.is_some() {
-            // While streaming velocity: wake only for velocity deadlines.
-            // Telemetry is skipped entirely during streaming — see constant docs.
+            // While streaming: wake for velocity resend, hold-timeout, *or*
+            // the slower telemetry deadline so operators see live data.
             wake_at = (last_resend + velocity_resend_interval)
-                .min(velocity_set_at + VELOCITY_HOLD_TIMEOUT);
+                .min(velocity_set_at + VELOCITY_HOLD_TIMEOUT)
+                .min(last_telemetry + TELEMETRY_INTERVAL_STREAMING);
         } else {
             // Idle: wake for telemetry and keepalive.
             wake_at = (last_telemetry + TELEMETRY_INTERVAL_IDLE)
@@ -151,10 +159,20 @@ pub fn run(
             last_keepalive = now;
         }
 
-        // Only poll telemetry when idle — no active velocity hold.
-        if held_velocity.is_none() && now >= last_telemetry + TELEMETRY_INTERVAL_IDLE {
-            poll_telemetry(&sdk, &state, &offsets);
-            last_telemetry = now;
+        // Telemetry. Idle: 10 Hz. Streaming: 5 Hz, ordered after the velocity
+        // resend in this iteration so the next resend deadline is fresh.
+        // Only poll if we've already serviced any pending velocity send for
+        // this iteration (the resend block above ran or wasn't due) — that
+        // keeps SDK calls strictly serialized on this thread without ever
+        // missing a resend deadline.
+        let telem_interval = if held_velocity.is_some() {
+            TELEMETRY_INTERVAL_STREAMING
+        } else {
+            TELEMETRY_INTERVAL_IDLE
+        };
+        if now >= last_telemetry + telem_interval {
+            poll_telemetry(&sdk, &state, &offsets, &mut prev_pos_sample);
+            last_telemetry = Instant::now();
         }
     }
 }
@@ -209,14 +227,21 @@ fn handle_one_shot(sdk: &KinovaSdk, cmd: &Cmd, offsets: &[f32; 6]) {
     }
 }
 
-fn poll_telemetry(sdk: &KinovaSdk, state: &Arc<RwLock<KinovaState>>, offsets: &[f32; 6]) {
-    // ONE call only.  The Kinova Ethernet SDK shares a single UDP socket with no
-    // sequence-number validation — any second sequential call risks reading the
-    // first call's response and corrupting all fields.
-    //
-    // GetGeneralInformations provides everything we need in a single round-trip:
-    // position, temps, voltage, accel, and joint current.
-    let Ok(gen) = sdk.get_general_informations() else { return };
+fn poll_telemetry(
+    sdk: &KinovaSdk,
+    state: &Arc<RwLock<KinovaState>>,
+    offsets: &[f32; 6],
+    prev_pos_sample: &mut Option<([f32; 6], Instant)>,
+) {
+    // Read pattern follows the working ROS2 wrapper at
+    // clubcapra/KinovaArmController. Three SDK calls in sequence, no delays.
+    // (Wrapper also reads GetAngularVelocity, but its firmware caches the
+    // last non-zero value below the encoder threshold — joints stay frozen
+    // on the last commanded velocity after motion stops. We derive vel from
+    // successive position samples instead, which gives a true zero at rest.)
+    let pos_res = sdk.get_angular_position();
+    let cur_res = sdk.get_angular_current();
+    let gen_res = sdk.get_general_informations();
 
     let now_ns = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -225,45 +250,60 @@ fn poll_telemetry(sdk: &KinovaSdk, state: &Arc<RwLock<KinovaState>>, offsets: &[
 
     let mut s = state.write().unwrap();
 
-    // Position lives in GeneralInformations.Position.Actuators
-    {
-        let a = &gen.Position.Actuators;
+    if let Ok(pos) = pos_res {
+        let a = &pos.Actuators;
         let raw = [a.Actuator1, a.Actuator2, a.Actuator3, a.Actuator4, a.Actuator5, a.Actuator6];
         if raw.iter().all(|&v| v.is_finite()) && !raw.iter().all(|&v| v == 0.0) {
             let mut joint_pos = raw;
             for i in 0..6 { joint_pos[i] -= offsets[i]; }
+            let now_inst = Instant::now();
+
+            // Differentiate against the previous fresh sample. dt is the
+            // wall-clock elapsed since the last update — typically the
+            // telemetry interval (100 ms idle / 200 ms streaming) but can
+            // be longer if a previous SDK call failed and we skipped a tick.
+            if let Some((prev_pos, prev_t)) = *prev_pos_sample {
+                let dt = now_inst.duration_since(prev_t).as_secs_f32();
+                if dt > 0.0 {
+                    for i in 0..6 {
+                        s.joint_vel[i] = (joint_pos[i] - prev_pos[i]) / dt;
+                    }
+                }
+            }
+            *prev_pos_sample = Some((joint_pos, now_inst));
+
             s.joint_pos = joint_pos;
             s.timestamp_ns = now_ns;
         }
     }
 
-    // Joint current from GeneralInformations.Current.Actuators
-    {
-        let a = &gen.Current.Actuators;
+    if let Ok(cur) = cur_res {
+        let a = &cur.Actuators;
         let raw = [a.Actuator1, a.Actuator2, a.Actuator3, a.Actuator4, a.Actuator5, a.Actuator6];
         if raw.iter().all(|&v| v.is_finite()) {
             s.joint_current = raw;
         }
     }
 
-    let temps = [
-        gen.ActuatorsTemperatures[0], gen.ActuatorsTemperatures[1],
-        gen.ActuatorsTemperatures[2], gen.ActuatorsTemperatures[3],
-        gen.ActuatorsTemperatures[4], gen.ActuatorsTemperatures[5],
-    ];
-    if temps.iter().all(|&v| v.is_finite()) {
-        s.joint_temp = temps;
-    }
-
-    if gen.AccelerationX.is_finite() && gen.AccelerationY.is_finite() && gen.AccelerationZ.is_finite() {
-        s.accel_x = gen.AccelerationX;
-        s.accel_y = gen.AccelerationY;
-        s.accel_z = gen.AccelerationZ;
-    }
-    if gen.SupplyVoltage.is_finite() && gen.SupplyVoltage > 10.0 && gen.SupplyVoltage < 40.0 {
-        s.bus_voltage = gen.SupplyVoltage;
-    }
-    if gen.TotalCurrent.is_finite() && gen.TotalCurrent >= 0.0 && gen.TotalCurrent < 30.0 {
-        s.bus_current = gen.TotalCurrent;
+    if let Ok(gen) = gen_res {
+        let temps = [
+            gen.ActuatorsTemperatures[0], gen.ActuatorsTemperatures[1],
+            gen.ActuatorsTemperatures[2], gen.ActuatorsTemperatures[3],
+            gen.ActuatorsTemperatures[4], gen.ActuatorsTemperatures[5],
+        ];
+        if temps.iter().all(|&v| v.is_finite()) {
+            s.joint_temp = temps;
+        }
+        if gen.AccelerationX.is_finite() && gen.AccelerationY.is_finite() && gen.AccelerationZ.is_finite() {
+            s.accel_x = gen.AccelerationX;
+            s.accel_y = gen.AccelerationY;
+            s.accel_z = gen.AccelerationZ;
+        }
+        if gen.SupplyVoltage.is_finite() && gen.SupplyVoltage > 10.0 && gen.SupplyVoltage < 40.0 {
+            s.bus_voltage = gen.SupplyVoltage;
+        }
+        if gen.TotalCurrent.is_finite() && gen.TotalCurrent >= 0.0 && gen.TotalCurrent < 30.0 {
+            s.bus_current = gen.TotalCurrent;
+        }
     }
 }
