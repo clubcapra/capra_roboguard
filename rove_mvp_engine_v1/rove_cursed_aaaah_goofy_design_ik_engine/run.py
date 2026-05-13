@@ -25,10 +25,13 @@ REQS = HERE / "requirements.txt"
 
 
 def _have_deps() -> bool:
+    # Spot-check imports for every runtime dep. Add to this list whenever
+    # requirements.txt grows — otherwise existing venvs won't get re-populated.
     try:
         import numpy  # noqa: F401
         import aiohttp  # noqa: F401
         from google import protobuf  # noqa: F401
+        import trimesh  # noqa: F401
     except ImportError:
         return False
     return True

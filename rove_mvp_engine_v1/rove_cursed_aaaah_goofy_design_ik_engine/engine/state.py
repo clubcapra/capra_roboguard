@@ -7,6 +7,8 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
+import numpy as np
+
 from forgebot.core.model import Project
 
 from .proto import Ovis
@@ -20,6 +22,10 @@ class EngineState:
     latest_ovis: Ovis | None = None
     start_time: float = field(default_factory=time.monotonic)
     last_tip: str = ""  # most recent Ovis.target, kept after Ovis goes None
+    # Per-link TCP (centroid) offset in the link's local frame. Populated at
+    # engine startup from mesh geometry; used as the rotation pivot / IK
+    # position target when an Ovis arrives with no tcp_offset_local set.
+    tcp_offsets: dict[str, np.ndarray] = field(default_factory=dict)
 
     def elapsed(self) -> float:
         return time.monotonic() - self.start_time

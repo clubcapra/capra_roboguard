@@ -13,6 +13,7 @@ from . import config as engine_config
 from . import ik_loop
 from .loader import load_robot
 from .state import EngineState
+from .tcp import compute_tcp_offsets
 from .transports import HttpWsServer, StateBus, UdpInput, UdpOutput
 
 _log = logging.getLogger("forgebot.engine")
@@ -23,6 +24,13 @@ async def run(config_path: Path) -> None:
     project = load_robot(cfg)
     state = EngineState(project=project)
     ik_loop.initialise_joint_values(state)
+    state.tcp_offsets = compute_tcp_offsets(project)
+    if state.tcp_offsets:
+        _log.info(
+            "computed TCP offsets for %d links (centroid pivot for clients "
+            "without their own tcp_offset_local)",
+            len(state.tcp_offsets),
+        )
     bus = StateBus()
 
     stopping = asyncio.Event()

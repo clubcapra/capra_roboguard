@@ -11,3 +11,7 @@ protobuf>=4.0
 aiohttp>=3.9
 python-fcl>=0.7
 scipy>=1.10
+# Used at engine startup to compute per-link mesh-centroid TCP offsets, so
+# clients that don't know mesh geometry (the control bridge, joysticks) get
+# centroid-anchored rotation for free.
+trimesh>=4.0

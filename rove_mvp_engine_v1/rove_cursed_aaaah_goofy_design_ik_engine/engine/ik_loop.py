@@ -59,6 +59,13 @@ def tick(state: EngineState, ik: IKConfig, dt: float) -> StateUpdate:
         return _build_state_update(state, t, diag=None)
 
     tcp_offset = _tcp_offset_from_ovis(ovis)
+    if tcp_offset is None:
+        # Fall back to the per-link centroid the engine computed at startup
+        # (clients without mesh geometry — bridge, joysticks — get
+        # centroid-anchored rotation for free).
+        cached = state.tcp_offsets.get(tip)
+        if cached is not None:
+            tcp_offset = cached
     target_world, target_rot = _integrate_ovis(state, ik, ovis, dt, tcp_offset)
 
     base = find_ik_base(state.project, tip)
