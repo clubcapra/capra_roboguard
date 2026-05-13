@@ -45,10 +45,9 @@ class OutputConfig:
 class HardwareConfig:
     """Optional bridge to rove_sensor_api's `kinova_arm` sensor.
 
-    When configured, the engine binds `state_listen_port` and waits for the
-    sensor_api to push UDP state datagrams to it. The frontend's "Sync"
-    button reads the latest received frame and snaps the model's joint
-    values to match the real arm.
+    rove_sensor_api uses a subscribe-push model: the engine sends a
+    SUBSCRIBE packet to (sensor_api_host, kinova_data_port) and the sensor
+    pushes DATA frames back to our ephemeral port at `subscribe_interval_ms`.
 
     Two ways to map kinova actuator index -> engine joint entity:
 
@@ -63,7 +62,11 @@ class HardwareConfig:
     """
 
     enabled: bool = False
-    state_listen_port: int = 9300
+    # rove_sensor_api endpoint. Defaults match the standard kinova driver:
+    # data_port = 5002 (UDP), reachable from the engine host.
+    sensor_api_host: str = "127.0.0.1"
+    kinova_data_port: int = 5002
+    subscribe_interval_ms: int = 100   # 10 Hz push, plenty for sync
 
     # Chain mode (preferred). When both are set, takes priority over joint_names.
     arm_base_entity_id: str = ""

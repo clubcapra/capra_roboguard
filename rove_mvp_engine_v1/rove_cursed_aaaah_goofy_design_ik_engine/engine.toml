@@ -53,12 +53,14 @@ ws_path        = "/state"
 stdout_enabled = false             # length-prefixed proto frames on stdout
 
 [hardware]
-# When enabled, the engine binds `state_listen_port` and waits for
-# rove_sensor_api to push kinova_arm joint state to it. The UI's "Sync"
-# button then snaps the model to whatever the real arm reports.
-# Configure rove_sensor_api to send kinova_arm state to <engine-host>:9300.
+# When enabled, the engine sends a SUBSCRIBE packet to rove_sensor_api's
+# kinova_arm data port at startup; sensor_api then pushes joint state back
+# at subscribe_interval_ms. The UI's "Sync" button reads the latest frame
+# and snaps the model to the real arm.
 enabled = true
-state_listen_port = 9300
+sensor_api_host = "127.0.0.1"
+kinova_data_port = 5002
+subscribe_interval_ms = 100
 
 # CHAIN MODE: engine walks the kinematic tree from arm_base to arm_tip and
 # assigns the joints it finds to kinova actuators 1..N (in chain order).

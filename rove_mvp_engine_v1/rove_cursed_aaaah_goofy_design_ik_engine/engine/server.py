@@ -50,15 +50,28 @@ async def run(config_path: Path) -> None:
         await udp_out.start()
 
     if cfg.hardware.enabled:
-        if not cfg.hardware.joint_names:
-            _log.warning(
-                "[hardware].enabled=true but joint_names is empty — sync button "
-                "won't have anything to snap to."
-            )
+        # Best-effort joint-count guess from whichever mapping is set, so
+        # the listener knows how many joint_N_pos fields to extract.
+        if cfg.hardware.arm_base_entity_id and cfg.hardware.arm_tip_entity_id:
+            try:
+                from forgebot.core.kinematics import extract_chain
+                _chain = extract_chain(
+                    project,
+                    cfg.hardware.arm_base_entity_id,
+                    cfg.hardware.arm_tip_entity_id,
+                )
+                expected_n = len(_chain.joints)
+            except Exception:  # noqa: BLE001
+                expected_n = 0
+        else:
+            expected_n = len(cfg.hardware.joint_names)
+
         kinova_listener = KinovaStateListener(
             state,
-            cfg.hardware.state_listen_port,
-            cfg.hardware.joint_names,
+            host=cfg.hardware.sensor_api_host,
+            data_port=cfg.hardware.kinova_data_port,
+            subscribe_interval_ms=cfg.hardware.subscribe_interval_ms,
+            expected_joint_count=expected_n,
         )
         await kinova_listener.start()
 
