@@ -260,7 +260,8 @@ def snap_model_to_kinova(
         state.kinova_offsets[eid] = offset
         captured[eid] = offset
         # Intentional no-op on joint_values: model_q stays where it was.
-        # When continuous mirror-mode lands, it will write
-        # state.joint_values[eid] = latest_kinova - state.kinova_offsets[eid]
-        # which equals model_q at sync time -- no visual jump.
+        # The mirror loop in ik_loop.tick() reads the offsets back to keep
+        # the model in sync with whatever kinova reports going forward.
+    # Cache chain order so the per-tick mirror doesn't re-resolve every time.
+    state.kinova_chain_joint_ids = joint_ids[:n]
     return n, errors, joint_ids, captured

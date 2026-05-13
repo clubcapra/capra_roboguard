@@ -37,6 +37,10 @@ class EngineState:
     # At sync time itself this evaluates to the model's pre-sync value, so
     # the model doesn't visually jump when the user clicks Sync.
     kinova_offsets: dict[str, float] = field(default_factory=dict)
+    # Ordered list of joint entity ids matching kinova actuator index 1..N.
+    # Captured at sync time so the per-tick mirror loop doesn't have to
+    # re-resolve the chain.
+    kinova_chain_joint_ids: list[str] = field(default_factory=list)
 
     def elapsed(self) -> float:
         return time.monotonic() - self.start_time

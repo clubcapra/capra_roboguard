@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from typing import cast
 
 import numpy as np
@@ -44,6 +45,7 @@ _DEFAULT_MAX_TOTAL_DQ_STEP = 0.10
 
 
 def tick(state: EngineState, ik: IKConfig, dt: float) -> StateUpdate:
+    _apply_kinova_mirror(state)
     ovis = state.take_ovis()
     t = state.elapsed()
 
@@ -346,3 +348,35 @@ def initialise_joint_values(state: EngineState) -> None:
             continue
         state.joint_values[eid] = float(home.get(eid, 0.0))
         state.joint_velocities[eid] = 0.0
+
+
+# How stale a kinova frame can be before we stop trusting it. 0.5 s is long
+# enough to ride out a brief sensor_api hiccup, short enough that a real
+# disconnect doesn't leave the model showing a frozen pose.
+_KINOVA_FRESH_S = 0.5
+
+
+def _apply_kinova_mirror(state: EngineState) -> None:
+    """Map fresh kinova reads into the model frame via the calibration
+    captured at Sync. Idempotent — silently no-ops when there are no offsets
+    (operator hasn't synced yet) or the latest frame is too stale.
+
+    Note: this runs *before* the IK step in `tick`. If the user is dragging
+    the gizmo, IK writes new joint values *after* the mirror, so the gizmo
+    drag wins for this tick. Next tick, mirror writes again — meaning that
+    while no velocity command is reaching kinova, the chain visually snaps
+    back to wherever kinova is pointing. Once the velocity-out path is
+    wired, kinova will actually move and mirror will track it."""
+    if not state.kinova_offsets or not state.kinova_chain_joint_ids:
+        return
+    if state.latest_kinova_positions is None:
+        return
+    if time.monotonic() - state.latest_kinova_t > _KINOVA_FRESH_S:
+        return
+
+    positions = state.latest_kinova_positions
+    for i, eid in enumerate(state.kinova_chain_joint_ids):
+        if i >= len(positions):
+            break
+        offset = state.kinova_offsets.get(eid, 0.0)
+        state.joint_values[eid] = float(positions[i]) - offset

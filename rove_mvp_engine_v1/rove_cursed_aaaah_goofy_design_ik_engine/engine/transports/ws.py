@@ -278,5 +278,8 @@ class HttpWsServer:
                 ),
                 "joint_ids": joint_ids,
                 "mapping_errors": errors,
+                # True after a successful sync: the engine is continuously
+                # mirroring kinova into the model frame via kinova_offsets.
+                "mirroring": bool(self.state.kinova_offsets),
             }
         )
