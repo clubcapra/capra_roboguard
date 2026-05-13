@@ -55,6 +55,16 @@ class FlippersConfig:
 @dataclass
 class OvisConfig:
     enabled: bool = False
+    # rove_mvp_engine endpoint. The bridge forwards every incoming
+    # RoveControl.Ovis to this UDP socket (re-wrapped as the engine's own
+    # Ovis proto with `target` filled in from `target_entity_id`).
+    engine_host: str = "127.0.0.1"
+    engine_port: int = 9100
+    # Entity id the engine should drive toward. Currently hardcoded to the
+    # jointgripper — fetch from the engine's startup scene log
+    # (`scene contents — send Ovis.target = ...`) or read it out of the
+    # bundled .forgebot.
+    target_entity_id: str = ""
 
 
 @dataclass
@@ -134,7 +144,12 @@ def load(path: Path) -> BridgeConfig:
 
     if "ovis" in raw:
         s = raw["ovis"]
-        cfg.ovis = OvisConfig(enabled=bool(s.get("enabled", cfg.ovis.enabled)))
+        cfg.ovis = OvisConfig(
+            enabled=bool(s.get("enabled", cfg.ovis.enabled)),
+            engine_host=str(s.get("engine_host", cfg.ovis.engine_host)),
+            engine_port=int(s.get("engine_port", cfg.ovis.engine_port)),
+            target_entity_id=str(s.get("target_entity_id", cfg.ovis.target_entity_id)),
+        )
 
     if "gripper" in raw:
         s = raw["gripper"]

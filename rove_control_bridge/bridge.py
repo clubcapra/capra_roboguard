@@ -38,6 +38,7 @@ import threading
 import time
 
 from .config import BridgeConfig
+from .ovis_forwarder import OvisForwarder
 from .sensor_api_client import (
     SensorApiUdpClient,
     discover_odrive_ports,
@@ -60,12 +61,14 @@ class RoveControlBridge:
         strategy: ConversionStrategy,
         port_map: dict[int, int],
         gripper_port: int | None = None,
+        ovis_forwarder: "OvisForwarder | None" = None,
     ) -> None:
         self._cfg = cfg
         self._strategy = strategy
         self._port_map = port_map          # {node_id: cmd_port}
         self._gripper_port = gripper_port  # None = gripper not present / disabled
         self._last_gripper_pos: int = -1   # sentinel: force first send
+        self._ovis_forwarder = ovis_forwarder
         self._client = SensorApiUdpClient(cfg.sensor_api.host)
 
         self._lock = threading.Lock()
@@ -116,6 +119,8 @@ class RoveControlBridge:
 
         watchdog.join(timeout=2.0)
         self._client.close()
+        if self._ovis_forwarder is not None:
+            self._ovis_forwarder.close()
         log.info("Bridge stopped.")
 
     def stop(self) -> None:
@@ -240,6 +245,13 @@ class RoveControlBridge:
 
             self._send_gripper(msg.gripper.position)
 
+            # Forward Ovis twist to the IK engine (input half only -- the
+            # bundled engine UI shows the resulting chain motion). The
+            # output half (engine StateUpdate -> ODrive NodeCommands) is
+            # deferred; until then the arm is driven visually, not mechanically.
+            if self._ovis_forwarder is not None:
+                self._ovis_forwarder.forward(msg.ovis)
+
             _window_count += 1
 
             # Logging: DEBUG for every packet, INFO only at the 2 s heartbeat.
@@ -355,10 +367,9 @@ def build_strategy(cfg: BridgeConfig) -> ConversionStrategy:
         log.warning(
             "flippers.enabled=true but no FlipperStrategy implemented yet — ignored."
         )
-    if cfg.ovis.enabled:
-        log.warning(
-            "ovis.enabled=true but IK not implemented yet — ignored."
-        )
+    # Ovis is handled outside the strategy abstraction for now: it forwards
+    # to the engine UDP and returns no NodeCommands until the StateUpdate
+    # -> ODrive morph is implemented. See OvisForwarder in start().
 
     return tracks
 
@@ -390,15 +401,35 @@ def start(cfg: BridgeConfig) -> None:
             )
 
     strategy = build_strategy(cfg)
+
+    ovis_forwarder: OvisForwarder | None = None
+    if cfg.ovis.enabled:
+        if not cfg.ovis.target_entity_id:
+            log.warning(
+                "[ovis].enabled=true but target_entity_id is empty — "
+                "ovis forwarding disabled."
+            )
+        else:
+            ovis_forwarder = OvisForwarder(
+                cfg.ovis.engine_host,
+                cfg.ovis.engine_port,
+                cfg.ovis.target_entity_id,
+            )
+
     log.info(
-        "Bridge starting: tracks strategy=%s  nodes=%s  gripper=%s  idle_timeout=%.1fs",
+        "Bridge starting: tracks strategy=%s  nodes=%s  gripper=%s  ovis=%s  idle_timeout=%.1fs",
         strategy.name,
         sorted(port_map.keys()),
         f"port {gripper_port}" if gripper_port else "disabled",
+        f"{cfg.ovis.engine_host}:{cfg.ovis.engine_port} target={cfg.ovis.target_entity_id}"
+        if ovis_forwarder
+        else "disabled",
         cfg.idle_timeout_s,
     )
 
-    bridge = RoveControlBridge(cfg, strategy, port_map, gripper_port=gripper_port)
+    bridge = RoveControlBridge(
+        cfg, strategy, port_map, gripper_port=gripper_port, ovis_forwarder=ovis_forwarder
+    )
 
     import signal
 
