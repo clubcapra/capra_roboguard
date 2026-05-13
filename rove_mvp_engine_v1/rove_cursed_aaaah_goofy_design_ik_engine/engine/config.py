@@ -42,11 +42,44 @@ class OutputConfig:
 
 
 @dataclass
+class HardwareConfig:
+    """Optional bridge to rove_sensor_api's `kinova_arm` sensor.
+
+    When configured, the engine binds `state_listen_port` and waits for the
+    sensor_api to push UDP state datagrams to it. The frontend's "Sync"
+    button reads the latest received frame and snaps the model's joint
+    values to match the real arm.
+
+    Two ways to map kinova actuator index -> engine joint entity:
+
+    1. CHAIN MODE (preferred when joints share names like "joint_revolute"):
+       Set `arm_base_entity_id` and `arm_tip_entity_id`. The engine walks
+       the kinematic chain between them and assigns the N joints to kinova
+       actuators 1..N (base -> tip).
+
+    2. NAME MODE: Set `joint_names` to a list ordered by kinova actuator
+       index. The engine looks up `Entity.name` (case-insensitive).
+       Useful when joint names are unique.
+    """
+
+    enabled: bool = False
+    state_listen_port: int = 9300
+
+    # Chain mode (preferred). When both are set, takes priority over joint_names.
+    arm_base_entity_id: str = ""
+    arm_tip_entity_id: str = ""
+
+    # Name mode (fallback). Joint names in kinova actuator-index order.
+    joint_names: list[str] = field(default_factory=list)
+
+
+@dataclass
 class EngineConfig:
     robot: RobotConfig = field(default_factory=RobotConfig)
     ik: IKConfig = field(default_factory=IKConfig)
     input: InputConfig = field(default_factory=InputConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
+    hardware: HardwareConfig = field(default_factory=HardwareConfig)
     root: Path = field(default_factory=lambda: Path.cwd())
 
 
@@ -66,6 +99,8 @@ def load(path: Path) -> EngineConfig:
         cfg.input = InputConfig(**data["input"])
     if "output" in data:
         cfg.output = OutputConfig(**data["output"])
+    if "hardware" in data:
+        cfg.hardware = HardwareConfig(**data["hardware"])
     return cfg
 
 

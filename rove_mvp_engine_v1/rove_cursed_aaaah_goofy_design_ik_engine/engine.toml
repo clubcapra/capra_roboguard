@@ -51,3 +51,21 @@ udp_target     = "127.0.0.1:9200"
 ws_enabled     = true              # reuses the input WS server when both on
 ws_path        = "/state"
 stdout_enabled = false             # length-prefixed proto frames on stdout
+
+[hardware]
+# When enabled, the engine binds `state_listen_port` and waits for
+# rove_sensor_api to push kinova_arm joint state to it. The UI's "Sync"
+# button then snaps the model to whatever the real arm reports.
+# Configure rove_sensor_api to send kinova_arm state to <engine-host>:9300.
+enabled = true
+state_listen_port = 9300
+
+# CHAIN MODE: engine walks the kinematic tree from arm_base to arm_tip and
+# assigns the joints it finds to kinova actuators 1..N (in chain order).
+# Works regardless of joint names — useful when all joints share the
+# default "joint_revolute" name in the editor.
+arm_base_entity_id = "ent_link_eba1f893"   # Base
+arm_tip_entity_id  = "ent_link_07ca91a1"   # JointGripper
+
+# NAME MODE (alternative — used only if the two ids above are empty).
+joint_names = []

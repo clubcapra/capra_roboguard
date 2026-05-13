@@ -26,6 +26,12 @@ class EngineState:
     # engine startup from mesh geometry; used as the rotation pivot / IK
     # position target when an Ovis arrives with no tcp_offset_local set.
     tcp_offsets: dict[str, np.ndarray] = field(default_factory=dict)
+    # Latest kinova_arm state pushed by rove_sensor_api. Ordered by kinova
+    # actuator index (1..N). None until the first frame arrives. The "Sync"
+    # button reads this and writes into joint_values via the config's
+    # joint_names list.
+    latest_kinova_positions: list[float] | None = None
+    latest_kinova_t: float = 0.0
 
     def elapsed(self) -> float:
         return time.monotonic() - self.start_time

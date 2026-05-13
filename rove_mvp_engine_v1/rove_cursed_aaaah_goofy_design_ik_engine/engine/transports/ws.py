@@ -21,7 +21,8 @@ from typing import Any
 from aiohttp import WSMsgType, web
 from aiohttp.web_runner import AppRunner, TCPSite
 
-from ..config import parse_bind
+from ..config import HardwareConfig, parse_bind
+from ..hardware import snap_model_to_kinova
 from ..proto import Ovis
 from ..state import EngineState
 from .bus import StateBus
@@ -42,6 +43,7 @@ class HttpWsServer:
         output_path: str,
         ui_dir: Path | None,
         data_dir: Path,
+        hardware: HardwareConfig | None = None,
     ) -> None:
         self.state = state
         self.bus = bus
@@ -52,6 +54,7 @@ class HttpWsServer:
         self.output_path = output_path
         self.ui_dir = ui_dir if (ui_dir and ui_dir.exists()) else None
         self.data_dir = data_dir
+        self.hardware = hardware
         self._state_subs: set[web.WebSocketResponse] = set()
         self._runner: AppRunner | None = None
         if output_enabled:
@@ -79,6 +82,9 @@ class HttpWsServer:
         # initial-state hydration.
         app.router.add_get("/api/v1/kinematics/profiles", self._http_profiles)
         app.router.add_get("/api/v1/scene/joints", self._http_joint_values)
+        # Snap model joints to the latest kinova state (debug button).
+        app.router.add_post("/api/v1/sync", self._http_sync)
+        app.router.add_get("/api/v1/sync/status", self._http_sync_status)
 
         if self.ui_dir is not None:
             app.router.add_get("/", self._http_ui_index)
@@ -207,3 +213,64 @@ class HttpWsServer:
     async def _http_ui_index(self, _request: web.Request) -> web.FileResponse:
         assert self.ui_dir is not None
         return web.FileResponse(self.ui_dir / "index.html")
+
+    async def _http_sync(self, _request: web.Request) -> web.Response:
+        if self.hardware is None or not self.hardware.enabled:
+            return web.json_response(
+                {
+                    "ok": False,
+                    "updated": 0,
+                    "errors": ["hardware sync disabled in engine.toml ([hardware].enabled=false)"],
+                },
+                status=409,
+            )
+        updated, errors, joint_ids = snap_model_to_kinova(
+            self.state,
+            arm_base_entity_id=self.hardware.arm_base_entity_id,
+            arm_tip_entity_id=self.hardware.arm_tip_entity_id,
+            joint_names=self.hardware.joint_names,
+        )
+        _log.info(
+            "sync requested: %d joints updated, %d errors  chain=%s",
+            updated,
+            len(errors),
+            joint_ids,
+        )
+        for err in errors:
+            _log.warning("  sync error: %s", err)
+        return web.json_response(
+            {
+                "ok": updated > 0,
+                "updated": updated,
+                "errors": errors,
+                "positions": self.state.latest_kinova_positions,
+                "joint_ids": joint_ids,
+            }
+        )
+
+    async def _http_sync_status(self, _request: web.Request) -> web.Response:
+        """Lets the UI grey out the Sync button until the engine has actually
+        received a kinova frame, and shows the resolved chain so the
+        operator can spot a misconfigured base/tip."""
+        if self.hardware is None or not self.hardware.enabled:
+            return web.json_response({"enabled": False, "have_frame": False})
+        from ..hardware import resolve_arm_joint_ids
+        joint_ids, errors = resolve_arm_joint_ids(
+            self.state,
+            arm_base_entity_id=self.hardware.arm_base_entity_id,
+            arm_tip_entity_id=self.hardware.arm_tip_entity_id,
+            joint_names=self.hardware.joint_names,
+        )
+        return web.json_response(
+            {
+                "enabled": True,
+                "have_frame": self.state.latest_kinova_positions is not None,
+                "frame_age_s": (
+                    None
+                    if self.state.latest_kinova_t == 0.0
+                    else max(0.0, __import__("time").monotonic() - self.state.latest_kinova_t)
+                ),
+                "joint_ids": joint_ids,
+                "mapping_errors": errors,
+            }
+        )

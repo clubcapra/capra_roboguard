@@ -12,6 +12,7 @@ from pathlib import Path
 from . import config as engine_config
 from . import ik_loop
 from .loader import load_robot
+from .hardware import KinovaStateListener
 from .state import EngineState
 from .tcp import compute_tcp_offsets
 from .transports import HttpWsServer, StateBus, UdpInput, UdpOutput
@@ -39,6 +40,7 @@ async def run(config_path: Path) -> None:
     udp_in: UdpInput | None = None
     udp_out: UdpOutput | None = None
     http_server: HttpWsServer | None = None
+    kinova_listener: KinovaStateListener | None = None
 
     if cfg.input.udp_enabled:
         udp_in = UdpInput(state, cfg.input.udp_bind)
@@ -46,6 +48,19 @@ async def run(config_path: Path) -> None:
     if cfg.output.udp_enabled:
         udp_out = UdpOutput(bus, cfg.output.udp_target)
         await udp_out.start()
+
+    if cfg.hardware.enabled:
+        if not cfg.hardware.joint_names:
+            _log.warning(
+                "[hardware].enabled=true but joint_names is empty — sync button "
+                "won't have anything to snap to."
+            )
+        kinova_listener = KinovaStateListener(
+            state,
+            cfg.hardware.state_listen_port,
+            cfg.hardware.joint_names,
+        )
+        await kinova_listener.start()
 
     # The HTTP server runs whenever WS in/out is on OR a UI dist is bundled —
     # the UI needs scene + mesh HTTP routes even if it only uses WS for telemetry.
@@ -62,6 +77,7 @@ async def run(config_path: Path) -> None:
             output_path=cfg.output.ws_path,
             ui_dir=ui_dir,
             data_dir=data_dir,
+            hardware=cfg.hardware,
         )
         await http_server.start()
 
@@ -103,6 +119,8 @@ async def run(config_path: Path) -> None:
         await udp_in.stop()
     if udp_out is not None:
         await udp_out.stop()
+    if kinova_listener is not None:
+        await kinova_listener.stop()
 
 
 async def _tick_loop(
