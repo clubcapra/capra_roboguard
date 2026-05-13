@@ -90,6 +90,7 @@ async def run(config_path: Path) -> None:
             cmd_port=cfg.hardware.kinova_cmd_port,
             max_vel_deg_s=cfg.hardware.max_kinova_vel_deg_s,
             min_vel_deg_s=cfg.hardware.min_vel_deg_s,
+            debug=cfg.ik.debug,   # reuse the [ik] debug flag
         )
         await kinova_sender.start()
         _log.warning(

@@ -128,12 +128,14 @@ class KinovaCommandSender:
         cmd_port: int,
         max_vel_deg_s: float,
         min_vel_deg_s: float,
+        debug: bool = False,
     ) -> None:
         self.state = state
         self.host = host
         self.cmd_port = cmd_port
         self.max_vel_deg_s = max_vel_deg_s
         self.min_vel_deg_s = min_vel_deg_s
+        self.debug = debug
         self._seq = 0
         self._transport: asyncio.DatagramTransport | None = None
 
@@ -152,7 +154,14 @@ class KinovaCommandSender:
 
     def maybe_send(self) -> None:
         """Build the COMMAND packet for this tick. No-op when not synced or
-        when every joint velocity rounds to zero."""
+        when every joint velocity rounds to zero.
+
+        Velocities are scaled UNIFORMLY (not independently clamped) when the
+        cap kicks in: IK produces a coordinated vel vector and the ratio
+        between joints is what makes the EE actually translate. Clipping
+        each joint independently breaks that ratio and the arm twists
+        instead of moving in the requested direction.
+        """
         if self._transport is None:
             return
         if not self.state.kinova_chain_joint_ids:
@@ -160,27 +169,30 @@ class KinovaCommandSender:
         if not self.state.kinova_offsets:
             return
 
-        payload: dict[str, float] = {}
-        any_nonzero = False
+        # First pass: compute signed deg/s for every joint, no clamp.
+        raw: list[float] = []
         for i, eid in enumerate(self.state.kinova_chain_joint_ids):
             if i >= 6:
                 break
             sign = self.state.kinova_signs.get(eid, 1.0)
             qdot_rad = self.state.joint_velocities.get(eid, 0.0)
-            vel_deg = sign * qdot_rad * 180.0 / math.pi
-            if vel_deg > self.max_vel_deg_s:
-                vel_deg = self.max_vel_deg_s
-            elif vel_deg < -self.max_vel_deg_s:
-                vel_deg = -self.max_vel_deg_s
-            if abs(vel_deg) > self.min_vel_deg_s:
-                any_nonzero = True
-            payload[f"joint_{i + 1}_vel"] = vel_deg
+            raw.append(sign * qdot_rad * 180.0 / math.pi)
 
-        if not any_nonzero:
-            # Pure-streaming convention: send nothing, let kinova's timeout
-            # halt the arm. Streaming zeros has been observed to destabilise
-            # the SDK (see kinova_test.py comments).
+        # Uniform scale-down if any joint exceeds the cap.
+        max_mag = max((abs(v) for v in raw), default=0.0)
+        if max_mag > self.max_vel_deg_s:
+            scale = self.max_vel_deg_s / max_mag
+            raw = [v * scale for v in raw]
+            max_mag = self.max_vel_deg_s
+
+        if max_mag < self.min_vel_deg_s:
+            # All joints below noise threshold: send nothing, let kinova's
+            # velocity-hold timeout halt the arm.
             return
+
+        payload: dict[str, float] = {
+            f"joint_{i + 1}_vel": v for i, v in enumerate(raw)
+        }
 
         self._seq = (self._seq + 1) & 0xFFFF
         body = json.dumps(payload).encode()
@@ -189,6 +201,15 @@ class KinovaCommandSender:
             self._transport.sendto(header + body)
         except Exception as exc:  # noqa: BLE001
             _log.debug("kinova command send failed: %s", exc)
+            return
+        if self.debug:
+            # Pair this with [ik].debug output so each tick's IK-qdot can be
+            # correlated with what actually went to kinova (after sign + cap).
+            _log.info(
+                "kinova cmd seq=%d  %s",
+                self._seq,
+                " ".join(f"j{i + 1}={v:+6.2f}" for i, v in enumerate(raw)),
+            )
 
     async def stop(self) -> None:
         if self._transport is not None:
