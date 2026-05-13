@@ -80,6 +80,19 @@ class HardwareConfig:
     # readings for these joints by -1 so the mirror direction matches.
     inverted_joints: list[int] = field(default_factory=list)
 
+    # ---- velocity output to kinova_arm ----
+    # SAFETY: leave disabled until mirror direction is verified for every
+    # joint by physically moving the arm and watching the model. When on,
+    # the engine sends per-tick MSG_COMMAND packets with joint_N_vel (deg/s)
+    # to (sensor_api_host, kinova_cmd_port) whenever any IK-derived qdot is
+    # non-zero. Silence -> kinova's own 300 ms velocity-hold timeout halts.
+    vel_output_enabled: bool = False
+    kinova_cmd_port: int = 5003
+    max_kinova_vel_deg_s: float = 20.0
+    # Velocities below this magnitude are treated as zero (no packet sent).
+    # Keeps IK floating-point dust from continuously poking the arm.
+    min_vel_deg_s: float = 0.05
+
 
 @dataclass
 class EngineConfig:

@@ -12,7 +12,7 @@ from pathlib import Path
 from . import config as engine_config
 from . import ik_loop
 from .loader import load_robot
-from .hardware import KinovaStateListener
+from .hardware import KinovaCommandSender, KinovaStateListener
 from .state import EngineState
 from .tcp import compute_tcp_offsets
 from .transports import HttpWsServer, StateBus, UdpInput, UdpOutput
@@ -75,6 +75,24 @@ async def run(config_path: Path) -> None:
         )
         await kinova_listener.start()
 
+    kinova_sender: KinovaCommandSender | None = None
+    if cfg.hardware.enabled and cfg.hardware.vel_output_enabled:
+        kinova_sender = KinovaCommandSender(
+            state,
+            host=cfg.hardware.sensor_api_host,
+            cmd_port=cfg.hardware.kinova_cmd_port,
+            max_vel_deg_s=cfg.hardware.max_kinova_vel_deg_s,
+            min_vel_deg_s=cfg.hardware.min_vel_deg_s,
+        )
+        await kinova_sender.start()
+        _log.warning(
+            "VEL OUTPUT ENABLED: every tick the engine will push joint "
+            "velocities to %s:%d. Sync must be done first; verify mirror "
+            "direction before allowing motion.",
+            cfg.hardware.sensor_api_host,
+            cfg.hardware.kinova_cmd_port,
+        )
+
     # The HTTP server runs whenever WS in/out is on OR a UI dist is bundled —
     # the UI needs scene + mesh HTTP routes even if it only uses WS for telemetry.
     ui_dir = config_path.parent / "ui"
@@ -115,7 +133,9 @@ async def run(config_path: Path) -> None:
             # can KeyboardInterrupt instead.
             pass
 
-    tasks.append(asyncio.create_task(_tick_loop(cfg, state, bus, stopping)))
+    tasks.append(
+        asyncio.create_task(_tick_loop(cfg, state, bus, stopping, kinova_sender))
+    )
 
     await stopping.wait()
     _log.info("shutting down")
@@ -134,6 +154,8 @@ async def run(config_path: Path) -> None:
         await udp_out.stop()
     if kinova_listener is not None:
         await kinova_listener.stop()
+    if kinova_sender is not None:
+        await kinova_sender.stop()
 
 
 async def _tick_loop(
@@ -141,6 +163,7 @@ async def _tick_loop(
     state: EngineState,
     bus: StateBus,
     stopping: asyncio.Event,
+    kinova_sender: KinovaCommandSender | None = None,
 ) -> None:
     period = 1.0 / max(1e-3, cfg.ik.rate_hz)
     last = time.monotonic()
@@ -150,6 +173,11 @@ async def _tick_loop(
         last = now
         try:
             update = ik_loop.tick(state, cfg.ik, dt)
+            # Close the loop: push IK velocities to kinova_arm before
+            # broadcasting telemetry. Kinova moves -> mirror updates next
+            # tick -> state.joint_values reflects the real arm.
+            if kinova_sender is not None:
+                kinova_sender.maybe_send()
             await bus.publish(update.SerializeToString())
         except Exception as e:  # noqa: BLE001
             _log.exception("tick failed: %s", e)

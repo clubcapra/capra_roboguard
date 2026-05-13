@@ -76,3 +76,12 @@ joint_names = []
 # to the model's URDF axis. After Sync the engine multiplies readings for
 # these joints by -1 so model rotation direction matches the real arm.
 inverted_joints = [2, 3, 4, 5, 6]
+
+# ---- velocity output to kinova_arm ----
+# SAFETY: keep `vel_output_enabled = false` until mirror direction is
+# verified for every joint (drag the gizmo, watch each joint move the
+# correct way). Set to true to close the loop: gizmo -> IK -> qdot -> arm.
+vel_output_enabled = false
+kinova_cmd_port = 5003
+max_kinova_vel_deg_s = 20.0   # per-joint cap, deg/s
+min_vel_deg_s = 0.05          # below this we send nothing (kinova auto-halts)

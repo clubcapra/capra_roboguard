@@ -109,6 +109,92 @@ def _extract_positions(body: dict, expected_n: int) -> list[float] | None:
     return out or None
 
 
+_MSG_COMMAND = 0x10
+
+
+class KinovaCommandSender:
+    """Per-tick velocity sender to rove_sensor_api's kinova_arm cmd port.
+
+    Reads state.joint_velocities (radians/s from IK), converts to deg/s,
+    applies the same per-joint sign captured at Sync, clamps to a config
+    cap, and pushes a single MSG_COMMAND UDP packet to the arm. Pure
+    streaming model: silence triggers kinova's 300 ms velocity-hold
+    timeout and the arm halts on its own."""
+
+    def __init__(
+        self,
+        state: EngineState,
+        host: str,
+        cmd_port: int,
+        max_vel_deg_s: float,
+        min_vel_deg_s: float,
+    ) -> None:
+        self.state = state
+        self.host = host
+        self.cmd_port = cmd_port
+        self.max_vel_deg_s = max_vel_deg_s
+        self.min_vel_deg_s = min_vel_deg_s
+        self._seq = 0
+        self._transport: asyncio.DatagramTransport | None = None
+
+    async def start(self) -> None:
+        loop = asyncio.get_running_loop()
+        self._transport, _ = await loop.create_datagram_endpoint(
+            asyncio.DatagramProtocol,
+            remote_addr=(self.host, self.cmd_port),
+        )
+        _log.info(
+            "kinova command sender ready: -> %s:%d  cap=%.1f deg/s",
+            self.host,
+            self.cmd_port,
+            self.max_vel_deg_s,
+        )
+
+    def maybe_send(self) -> None:
+        """Build the COMMAND packet for this tick. No-op when not synced or
+        when every joint velocity rounds to zero."""
+        if self._transport is None:
+            return
+        if not self.state.kinova_chain_joint_ids:
+            return  # not synced yet
+        if not self.state.kinova_offsets:
+            return
+
+        payload: dict[str, float] = {}
+        any_nonzero = False
+        for i, eid in enumerate(self.state.kinova_chain_joint_ids):
+            if i >= 6:
+                break
+            sign = self.state.kinova_signs.get(eid, 1.0)
+            qdot_rad = self.state.joint_velocities.get(eid, 0.0)
+            vel_deg = sign * qdot_rad * 180.0 / math.pi
+            if vel_deg > self.max_vel_deg_s:
+                vel_deg = self.max_vel_deg_s
+            elif vel_deg < -self.max_vel_deg_s:
+                vel_deg = -self.max_vel_deg_s
+            if abs(vel_deg) > self.min_vel_deg_s:
+                any_nonzero = True
+            payload[f"joint_{i + 1}_vel"] = vel_deg
+
+        if not any_nonzero:
+            # Pure-streaming convention: send nothing, let kinova's timeout
+            # halt the arm. Streaming zeros has been observed to destabilise
+            # the SDK (see kinova_test.py comments).
+            return
+
+        self._seq = (self._seq + 1) & 0xFFFF
+        body = json.dumps(payload).encode()
+        header = struct.pack(_HEADER_FMT, _PROTOCOL_VERSION, _MSG_COMMAND, self._seq)
+        try:
+            self._transport.sendto(header + body)
+        except Exception as exc:  # noqa: BLE001
+            _log.debug("kinova command send failed: %s", exc)
+
+    async def stop(self) -> None:
+        if self._transport is not None:
+            self._transport.close()
+
+
 class KinovaStateListener:
     """Subscribe to rove_sensor_api kinova_arm and stash incoming positions in
     EngineState. One UDP socket: SUBSCRIBE goes out, DATA comes back to the
