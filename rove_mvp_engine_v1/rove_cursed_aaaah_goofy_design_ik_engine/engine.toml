@@ -37,6 +37,15 @@ rate_hz = 60.0
 # Per-tick IK trace (one line per non-idle tick). Loud but cheap to disable.
 debug = true
 
+# Bump the auto-computed mesh-centroid TCP by this delta (link's local
+# frame, metres). Use it to push the IK pivot past the gripper centroid
+# to wherever the tool actually grasps (e.g. 0.127 m = 5" further along
+# the gripper's forward axis). Key can be the entity id or the link name.
+# Try one axis at a time, watch which way the IK pivot moves in the UI,
+# then commit to the right axis.
+[ik.tcp_offset_extra]
+# JointGripper = [0.127, 0.0, 0.0]   # uncomment + adjust axis to taste
+
 [input]
 udp_enabled = true
 udp_bind    = "0.0.0.0:9100"

@@ -26,12 +26,19 @@ async def run(config_path: Path) -> None:
     state = EngineState(project=project)
     ik_loop.initialise_joint_values(state)
     state.tcp_offsets = compute_tcp_offsets(project)
+    _apply_tcp_extras(state, cfg.ik.tcp_offset_extra)
     if state.tcp_offsets:
         _log.info(
-            "computed TCP offsets for %d links (centroid pivot for clients "
-            "without their own tcp_offset_local)",
-            len(state.tcp_offsets),
+            "TCP offsets (per link, local frame metres) after centroid + "
+            "config overrides:",
         )
+        for eid, off in state.tcp_offsets.items():
+            ent = project.scene.entities.get(eid)
+            name = (ent.name if ent else "?") or "?"
+            _log.info(
+                "  %-25s %-30s (%+.4f, %+.4f, %+.4f)",
+                name, eid, off[0], off[1], off[2],
+            )
     bus = StateBus()
 
     stopping = asyncio.Event()
@@ -184,6 +191,45 @@ async def _tick_loop(
         # Sleep for the remainder of the period — accounting for time taken.
         elapsed = time.monotonic() - now
         await asyncio.sleep(max(0.0, period - elapsed))
+
+
+def _apply_tcp_extras(
+    state: EngineState, extras: dict[str, list[float]]
+) -> None:
+    """Merge user-specified TCP offset deltas (link's local frame, metres)
+    on top of the auto-computed centroid offsets. Keys are entity ids OR
+    link names (case-insensitive). Unknown keys are logged and skipped."""
+    if not extras:
+        return
+    import numpy as _np
+
+    scene = state.project.scene
+    name_lookup = {
+        (ent.name or "").strip().lower(): eid
+        for eid, ent in scene.entities.items()
+        if (ent.name or "").strip()
+    }
+    for key, vec in extras.items():
+        if key in scene.entities:
+            eid = key
+        else:
+            eid = name_lookup.get(key.strip().lower())
+            if eid is None:
+                _log.warning(
+                    "tcp_offset_extra: no entity matches %r (tried id + name).",
+                    key,
+                )
+                continue
+        if not isinstance(vec, (list, tuple)) or len(vec) != 3:
+            _log.warning(
+                "tcp_offset_extra[%s]: expected 3-element list, got %r", key, vec
+            )
+            continue
+        extra = _np.array([float(v) for v in vec], dtype=float)
+        if eid in state.tcp_offsets:
+            state.tcp_offsets[eid] = state.tcp_offsets[eid] + extra
+        else:
+            state.tcp_offsets[eid] = extra
 
 
 def _log_scene(state: EngineState) -> None:

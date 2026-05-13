@@ -21,6 +21,12 @@ class IKConfig:
     max_ang_vel: float = 1.0
     rate_hz: float = 30.0
     debug: bool = False
+    # Adds a per-link offset (in the link's LOCAL frame, metres) to the
+    # auto-computed mesh-centroid TCP offset. Keys are entity ids OR link
+    # names (case-insensitive). Use this to push the IK pivot past the
+    # gripper centroid -- e.g. 0.127 m (5") along the gripper's forward
+    # axis so the tool's tip becomes the IK reference point.
+    tcp_offset_extra: dict[str, list[float]] = field(default_factory=dict)
 
 
 @dataclass
