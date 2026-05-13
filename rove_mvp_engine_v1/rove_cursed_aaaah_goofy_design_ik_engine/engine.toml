@@ -66,7 +66,7 @@ subscribe_interval_ms = 100
 # assigns the joints it finds to kinova actuators 1..N (in chain order).
 # Works regardless of joint names — useful when all joints share the
 # default "joint_revolute" name in the editor.
-arm_base_entity_id = "ent_link_eba1f893"   # Base
+arm_base_entity_id = "ent_link_1d47ab1d"   # Core (chassis — first joint above this is the kinova j1)
 arm_tip_entity_id  = "ent_link_07ca91a1"   # JointGripper
 
 # NAME MODE (alternative — used only if the two ids above are empty).
