@@ -1,0 +1,21 @@
+# Robotiq 2F-140 — Modbus RTU over USB→RS-485.
+# Delete this file to skip the gripper driver at startup.
+
+# Serial device for the USB→RS-485 adapter. The udev rule should map the
+# adapter to /dev/ttyUSB_gripper so this stays stable across reboots.
+port = "/dev/ttyUSB_gripper"
+
+# Robotiq factory defaults.
+baudrate = 115200
+slave_id = 9
+
+# Status read cadence.  50 ms = 20 Hz.
+poll_interval_ms = 50
+
+# Send rACT=1 on connect and wait for activation to complete.
+auto_activate = true
+
+# Max time to wait for `gSTA == 3` after auto-activate before giving up and
+# continuing anyway. Activation is fast (<1 s) when nothing is blocking the
+# jaws.
+activation_timeout_ms = 5000
