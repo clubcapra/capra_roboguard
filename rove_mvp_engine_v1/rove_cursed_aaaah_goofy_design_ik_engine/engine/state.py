@@ -27,11 +27,16 @@ class EngineState:
     # position target when an Ovis arrives with no tcp_offset_local set.
     tcp_offsets: dict[str, np.ndarray] = field(default_factory=dict)
     # Latest kinova_arm state pushed by rove_sensor_api. Ordered by kinova
-    # actuator index (1..N). None until the first frame arrives. The "Sync"
-    # button reads this and writes into joint_values via the config's
-    # joint_names list.
+    # actuator index (1..N). None until the first frame arrives.
     latest_kinova_positions: list[float] | None = None
     latest_kinova_t: float = 0.0
+    # Per-joint offset (radians) captured at sync time:
+    #     offset[id] = kinova_q_at_sync - model_q_at_sync
+    # After sync, mapping kinova readings into the model frame is:
+    #     model_q = kinova_q - offset
+    # At sync time itself this evaluates to the model's pre-sync value, so
+    # the model doesn't visually jump when the user clicks Sync.
+    kinova_offsets: dict[str, float] = field(default_factory=dict)
 
     def elapsed(self) -> float:
         return time.monotonic() - self.start_time

@@ -214,10 +214,20 @@ def snap_model_to_kinova(
     arm_base_entity_id: str = "",
     arm_tip_entity_id: str = "",
     joint_names: list[str] | None = None,
-) -> tuple[int, list[str], list[str]]:
-    """Apply `state.latest_kinova_positions` (already in radians) to the
-    engine's joint_values via the resolved chain. Returns
-    `(updated, errors, resolved_joint_ids)`."""
+) -> tuple[int, list[str], list[str], dict[str, float]]:
+    """Calibrate the kinova<->model frame offset.
+
+    At sync time the user has placed the real arm at the same physical pose
+    as the 3D model (typically home). We capture::
+
+        offset[i] = kinova_q[i] - model_q[i]
+
+    The model is NOT overwritten -- it stays at its current pose visually.
+    After sync, future kinova reads map into the model frame as
+    `kinova_q - offset`, so when the real arm moves the model can mirror it
+    without inheriting kinova's 180-degree-zero convention.
+
+    Returns `(captured_count, errors, resolved_joint_ids, offsets_dict)`."""
     joint_ids, errors = resolve_arm_joint_ids(
         state,
         arm_base_entity_id=arm_base_entity_id,
@@ -226,13 +236,13 @@ def snap_model_to_kinova(
     )
     if state.latest_kinova_positions is None:
         errors.append("no kinova state received yet (sensor_api not pushing?)")
-        return 0, errors, joint_ids
+        return 0, errors, joint_ids, {}
 
     positions = state.latest_kinova_positions
     if len(positions) < len(joint_ids):
         errors.append(
             f"kinova frame has {len(positions)} positions but chain has "
-            f"{len(joint_ids)} joints — only the first {len(positions)} will be snapped"
+            f"{len(joint_ids)} joints — only the first {len(positions)} will be calibrated"
         )
     if len(positions) > len(joint_ids):
         errors.append(
@@ -241,7 +251,16 @@ def snap_model_to_kinova(
         )
 
     n = min(len(positions), len(joint_ids))
+    captured: dict[str, float] = {}
     for i in range(n):
-        state.joint_values[joint_ids[i]] = float(positions[i])
-        state.joint_velocities[joint_ids[i]] = 0.0
-    return n, errors, joint_ids
+        eid = joint_ids[i]
+        kinova_q = float(positions[i])
+        model_q = float(state.joint_values.get(eid, 0.0))
+        offset = kinova_q - model_q
+        state.kinova_offsets[eid] = offset
+        captured[eid] = offset
+        # Intentional no-op on joint_values: model_q stays where it was.
+        # When continuous mirror-mode lands, it will write
+        # state.joint_values[eid] = latest_kinova - state.kinova_offsets[eid]
+        # which equals model_q at sync time -- no visual jump.
+    return n, errors, joint_ids, captured

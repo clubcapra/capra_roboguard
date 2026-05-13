@@ -224,27 +224,33 @@ class HttpWsServer:
                 },
                 status=409,
             )
-        updated, errors, joint_ids = snap_model_to_kinova(
+        captured, errors, joint_ids, offsets = snap_model_to_kinova(
             self.state,
             arm_base_entity_id=self.hardware.arm_base_entity_id,
             arm_tip_entity_id=self.hardware.arm_tip_entity_id,
             joint_names=self.hardware.joint_names,
         )
+        # Log offsets in degrees so the user can sanity-check them against
+        # the Kinova 180-degree-zero convention.
+        import math as _math
+        offsets_deg = {k: v * 180.0 / _math.pi for k, v in offsets.items()}
         _log.info(
-            "sync requested: %d joints updated, %d errors  chain=%s",
-            updated,
-            len(errors),
+            "sync calibrated %d joints  chain=%s  offsets_deg=%s",
+            captured,
             joint_ids,
+            {k[-8:]: round(v, 2) for k, v in offsets_deg.items()},
         )
         for err in errors:
             _log.warning("  sync error: %s", err)
         return web.json_response(
             {
-                "ok": updated > 0,
-                "updated": updated,
+                "ok": captured > 0,
+                "captured": captured,
                 "errors": errors,
                 "positions": self.state.latest_kinova_positions,
                 "joint_ids": joint_ids,
+                "offsets": offsets,           # radians
+                "offsets_deg": offsets_deg,   # degrees, for the UI display
             }
         )
 
