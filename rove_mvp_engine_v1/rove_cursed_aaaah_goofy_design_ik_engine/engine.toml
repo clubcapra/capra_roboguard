@@ -1,0 +1,53 @@
+# ForgeBOT IK engine configuration.
+#
+# Sections:
+#   [robot]     where to load the scene from
+#   [ik]        solver behaviour (collision toggle, twist frame, vel caps)
+#   [input]     how Ovis arrives (UDP, WebSocket, or both)
+#   [output]    where StateUpdate goes (UDP, WebSocket, stdout)
+#
+# Paths are resolved relative to this file.
+
+[robot]
+# Tried in order. First match wins.
+forgebot = "data/scene.forgebot"
+urdf     = "data/robot.urdf"
+
+[ik]
+# Run python-fcl collision checks during IK; rejects steps that introduce
+# new collision pairs. python-fcl is always bundled in the export, so this
+# is a runtime toggle, not a build-time choice.
+collision_aware = true   # TEMP: turn back on once we confirm the stutter source
+
+# Frame Ovis position/orientation is expressed in.
+#   "world"  - world axes (matches the editor gizmo's default)
+#   "target" - tip's local frame (joystick-style: +x is "forward" for the tip)
+twist_frame = "world"     # MUST be "world" for the bundled UI (gizmo emits world-frame deltas)
+
+# Ovis values are normalised to [-1, 1]. These caps map 1.0 to a real
+# velocity. Per-target overrides live in data/ik_profile.json.
+max_lin_vel = 20.0   # metres/second at |position| = 1 (UI-tracking default)
+max_ang_vel = 60.0   # radians/second at |orientation| = 1 (UI-tracking default)
+
+# Engine tick rate. State is emitted at this rate; the latest Ovis is
+# applied each tick (older Ovis messages are dropped — they're velocities,
+# not a queue).
+rate_hz = 60.0
+
+# Per-tick IK trace (one line per non-idle tick). Loud but cheap to disable.
+debug = true
+
+[input]
+udp_enabled = true
+udp_bind    = "0.0.0.0:9100"
+ws_enabled  = true
+ws_bind     = "0.0.0.0:9101"
+ws_path     = "/ovis"
+
+[output]
+# StateUpdate per tick. Multiple outputs can be on simultaneously.
+udp_enabled    = false
+udp_target     = "127.0.0.1:9200"
+ws_enabled     = true              # reuses the input WS server when both on
+ws_path        = "/state"
+stdout_enabled = false             # length-prefixed proto frames on stdout
