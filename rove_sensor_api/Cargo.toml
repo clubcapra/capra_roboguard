@@ -1,0 +1,25 @@
+[package]
+name = "capra-rove-interface"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+axum = "0.8"
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-scalar = { version = "0.3", features = ["axum"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+dashmap = "6"
+socketcan = { version = "3", features = ["tokio"] }
+dirs = "5"
+tokio-serial = "5"
+libloading = "0.8"
+toml = "0.8"
+tokio-modbus = { version = "0.16", default-features = false, features = ["rtu"] }
+futures = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

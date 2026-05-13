@@ -1,0 +1,69 @@
+# rove_control_bridge — Jetson-side conversion bridge config
+# Receives RoveControl.proto from the steamdeck and converts to
+# rove_sensor_api streaming commands for the ODrive nodes.
+#
+# Run with: python -m rove_control_bridge --config config/default.yaml
+
+# ---------- Inbound: RoveControl proto listener ----------
+listen:
+  host: "0.0.0.0"
+  port: 9101   # must not overlap with rove_sensor_api ports (5000–5xxx)
+
+# ---------- rove_sensor_api connection ----------
+sensor_api:
+  host: "127.0.0.1"
+  http_port: 8080     # used for /discover to auto-resolve ODrive command ports
+
+# ---------- Track conversion ----------
+tracks:
+  # "velocity"  — left_vel/right_vel [-1,1] scaled to rev/s via max_velocity
+  # "torque"    — left_vel/right_vel [-1,1] scaled to Nm via max_torque
+  strategy: "torque"
+
+  # ODrive CAN node IDs assigned to each track
+  left_node_ids: [31, 34]
+  right_node_ids: [32, 33]
+
+  # Scale factors
+  max_velocity: 20.0    # rev/s at full stick deflection (velocity strategy)
+  max_torque: 15.0       # Nm at full stick deflection (torque strategy)
+
+  invert_left: false
+  invert_right: true   # right-side motors are physically mirrored — invert to drive straight
+
+# ---------- Flipper conversion (not wired yet) ----------
+flippers:
+  enabled: false
+  strategy: "velocity"
+  node_ids:
+    fl: null   # front-left  ODrive node ID (null = not connected)
+    fr: null   # front-right
+    rl: null   # rear-left
+    rr: null   # rear-right
+  max_velocity: 2.0     # rev/s at full step command
+
+# ---------- Arm / Ovis (IK not yet implemented) ----------
+ovis:
+  enabled: false
+
+# ---------- Gripper (Robotiq 2F-140 via rove_sensor_api) ----------
+gripper:
+  enabled: true
+  sensor_id: "robotiq_gripper"  # must match the id returned by /discover
+  speed: 255    # 0–255 closing speed sent with every position command
+  force: 128    # 0–255 gripping force (128 = half, safe default)
+
+# ---------- Operational ----------
+# How often to re-send commands even when no new proto arrives (keepalive Hz).
+# Must be <= the ODrive watchdog interval. Default: 10 Hz.
+# Seconds of silence before ODrives return to Idle (axis_state=1).
+# On next packet they automatically re-arm to ClosedLoopControl (axis_state=8).
+idle_timeout_s: 0.5   # seconds of silence before ODrives go idle (axis_state=1)
+                      # must be > worst-case WiFi jitter; 500ms survives most dropouts
+                      # while still stopping quickly when operator releases stick
+
+# Seconds to wait for /discover to succeed before giving up.
+discover_timeout_s: 10.0
+
+# Log every converted command to stdout.
+verbose: true

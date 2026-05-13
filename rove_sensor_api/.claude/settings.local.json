@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "WebFetch(domain:docs.odriverobotics.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:odrive-cdn.nyc3.digitaloceanspaces.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(cargo build:*)",
+      "Bash(curl -s https://raw.githubusercontent.com/odriverobotics/ODriveResources/master/examples/can_param_access.py)",
+      "Bash(curl -s https://raw.githubusercontent.com/odriverobotics/ODriveResources/master/examples/can_enumerate.py)",
+      "Bash(curl -s \"https://api.github.com/repos/odriverobotics/ODriveFirmware/releases/latest\")",
+      "Bash(python3 -c \"import sys,json; r=json.load\\(sys.stdin\\); print\\(r.get\\('tag_name','?'\\)\\); print\\([a['browser_download_url'] for a in r.get\\('assets',[]\\) if 'endpoint' in a['name'].lower\\(\\)]\\)\")",
+      "Bash(curl -s \"https://api.github.com/repos/odriverobotics/ODriveFirmware/releases\")",
+      "Bash(python3 -c \"import sys,json; r=json.load\\(sys.stdin\\); [print\\(x.get\\('tag_name'\\), [a['browser_download_url'] for a in x.get\\('assets',[]\\)]\\) for x in r[:5]]\")",
+      "Bash(python3 -c ':*)",
+      "Bash(curl -s \"https://api.github.com/repos/odriverobotics/odrive_can/releases\")",
+      "Bash(curl -s \"https://api.github.com/repos/odriverobotics/ODrive/releases\")",
+      "Bash(curl -sL \"https://api.github.com/repos/odriverobotics/ODrivePro/releases\")",
+      "Bash(curl -sL \"https://api.github.com/repos/odriverobotics/odrive-pro-firmware/releases\")",
+      "Bash(curl -sL \"https://api.github.com/repos/odriverobotics/ODriveHardware/releases\")",
+      "Bash(curl -sL \"https://docs.odriverobotics.com/v/latest/fibre_types/odrive-interface.json\")",
+      "Bash(curl -sL \"https://docs.odriverobotics.com\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(curl -sL \"https://docs.odriverobotics.com/releases/firmware\")",
+      "Bash(curl -sL \"https://docs.odriverobotics.com/api.js\")"
+    ]
+  }
+}
