@@ -41,6 +41,12 @@ class EngineState:
     # Captured at sync time so the per-tick mirror loop doesn't have to
     # re-resolve the chain.
     kinova_chain_joint_ids: list[str] = field(default_factory=list)
+    # Per-joint sign multiplier (+1 or -1) applied to kinova reads. Set from
+    # HardwareConfig.inverted_joints at sync time. Used both when capturing
+    # the offset and when mirroring, so the formulas stay consistent:
+    #     offset[i] = sign[i] * kinova_q_at_sync - model_q_at_sync
+    #     model_q   = sign[i] * kinova_q_now    - offset[i]
+    kinova_signs: dict[str, float] = field(default_factory=dict)
 
     def elapsed(self) -> float:
         return time.monotonic() - self.start_time

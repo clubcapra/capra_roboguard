@@ -229,6 +229,7 @@ class HttpWsServer:
             arm_base_entity_id=self.hardware.arm_base_entity_id,
             arm_tip_entity_id=self.hardware.arm_tip_entity_id,
             joint_names=self.hardware.joint_names,
+            inverted_joints=self.hardware.inverted_joints,
         )
         # Log offsets in degrees so the user can sanity-check them against
         # the Kinova 180-degree-zero convention.

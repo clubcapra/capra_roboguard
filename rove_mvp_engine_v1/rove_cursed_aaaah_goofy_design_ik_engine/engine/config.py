@@ -75,6 +75,11 @@ class HardwareConfig:
     # Name mode (fallback). Joint names in kinova actuator-index order.
     joint_names: list[str] = field(default_factory=list)
 
+    # Kinova actuator indices (1..N) whose rotation axis is inverted
+    # relative to the model's URDF axis. After Sync the engine multiplies
+    # readings for these joints by -1 so the mirror direction matches.
+    inverted_joints: list[int] = field(default_factory=list)
+
 
 @dataclass
 class EngineConfig:

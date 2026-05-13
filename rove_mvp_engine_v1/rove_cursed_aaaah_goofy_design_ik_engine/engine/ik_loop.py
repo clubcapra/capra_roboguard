@@ -378,5 +378,6 @@ def _apply_kinova_mirror(state: EngineState) -> None:
     for i, eid in enumerate(state.kinova_chain_joint_ids):
         if i >= len(positions):
             break
+        sign = state.kinova_signs.get(eid, 1.0)
         offset = state.kinova_offsets.get(eid, 0.0)
-        state.joint_values[eid] = float(positions[i]) - offset
+        state.joint_values[eid] = sign * float(positions[i]) - offset

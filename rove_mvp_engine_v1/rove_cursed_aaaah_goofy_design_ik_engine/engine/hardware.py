@@ -214,6 +214,7 @@ def snap_model_to_kinova(
     arm_base_entity_id: str = "",
     arm_tip_entity_id: str = "",
     joint_names: list[str] | None = None,
+    inverted_joints: Iterable[int] | None = None,
 ) -> tuple[int, list[str], list[str], dict[str, float]]:
     """Calibrate the kinova<->model frame offset.
 
@@ -250,18 +251,23 @@ def snap_model_to_kinova(
             f"has {len(joint_ids)} joints — extra values ignored"
         )
 
+    inverted = set(inverted_joints or ())
+
     n = min(len(positions), len(joint_ids))
     captured: dict[str, float] = {}
+    state.kinova_signs.clear()
     for i in range(n):
         eid = joint_ids[i]
-        kinova_q = float(positions[i])
+        kinova_idx = i + 1  # 1-based kinova actuator index
+        sign = -1.0 if kinova_idx in inverted else 1.0
+        state.kinova_signs[eid] = sign
+        signed_kinova_q = sign * float(positions[i])
         model_q = float(state.joint_values.get(eid, 0.0))
-        offset = kinova_q - model_q
+        offset = signed_kinova_q - model_q
         state.kinova_offsets[eid] = offset
         captured[eid] = offset
         # Intentional no-op on joint_values: model_q stays where it was.
-        # The mirror loop in ik_loop.tick() reads the offsets back to keep
-        # the model in sync with whatever kinova reports going forward.
-    # Cache chain order so the per-tick mirror doesn't re-resolve every time.
+        # The mirror loop reads sign + offset to keep the model in sync
+        # with whatever kinova reports going forward.
     state.kinova_chain_joint_ids = joint_ids[:n]
     return n, errors, joint_ids, captured

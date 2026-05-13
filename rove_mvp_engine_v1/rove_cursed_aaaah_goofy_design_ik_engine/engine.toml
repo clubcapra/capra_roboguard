@@ -71,3 +71,8 @@ arm_tip_entity_id  = "ent_link_07ca91a1"   # JointGripper
 
 # NAME MODE (alternative — used only if the two ids above are empty).
 joint_names = []
+
+# Kinova actuator indices (1..N) whose rotation axis is inverted relative
+# to the model's URDF axis. After Sync the engine multiplies readings for
+# these joints by -1 so model rotation direction matches the real arm.
+inverted_joints = [2, 3, 4, 5, 6]
