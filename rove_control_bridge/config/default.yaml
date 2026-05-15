@@ -16,17 +16,18 @@ sensor_api:
 
 # ---------- Track conversion ----------
 tracks:
-  # "velocity"  — left_vel/right_vel [-1,1] scaled to rev/s via max_velocity
-  # "torque"    — left_vel/right_vel [-1,1] scaled to Nm via max_torque
-  strategy: "torque"
+  # "velocity"  — every drum in velocity mode, scaled to rev/s via max_velocity
+  # "torque"    — every drum in torque mode, scaled to Nm via max_torque
+  # "mixed"     — per side: node_ids[:-1] velocity governor, node_ids[-1] torque
+  strategy: "mixed"
 
   # ODrive CAN node IDs assigned to each track
   left_node_ids: [31, 34]
   right_node_ids: [32, 33]
 
   # Scale factors
-  max_velocity: 20.0    # rev/s at full stick deflection (velocity strategy)
-  max_torque: 15.0       # Nm at full stick deflection (torque strategy)
+  max_velocity: 25.0    # rev/s at full stick deflection (velocity strategy)
+  max_torque: 25.0       # Nm at full stick deflection (torque strategy, applied to every drum)
 
   invert_left: false
   invert_right: true   # right-side motors are physically mirrored — invert to drive straight
@@ -42,9 +43,20 @@ flippers:
     rr: null   # rear-right
   max_velocity: 2.0     # rev/s at full step command
 
-# ---------- Arm / Ovis (IK not yet implemented) ----------
+# ---------- Arm / Ovis (forward-only test) ----------
+# When enabled, the bridge re-wraps each incoming RoveControl.Ovis as a
+# forgebot.engine.Ovis and sends it UDP to rove_ik_engine. The engine
+# runs IK on the loaded scene and visualises the chain in its bundled UI,
+# so you can verify operator-twist -> chain-motion mapping without yet
+# closing the loop back to the ODrives. Eventually rove_ik_engine will
+# also own tracks + flippers conversion (collision sim against the world
+# model), at which point the bridge's role shrinks to UDP receive/parse.
 ovis:
-  enabled: false
+  enabled: true
+  engine_host: "127.0.0.1"   # same Pi as the engine
+  engine_port: 9100
+  target_entity_id: "ent_link_07ca91a1"
+
 
 # ---------- Gripper (Robotiq 2F-140 via rove_sensor_api) ----------
 gripper:
