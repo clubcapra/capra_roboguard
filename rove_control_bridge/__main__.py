@@ -27,8 +27,7 @@ if __package__ in (None, ""):
     __package__ = os.path.basename(_here)
 
 from .bridge import start
-from .config import BridgeConfig, FlipperNodeIds, FlippersConfig, ListenConfig, SensorApiConfig, TracksConfig
-from .config import load as load_config
+from .config import BridgeConfig, load as load_config
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,27 +39,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="FILE",
         help="YAML config file (required unless all options are passed as flags)",
     )
-    # Allow selective overrides of the most commonly changed values.
     p.add_argument("--listen-host", default=None, help="Bind address for RoveControl packets")
     p.add_argument("--listen-port", type=int, default=None, help="UDP port to listen on")
     p.add_argument("--sensor-api-host", default=None, help="rove_sensor_api host")
     p.add_argument("--sensor-api-http-port", type=int, default=None, help="rove_sensor_api HTTP port")
     p.add_argument(
         "--tracks-strategy",
-        choices=["velocity", "torque"],
+        choices=["velocity", "torque", "mixed"],
         default=None,
         help="Track conversion strategy",
     )
     p.add_argument("--max-velocity", type=float, default=None, help="Max track velocity (rev/s)")
     p.add_argument("--max-torque", type=float, default=None, help="Max track torque (Nm)")
-    p.add_argument("--send-rate", type=float, default=None, help="Keepalive send rate (Hz)")
     p.add_argument("--discover-timeout", type=float, default=None, help="ODrive discovery timeout (s)")
     p.add_argument("-v", "--verbose", action="store_true", default=False, help="Verbose logging")
     return p.parse_args(argv)
 
 
 def merge_args_into_config(args: argparse.Namespace, cfg: BridgeConfig) -> BridgeConfig:
-    """Apply any CLI overrides on top of the loaded config."""
+    """Apply CLI overrides on top of the loaded config."""
     if args.listen_host is not None:
         cfg.listen.host = args.listen_host
     if args.listen_port is not None:
@@ -75,8 +72,6 @@ def merge_args_into_config(args: argparse.Namespace, cfg: BridgeConfig) -> Bridg
         cfg.tracks.max_velocity = args.max_velocity
     if args.max_torque is not None:
         cfg.tracks.max_torque = args.max_torque
-    if args.send_rate is not None:
-        cfg.send_rate_hz = args.send_rate
     if args.discover_timeout is not None:
         cfg.discover_timeout_s = args.discover_timeout
     if args.verbose:

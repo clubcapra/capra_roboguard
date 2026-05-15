@@ -1,0 +1,8 @@
+#!/bin/sh
+'''exec' /home/capra/data/capra_rove_stack/capra_roboguard/rove_mvp_engine_v1/rove_cursed_aaaah_goofy_design_ik_engine/.venv/bin/python "$0" "$@"
+' '''
+import sys
+from numpy.f2py.f2py2e import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
