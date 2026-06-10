@@ -70,10 +70,12 @@ def main():
             s.set_rays(min(args.rays, s.rays_per_scan))
         if args.threads > 0 and hasattr(s, "set_ray_threads"):
             s.set_ray_threads(args.threads)
-    pubs = {s.name: LidarUdpPublisher(args.host, DEFAULT_PORTS.get(s.name, 5022))
+    # Livox-style subscribable streams: bind the port, push to whoever registers.
+    pubs = {s.name: LidarUdpPublisher(DEFAULT_PORTS.get(s.name, 5022))
             for s in livox}
     print(f"[lidar_worker] {', '.join(s.name for s in livox)} @ {args.hz:g}Hz "
-          f"{args.rays} rays -> UDP {', '.join(str(DEFAULT_PORTS.get(s.name)) for s in livox)}")
+          f"{args.rays} rays -> UDP {', '.join(str(DEFAULT_PORTS.get(s.name)) for s in livox)} "
+          f"(subscribe to receive)")
 
     period = 1.0 / args.hz
     rt0 = time.time(); n = 0

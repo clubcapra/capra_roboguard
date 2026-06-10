@@ -42,11 +42,6 @@ def main():
     ap.add_argument("--terrain", nargs="?",
                     const="../free_dirt_road_through_forest.glb", default=None)
     ap.add_argument("--host", default="127.0.0.1", help="bind/target host for UDP+RTSP")
-    ap.add_argument("--sensor-host", default=None,
-                    help="destination host for PUSHED sensor streams (lidar / Livox IMU / "
-                         "ground-truth) when autonomy runs on a different machine than the sim. "
-                         "Defaults to --host. Backend telemetry + control stay on --host, local "
-                         "to the rove_sensor_api binary, so the rsa mocks keep receiving them.")
     ap.add_argument("--no-texture", action="store_true")
     ap.add_argument("--no-rtsp", action="store_true", help="skip the camera RTSP feeds")
     ap.add_argument("--no-lidar", action="store_true",
@@ -119,7 +114,9 @@ def main():
     for s in livox:                      # lighter ray budget for realtime serving
         if hasattr(s, "set_rays") and args.lidar_rays > 0:
             s.set_rays(min(args.lidar_rays, s.rays_per_scan))
-    lidar_pubs = {s.name: LidarUdpPublisher(args.host, DEFAULT_PORTS.get(s.name, 5022))
+    # Livox-style: the publisher binds its port and streams to whoever subscribes
+    # (no preconfigured host) -- so the cloud isn't soft-locked to one consumer.
+    lidar_pubs = {s.name: LidarUdpPublisher(DEFAULT_PORTS.get(s.name, 5022))
                   for s in livox}
     # The Livox Mid-360 built-in IMU is part of the LIDAR subsystem -- completely
     # separate from the rove_sensor_api (which is only Pi-board hardware). It is
@@ -131,7 +128,7 @@ def main():
     if all_livox:
         imu_sensors = sorted(all_livox, key=lambda s: 0 if "top" in s.name else 1)
         imu_port = port_map.livox_imu_port if port_map else 56401
-        imu_pub = LivoxImuUdpPublisher(args.host, imu_port)
+        imu_pub = LivoxImuUdpPublisher(imu_port)
     gt = next((d for d in api.devices if getattr(d, "channel", "") == "vectornav"), None)
 
     feeds = None

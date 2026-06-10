@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import socket
 import struct
+import time
 from dataclasses import dataclass, field
 from typing import Any, Tuple
 
@@ -223,28 +224,78 @@ def decode_imu_packet(buf: bytes):
     return np.array([g0, g1, g2]), np.array([a0, a1, a2]), ts_ns
 
 
-class LivoxImuUdpPublisher:
-    """Sends Mid-360 IMU samples as native Livox UDP datagrams (default port
-    56401, the real host-side IMU port). Fire-and-forget."""
+class _Subscribers:
+    """Livox-style registration for a UDP push stream.
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 56401):
-        self.host, self.port = host, int(port)
+    The real Mid-360 doesn't blast its cloud/IMU at a hard-coded host: a client
+    registers (SDK control command) and the sensor then streams to whoever asked.
+    We model that so the sim never "soft-locks" the livox stream to one machine --
+    ANY number of consumers (autonomy, mapping, a debug viewer, on the same box or
+    across the LAN) can subscribe and each gets the stream.
+
+    The bound socket both RECEIVES subscribe/keepalive datagrams and SENDS the
+    data, so replies go to the exact (ip, port) the request came from -- no
+    preconfigured destination. A subscriber that stops pinging within `TTL` is
+    dropped (so a dead consumer doesn't get streamed forever). Any datagram is a
+    subscribe/keepalive; clients re-ping well inside the TTL (e.g. 1 Hz)."""
+
+    TTL = 5.0
+
+    def __init__(self, port: int, bind_host: str = "0.0.0.0"):
+        self.port = int(port)
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._cnt = 0
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.bind((bind_host, self.port))
+        self._sock.setblocking(False)
+        self._subs: dict = {}            # addr -> last-seen monotonic time
 
-    def publish(self, gyro, accel, ts_ns: int) -> None:
-        try:
-            self._sock.sendto(encode_imu_packet(gyro, accel, ts_ns, udp_cnt=self._cnt),
-                              (self.host, self.port))
-            self._cnt += 1
-        except OSError:
-            pass
+    def _drain(self) -> None:
+        while True:                      # absorb all pending subscribe/keepalives
+            try:
+                _data, addr = self._sock.recvfrom(2048)
+            except (BlockingIOError, InterruptedError):
+                break
+            except OSError:
+                break
+            self._subs[addr] = time.monotonic()
+
+    def targets(self) -> list:
+        """Live subscriber addresses (drains new pings, expires stale ones)."""
+        self._drain()
+        cutoff = time.monotonic() - self.TTL
+        self._subs = {a: t for a, t in self._subs.items() if t >= cutoff}
+        return list(self._subs)
+
+    def send(self, payload: bytes) -> None:
+        for addr in self.targets():
+            try:
+                self._sock.sendto(payload, addr)
+            except OSError:
+                pass
 
     def close(self) -> None:
         try:
             self._sock.close()
         except OSError:
             pass
+
+
+class LivoxImuUdpPublisher:
+    """Streams Mid-360 IMU samples as native Livox UDP datagrams (default port
+    56401, the real host-side IMU port) to registered subscribers (Livox-style;
+    see `_Subscribers`)."""
+
+    def __init__(self, port: int = 56401, bind_host: str = "0.0.0.0"):
+        self.port = int(port)
+        self._subs = _Subscribers(self.port, bind_host)
+        self._cnt = 0
+
+    def publish(self, gyro, accel, ts_ns: int) -> None:
+        self._subs.send(encode_imu_packet(gyro, accel, ts_ns, udp_cnt=self._cnt))
+        self._cnt += 1
+
+    def close(self) -> None:
+        self._subs.close()
 
 
 # binary point-cloud UDP stream: each scan is fragmented across one or more
@@ -323,28 +374,35 @@ class CloudReassembler:
 
 class LidarUdpPublisher:
     """Streams each Livox scan as binary point-cloud UDP datagrams (one or more
-    per scan, one stream per sensor channel/port). Fire-and-forget, like the real
-    sensor -- the consumer reassembles by frame id with `CloudReassembler`."""
+    per scan, one stream per sensor channel/port) to registered subscribers
+    (Livox-style; see `_Subscribers`). The consumer reassembles by frame id with
+    `CloudReassembler`."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 5022,
-                 max_points_per_packet: int = _PC_PTS_PER_PKT):
-        self.host, self.port = host, int(port)
+    def __init__(self, port: int = 5022,
+                 max_points_per_packet: int = _PC_PTS_PER_PKT,
+                 bind_host: str = "0.0.0.0"):
+        self.port = int(port)
         self.max_points_per_packet = int(max_points_per_packet)
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._subs = _Subscribers(self.port, bind_host)
         self._frame = 0
 
     def publish(self, scan: "LidarScan") -> None:
         if scan is None:
             return
-        for pkt in encode_cloud(scan, self._frame, self.max_points_per_packet):
-            try:
-                self._sock.sendto(pkt, (self.host, self.port))
-            except OSError:
-                pass
+        # Resolve subscribers ONCE per frame so every fragment of this scan goes
+        # to the same set (a frame must arrive whole to reassemble).
+        targets = self._subs.targets()
+        if targets:
+            for pkt in encode_cloud(scan, self._frame, self.max_points_per_packet):
+                for addr in targets:
+                    try:
+                        self._subs._sock.sendto(pkt, addr)
+                    except OSError:
+                        pass
         self._frame = (self._frame + 1) & 0xFFFFFFFF
 
     def close(self) -> None:
         try:
-            self._sock.close()
+            self._subs.close()
         except OSError:
             pass
