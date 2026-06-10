@@ -1,0 +1,5 @@
+# Runtime binaries (mediamtx, ffmpeg, ffprobe) are too large for git and are
+# fetched per-machine by `scripts/fetch_bin.sh`. Keep them OUT of the repo but
+# keep this directory tracked so the fetch target exists on a fresh checkout.
+*
+!.gitignore
