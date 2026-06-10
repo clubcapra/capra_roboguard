@@ -1,0 +1,65 @@
+# Fix tomorrow — open issues (capra_autonomy + sim)
+
+Snapshot of known problems found during autonomy bring-up, with the workaround in
+place now and the proper fix for later.
+
+## 1. IMU/GNSS drift — the AUTONOMY must handle it (PositionService fusion)  ← biggest one
+- The sim VN random-walk (`devices.py` `_gnss_enu`: `_walk += N(0,0.03)` @50 Hz, no
+  bound) drifts ~19 m over a long session (measured **(+15.7, −10.2) m** while the robot
+  was at spawn, vs the clean lidar pose). This is **realistic** — every real IMU/GNSS
+  drifts — so it's a good test case, NOT just a sim bug to disable.
+- **Proper fix (per the user + SAR spec): build the autonomy PositionService FUSION** —
+  wheel odometry (ODrive encoders) + **lidar odometry / scan-matching (SLAM)** + Livox
+  IMU + GNSS, with a drift estimate, so pose stays bounded when GNSS is bad. This is the
+  core of the M8 work. See [[sar-spec-docs]] PositionService (GNSS integrity SM
+  TRUSTED→SUSPECT→REJECTED→ABSENT, drift budget). The current engine PositionService is
+  GNSS+lowpass only — it FOLLOWS the drift, doesn't bound it.
+- **Temporary testing crutch only:** `ROVE_VN_ERRORS=0` (clean pose) to unblock testing
+  the driving calibration + reflexes tonight. Do NOT ship this; the real deliverable is
+  the fusion. (Optionally also bound the sim's "nominal" walk so nominal ≈ 0.4 m like real GNSS.)
+
+## 2. VectorNav yaw is rotated ~90° from the drive-forward axis
+- Confirmed by the user (VN is mounted rotated in the 3D model) + probe: driving all
+  tracks forward moves the chassis EAST while VN yaw says SOUTH (~90° off). The brush
+  model's forward (track geometry) ≠ VN/base yaw.
+- **Workaround now:** `[goto].drive_offset_deg = 90` in `config/autonomy.toml`
+  (drive_heading = VN heading + 90°).
+- **Proper fix:** correct the VN mount in the sim so `VectorNavDevice` reports the true
+  chassis heading (then drive_offset_deg = 0), OR derive heading from lidar odometry.
+
+## 3. Road has NO collision on its bounds (edges are void)
+- The terrain collider is the road strip only; off the road = no floor. Driving toward
+  the road edge / "into the trees" off the strip = the robot falls off the map.
+- **Direction from user:** test by driving the robot **up and down the road (the hill)**,
+  i.e. ALONG the drivable strip — not across it into the bounds.
+
+## 4. Obstacle spawning should be flexible (place objects anywhere on the road)
+- Now: `ROVE_SPAWN_TREES=1` spawns 3 fixed trunks via `scene.spawn_demo_trees`.
+- Added: `ROVE_OBSTACLES="x,y;x,y;..."` env → spawn cylinders at arbitrary road
+  positions (read by BOTH sim_server physics AND each lidar_worker, so the lidar
+  raycasts them). Set positions that sit on the drivable strip.
+- **Later:** a runtime spawn command (needs to reach both sim processes — shared file
+  or broadcast — because lidar_worker is a separate sim).
+
+## What works (don't re-litigate)
+- Livox subscription transport (cross-machine), Rust LVX2 decoder, lidar forward-hazard
+  reflex (obstacle + cliff, validated), L0 reflexes (geofence/fall/attitude), remote
+  reset-to-spawn (UDP :5099, verified), track-rotation calibration (invert_right=false),
+  drive sign (+forward = positive tracks). Heading *control* is good once the pose is clean.
+
+## Road geometry (raycast of the collision mesh from spawn (3,-6))
+Drivable (z~0, solid) to 24 m+: **South**, **East**, **SW** (SW has the most hill,
+descends to ~-0.3 m). **North / NE / NW are cliffs** within ~9 m (the road bounds, no
+collision). Drive-forward at spawn = **East** (so an East waypoint needs no turn).
+- Up/down-road test: drive East/South along the strip, there-and-back. Avoid N/NE/NW.
+- Obstacle-avoid test: `ROVE_OBSTACLES="9,0"` puts a trunk in the East lane.
+
+## Redeploy needed on think2 to continue (one pull + reinstall)
+`tools/sim_server.py`, `tools/lidar_worker.py`, `rove_sim/world/scene.py`,
+`scripts/install_service.sh` changed. On think2:
+```
+cd /data/capra_stack/capra_roboguard/rove_sim && git pull && sudo ./scripts/install_service.sh
+```
+This adds `ROVE_VN_ERRORS=0` (clean pose) + env-driven obstacle spawning. After it,
+GoTo should drive East cleanly on a stable pose; then build the PositionService fusion
+to handle realistic drift and re-enable VN errors.

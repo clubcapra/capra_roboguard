@@ -41,6 +41,7 @@ rate_hz = 50.0
 arrive_tol_m = 0.6          # within this radius of a waypoint => waypoint done
 k_v          = 0.35         # forward gain (per metre of remaining distance), normalized
 v_max        = 0.30         # cap on normalized forward (slow -> less slip-drift while turning)
+drive_offset_deg = 90.0     # VN-yaw -> drive-forward axis offset (brush model, calibrated by probe)
 
 # INNER heading asservissement (IMU gyro_z vs track differential) — mud rejection.
 # turn = kp*heading_err + ki*∫err - kd*(gyro_sign*yaw_rate). ki=kd=0 => plain steer.
@@ -81,7 +82,10 @@ min_ground_per_bin = 2       # < this many ground returns in a near range-bin =>
 [mission]
 relative_to_start = true
 demo_forward_m    = 0.0
-# Spawn sits at world ~(3,-6) facing South. Drive 10 m straight South (no turn) --
-# straight at the demo trees (3,-11.5 etc.), so the lidar hazard reflex stops the
-# robot before the trunk. Waypoint is PAST the trees on purpose.
-waypoints         = [[0.0, -10.0]]
+# ALONG-THE-ROAD test (drive up/down the road, not across into the no-collision
+# bounds). At spawn the drive-forward axis is EAST, and the road is solid to 24 m+
+# East/South (raycast of the collision mesh; N/NE/NW are cliffs). 15 m East = a
+# straight aligned drive with no trees in the lane. Add [15,0],[0,0] for there-and-back.
+# For the obstacle-avoid demo instead: set sim env ROVE_OBSTACLES="9,0" (a trunk in
+# the East lane) and keep this waypoint past it.
+waypoints         = [[15.0, 0.0]]

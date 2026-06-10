@@ -309,11 +309,10 @@ async fn run_control_loop(
                         // Inner IMU heading loop turns the heading error into the
                         // track differential, damping slip-induced yaw (mud).
                         let turn = heading.update(heading_err, pose.yaw_rate, dt);
-                        // Sim track convention (verified live by direct probe):
-                        //  * +track on BOTH sides drives the chassis BACKWARD, so to
-                        //    close range we drive with -forward.
-                        //  * turn>0 (toward +heading_err = CCW) is left>right.
-                        let drive = -forward;
+                        // Sim track convention (verified live by trajectory probe):
+                        //  * +track on BOTH sides drives FORWARD (along the drive axis).
+                        //  * turn>0 steers toward +heading_err: left>right.
+                        let drive = forward;
                         let left = (drive + turn).clamp(-1.0, 1.0);
                         let right = (drive - turn).clamp(-1.0, 1.0);
                         tracks.drive(left, right, dt).await?;

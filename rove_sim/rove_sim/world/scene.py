@@ -207,17 +207,52 @@ def load_scene_sim(path_or_scene, profile: str, mode: str = "headless",
     return sim
 
 
-# Demo obstacles: a few static trunks on the road south of the standard spawn,
-# so autonomy can drive at them and the lidar forward-hazard reflex stops the
-# robot in time. Spawned in EVERY sim instance that raycasts/collides against
-# them (sim_server physics AND each lidar_worker), gated by env ROVE_SPAWN_TREES.
-DEMO_TREES = [("tree_a", (3.0, -11.5)), ("tree_b", (1.0, -14.5)), ("tree_c", (5.0, -14.5))]
+# Static trunk obstacles on the road, so autonomy can drive at them and the lidar
+# forward-hazard reflex stops in time. Spawned in EVERY sim instance that raycasts/
+# collides against them (sim_server physics AND each lidar_worker). Default demo
+# positions; override with env ROVE_OBSTACLES="x,y;x,y;..." to place them anywhere
+# on the drivable road.
+DEMO_TREES = [(3.0, -11.5), (1.0, -14.5), (5.0, -14.5)]
 
 
-def spawn_demo_trees(world) -> int:
-    """Upsert the demo trunks into `world` (a MockWorld). Idempotent by id."""
-    for tid, (tx, ty) in DEMO_TREES:
+def parse_obstacles_env(s):
+    """Parse ROVE_OBSTACLES "x,y;x,y;..." -> [(x,y), ...] (bad entries skipped)."""
+    out = []
+    for part in (s or "").split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            x, y = part.split(",")
+            out.append((float(x), float(y)))
+        except ValueError:
+            pass
+    return out
+
+
+def spawn_obstacles(world, positions=None, radius=0.25, height=4.0) -> int:
+    """Upsert cylinder trunks at `positions` (default DEMO_TREES) into `world`."""
+    positions = DEMO_TREES if positions is None else positions
+    for i, (tx, ty) in enumerate(positions):
         world.spawn_object(SceneObject(
-            id=tid, pose=(tx, ty, 2.0), shape="cylinder", extents=(0.5, 0.5, 4.0),
+            id=f"obs_{i}", pose=(tx, ty, height / 2.0), shape="cylinder",
+            extents=(radius * 2, radius * 2, height),
             rgba=(0.45, 0.30, 0.15, 1.0), mass=0.0, cls="tree"))
-    return len(DEMO_TREES)
+    return len(positions)
+
+
+def spawn_obstacles_from_env(world) -> int:
+    """ROVE_OBSTACLES="x,y;..." (explicit) wins, else ROVE_SPAWN_TREES=1 spawns the
+    default demo trunks. Returns the count (0 if neither set)."""
+    import os
+    env = os.environ.get("ROVE_OBSTACLES")
+    if env:
+        pos = parse_obstacles_env(env)
+        return spawn_obstacles(world, pos) if pos else 0
+    if os.environ.get("ROVE_SPAWN_TREES"):
+        return spawn_obstacles(world)
+    return 0
+
+
+def spawn_demo_trees(world) -> int:           # back-compat alias
+    return spawn_obstacles(world)

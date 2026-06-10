@@ -167,10 +167,11 @@ def main():
     # --- demo obstacles (trees on the road) --------------------------------
     # ROVE_SPAWN_TREES=1 spawns a few static trunks south of spawn so autonomy can
     # drive at them and the lidar forward-hazard reflex stops the robot in time.
-    if os.environ.get("ROVE_SPAWN_TREES"):
-        from rove_sim.world.scene import spawn_demo_trees
-        n = spawn_demo_trees(sim.world)
-        print(f"[sim_server] spawned {n} demo trees on the road (ROVE_SPAWN_TREES)")
+    from rove_sim.world.scene import spawn_obstacles_from_env
+    n_obs = spawn_obstacles_from_env(sim.world)
+    if n_obs:
+        print(f"[sim_server] spawned {n_obs} obstacles on the road "
+              f"(ROVE_OBSTACLES / ROVE_SPAWN_TREES)")
 
     # --- remote reset-to-spawn (UDP) ---------------------------------------
     # Lets autonomy put the robot back at the start between runs (no sim restart).

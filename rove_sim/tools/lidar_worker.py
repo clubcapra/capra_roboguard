@@ -60,11 +60,10 @@ def main():
                         world_overrides=overrides, egl=False)
     p.setGravity(0, 0, 0)
 
-    # Same demo obstacles as sim_server, so the lidar RAYCASTS against them (this
-    # worker is a separate sim process). Static -> the synced robot pose is enough.
-    if os.environ.get("ROVE_SPAWN_TREES"):
-        from rove_sim.world.scene import spawn_demo_trees
-        spawn_demo_trees(sim.world)
+    # Same obstacles as sim_server, so the lidar RAYCASTS against them (this worker
+    # is a separate sim process). Static -> the synced robot pose is enough.
+    from rove_sim.world.scene import spawn_obstacles_from_env
+    spawn_obstacles_from_env(sim.world)
 
     want = [n.strip() for n in args.lidars.split(",") if n.strip()]
     livox = [s for s in sim.sensors if s.name in want]
