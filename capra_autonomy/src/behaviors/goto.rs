@@ -58,7 +58,9 @@ pub fn step(pose: &Pose, wp: &Waypoint, g: &Goto) -> Step {
     }
 
     let bearing = dy.atan2(dx); // ENU, CCW from East
-    let heading_err = wrap_pi(bearing - pose.heading_enu_rad());
+    // Steer the DRIVE-forward axis (VN yaw + body offset), not the VN yaw itself.
+    let drive_heading = pose.heading_enu_rad() + g.drive_offset_deg.to_radians();
+    let heading_err = wrap_pi(bearing - drive_heading);
 
     // Gate forward toward zero as heading error grows: full speed within
     // PIVOT_FULL, hard pivot-in-place beyond PIVOT_ZERO. This stops the robot
@@ -100,6 +102,7 @@ mod tests {
             arrive_tol_m: 0.6,
             k_v: 0.35,
             v_max: 0.45,
+            drive_offset_deg: 0.0, // tests check raw VN-yaw geometry
         }
     }
 

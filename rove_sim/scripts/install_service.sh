@@ -50,6 +50,13 @@ WorkingDirectory=$PROJECT_DIR
 ExecStart=$ENTRY $ARGS
 Environment=PYOPENGL_PLATFORM=egl
 Environment=ROVE_SPAWN_TREES=1
+# Clean VN pose for autonomy bring-up: the random-walk error is unbounded and
+# drifts >15 m over a long session, making GoTo unusable. Re-enable (set to 1 or
+# remove) once PositionService fusion bounds the drift. See capra_autonomy/FIX_TOMORROW.md
+Environment=ROVE_VN_ERRORS=0
+# Obstacles: defaults to the demo trunks; set ROVE_OBSTACLES="x,y;x,y" to place
+# them anywhere on the road (read by sim_server AND the lidar workers).
+# Environment=ROVE_OBSTACLES=3,-11.5;1,-14.5
 Restart=on-failure
 RestartSec=5
 # rove.sh's own trap + systemd's cgroup kill reap every worker (python/mediamtx/ffmpeg).

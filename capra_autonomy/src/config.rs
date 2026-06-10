@@ -63,6 +63,10 @@ pub struct Goto {
     pub arrive_tol_m: f64,
     pub k_v: f64,
     pub v_max: f64,
+    /// Body-frame offset (deg) from VN yaw to the drive-forward axis. The brush
+    /// model's forward (track geometry) is ~90deg off the VN yaw on this robot
+    /// (calibrated by probe). drive_heading_enu = (90 - yaw_ned) + this.
+    pub drive_offset_deg: f64,
 }
 
 /// Inner heading asservissement (IMU vs tracks) — see `control::heading`.
