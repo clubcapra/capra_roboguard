@@ -1,5 +1,6 @@
 pub mod bus;
 pub mod endpoints;
+pub mod mock;
 pub mod node;
 pub mod protocol;
 pub mod state;

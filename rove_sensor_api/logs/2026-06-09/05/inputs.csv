@@ -1,0 +1,6 @@
+timestamp_ns,sensor_id,source,client,user_agent,kind,payload,result,error
+1780983176877727842,odrive_31,http,127.0.0.1:41028,curl/8.15.0,command,"{""input_vel"":15.0}","{""sent"":[""input_vel""]}",
+1780983176884491623,odrive_32,http,127.0.0.1:41040,curl/8.15.0,command,"{""input_vel"":15.0}","{""sent"":[""input_vel""]}",
+1780983176890244137,odrive_33,http,127.0.0.1:41042,curl/8.15.0,command,"{""input_vel"":15.0}","{""sent"":[""input_vel""]}",
+1780983176896886057,odrive_34,http,127.0.0.1:41058,curl/8.15.0,command,"{""input_vel"":15.0}","{""sent"":[""input_vel""]}",
+1780983176903539570,robotiq_gripper,http,127.0.0.1:41066,curl/8.15.0,command,"{""position"":200}","{""sent"":[""position""]}",

@@ -60,6 +60,78 @@ impl Default for WatchdogConfig {
     }
 }
 
+/// ODrive node data schema. Free fn so the sim mock (`odrive::mock`) serves it verbatim.
+pub fn data_schema() -> Vec<FieldDescriptor> {
+    vec![
+        FieldDescriptor::new("node_id",           "ODrive CAN node ID",                         "u8"),
+        FieldDescriptor::new("axis_error",         "Axis error flags (0 = no error)",            "u32"),
+        FieldDescriptor::new("axis_state",         "Current axis state (8 = ClosedLoopControl)", "u8"),
+        FieldDescriptor::new("procedure_result",   "Procedure_Result (fw≥0.6 Heartbeat byte 5)", "u8"),
+        FieldDescriptor::new("trajectory_done",    "Trajectory done flag",                       "bool"),
+        FieldDescriptor::new("pos_estimate",       "Position estimate",    "f32").with_unit("rev"),
+        FieldDescriptor::new("vel_estimate",       "Velocity estimate",    "f32").with_unit("rev/s"),
+        FieldDescriptor::new("shadow_count",       "Encoder shadow count", "i32").with_unit("counts"),
+        FieldDescriptor::new("count_cpr",          "Encoder CPR",          "i32").with_unit("counts"),
+        FieldDescriptor::new("iq_setpoint",        "Current setpoint",     "f32").with_unit("A"),
+        FieldDescriptor::new("iq_measured",        "Measured phase current","f32").with_unit("A"),
+        FieldDescriptor::new("bus_voltage",        "DC bus voltage",        "f32").with_unit("V"),
+        FieldDescriptor::new("bus_current",        "DC bus current",        "f32").with_unit("A"),
+        FieldDescriptor::new("active_errors",      "Active error flags (Get_Error)",   "u32"),
+        FieldDescriptor::new("disarm_reason",      "Disarm reason (Get_Error)",        "u32"),
+        FieldDescriptor::new("torque_target",      "Torque target (Get_Torques)",      "f32").with_unit("Nm"),
+        FieldDescriptor::new("torque_estimate",    "Torque estimate (Get_Torques)",    "f32").with_unit("Nm"),
+        FieldDescriptor::new("electrical_power",   "Electrical power (Get_Powers)",    "f32").with_unit("W"),
+        FieldDescriptor::new("mechanical_power",   "Mechanical power (Get_Powers)",    "f32").with_unit("W"),
+        FieldDescriptor::new("fet_temp",           "FET temperature (Get_Temperature, null until received)", "f32").with_unit("°C"),
+        FieldDescriptor::new("motor_temp",         "Motor temperature (Get_Temperature, null until received)", "f32").with_unit("°C"),
+        FieldDescriptor::new("timestamp_ns",       "Unix timestamp (ns) of the last CAN frame received from this node; 0 until first frame", "i64").with_unit("ns"),
+    ]
+}
+
+/// ODrive node command schema. Free fn so the sim mock can reuse it verbatim.
+pub fn command_schema() -> Vec<FieldDescriptor> {
+    vec![
+        // --- Combined setpoint (primary command) ---
+        FieldDescriptor::new(
+            "axis_state",
+            "Target axis state (optional; 1=Idle, 8=ClosedLoopControl)",
+            "u32",
+        ),
+        FieldDescriptor::new("input_pos", "Position setpoint", "f32").with_unit("rev"),
+        FieldDescriptor::new("input_vel_ff", "Velocity feedforward", "f32").with_unit("rev/s"),
+        FieldDescriptor::new("input_torque_ff", "Torque feedforward", "f32").with_unit("Nm"),
+        // --- Controller mode ---
+        FieldDescriptor::new(
+            "control_mode",
+            "Control mode (0=Voltage,1=Torque,2=Velocity,3=Position)",
+            "u32",
+        ),
+        FieldDescriptor::new(
+            "input_mode",
+            "Input mode (0=Inactive,1=Passthrough,2=VelRamp,3=PosFilter,5=TrapTraj...)",
+            "u32",
+        ),
+        // --- Alternative setpoints ---
+        FieldDescriptor::new("input_vel", "Velocity setpoint (use instead of input_pos)", "f32").with_unit("rev/s"),
+        FieldDescriptor::new("input_torque", "Torque setpoint (use instead of input_pos)", "f32").with_unit("Nm"),
+        // --- Limits ---
+        FieldDescriptor::new("velocity_limit", "Velocity limit", "f32").with_unit("rev/s"),
+        FieldDescriptor::new("current_limit", "Current limit", "f32").with_unit("A"),
+        // --- Trajectory planner ---
+        FieldDescriptor::new("traj_vel_limit", "Trajectory velocity limit", "f32").with_unit("rev/s"),
+        FieldDescriptor::new("traj_accel_limit", "Trajectory acceleration limit", "f32").with_unit("rev/s²"),
+        FieldDescriptor::new("traj_decel_limit", "Trajectory deceleration limit", "f32").with_unit("rev/s²"),
+        FieldDescriptor::new("traj_inertia", "Trajectory inertia", "f32").with_unit("Nm/(rev/s²)"),
+        // --- Gains ---
+        FieldDescriptor::new("pos_gain", "Position P gain", "f32"),
+        FieldDescriptor::new("vel_gain", "Velocity P gain", "f32"),
+        FieldDescriptor::new("vel_integrator_gain", "Velocity integrator gain", "f32"),
+        // --- Actions ---
+        FieldDescriptor::new("clear_errors", "Set true to clear all errors", "bool"),
+        FieldDescriptor::new("reboot", "Set true to reboot the ODrive", "bool"),
+    ]
+}
+
 /// SensorDriver implementation for one ODrive CAN node.
 pub struct OdriveNode {
     node_id: u8,
@@ -316,73 +388,11 @@ impl SensorDriver for OdriveNode {
     }
 
     fn data_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            FieldDescriptor::new("node_id",           "ODrive CAN node ID",                         "u8"),
-            FieldDescriptor::new("axis_error",         "Axis error flags (0 = no error)",            "u32"),
-            FieldDescriptor::new("axis_state",         "Current axis state (8 = ClosedLoopControl)", "u8"),
-            FieldDescriptor::new("procedure_result",   "Procedure_Result (fw≥0.6 Heartbeat byte 5)", "u8"),
-            FieldDescriptor::new("trajectory_done",    "Trajectory done flag",                       "bool"),
-            FieldDescriptor::new("pos_estimate",       "Position estimate",    "f32").with_unit("rev"),
-            FieldDescriptor::new("vel_estimate",       "Velocity estimate",    "f32").with_unit("rev/s"),
-            FieldDescriptor::new("shadow_count",       "Encoder shadow count", "i32").with_unit("counts"),
-            FieldDescriptor::new("count_cpr",          "Encoder CPR",          "i32").with_unit("counts"),
-            FieldDescriptor::new("iq_setpoint",        "Current setpoint",     "f32").with_unit("A"),
-            FieldDescriptor::new("iq_measured",        "Measured phase current","f32").with_unit("A"),
-            FieldDescriptor::new("bus_voltage",        "DC bus voltage",        "f32").with_unit("V"),
-            FieldDescriptor::new("bus_current",        "DC bus current",        "f32").with_unit("A"),
-            FieldDescriptor::new("active_errors",      "Active error flags (Get_Error)",   "u32"),
-            FieldDescriptor::new("disarm_reason",      "Disarm reason (Get_Error)",        "u32"),
-            FieldDescriptor::new("torque_target",      "Torque target (Get_Torques)",      "f32").with_unit("Nm"),
-            FieldDescriptor::new("torque_estimate",    "Torque estimate (Get_Torques)",    "f32").with_unit("Nm"),
-            FieldDescriptor::new("electrical_power",   "Electrical power (Get_Powers)",    "f32").with_unit("W"),
-            FieldDescriptor::new("mechanical_power",   "Mechanical power (Get_Powers)",    "f32").with_unit("W"),
-            FieldDescriptor::new("fet_temp",           "FET temperature (Get_Temperature, null until received)", "f32").with_unit("°C"),
-            FieldDescriptor::new("motor_temp",         "Motor temperature (Get_Temperature, null until received)", "f32").with_unit("°C"),
-            FieldDescriptor::new("timestamp_ns",       "Unix timestamp (ns) of the last CAN frame received from this node; 0 until first frame", "i64").with_unit("ns"),
-        ]
+        data_schema()
     }
 
     fn command_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            // --- Combined setpoint (primary command) ---
-            FieldDescriptor::new(
-                "axis_state",
-                "Target axis state (optional; 1=Idle, 8=ClosedLoopControl)",
-                "u32",
-            ),
-            FieldDescriptor::new("input_pos", "Position setpoint", "f32").with_unit("rev"),
-            FieldDescriptor::new("input_vel_ff", "Velocity feedforward", "f32").with_unit("rev/s"),
-            FieldDescriptor::new("input_torque_ff", "Torque feedforward", "f32").with_unit("Nm"),
-            // --- Controller mode ---
-            FieldDescriptor::new(
-                "control_mode",
-                "Control mode (0=Voltage,1=Torque,2=Velocity,3=Position)",
-                "u32",
-            ),
-            FieldDescriptor::new(
-                "input_mode",
-                "Input mode (0=Inactive,1=Passthrough,2=VelRamp,3=PosFilter,5=TrapTraj...)",
-                "u32",
-            ),
-            // --- Alternative setpoints ---
-            FieldDescriptor::new("input_vel", "Velocity setpoint (use instead of input_pos)", "f32").with_unit("rev/s"),
-            FieldDescriptor::new("input_torque", "Torque setpoint (use instead of input_pos)", "f32").with_unit("Nm"),
-            // --- Limits ---
-            FieldDescriptor::new("velocity_limit", "Velocity limit", "f32").with_unit("rev/s"),
-            FieldDescriptor::new("current_limit", "Current limit", "f32").with_unit("A"),
-            // --- Trajectory planner ---
-            FieldDescriptor::new("traj_vel_limit", "Trajectory velocity limit", "f32").with_unit("rev/s"),
-            FieldDescriptor::new("traj_accel_limit", "Trajectory acceleration limit", "f32").with_unit("rev/s²"),
-            FieldDescriptor::new("traj_decel_limit", "Trajectory deceleration limit", "f32").with_unit("rev/s²"),
-            FieldDescriptor::new("traj_inertia", "Trajectory inertia", "f32").with_unit("Nm/(rev/s²)"),
-            // --- Gains ---
-            FieldDescriptor::new("pos_gain", "Position P gain", "f32"),
-            FieldDescriptor::new("vel_gain", "Velocity P gain", "f32"),
-            FieldDescriptor::new("vel_integrator_gain", "Velocity integrator gain", "f32"),
-            // --- Actions ---
-            FieldDescriptor::new("clear_errors", "Set true to clear all errors", "bool"),
-            FieldDescriptor::new("reboot", "Set true to reboot the ODrive", "bool"),
-        ]
+        command_schema()
     }
 
     fn read_data(&self) -> Result<Value, DriverError> {

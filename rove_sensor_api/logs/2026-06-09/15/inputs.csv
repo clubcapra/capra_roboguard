@@ -1,0 +1,9 @@
+timestamp_ns,sensor_id,source,client,user_agent,kind,payload,result,error
+1781017421366093218,robotiq_gripper,http,127.0.0.1:51778,curl/8.15.0,command,"{""position"":0}","{""sent"":[""position""]}",
+1781017426024968005,robotiq_gripper,http,127.0.0.1:59820,curl/8.15.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781017793251025893,robotiq_gripper,http,127.0.0.1:60714,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781017825662547199,robotiq_gripper,http,127.0.0.1:60714,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":0}","{""sent"":[""position""]}",
+1781017863006490820,robotiq_gripper,http,127.0.0.1:60714,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781017926605371149,robotiq_gripper,http,127.0.0.1:60714,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":0}","{""sent"":[""position""]}",
+1781019001725054046,robotiq_gripper,http,127.0.0.1:35554,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781019007056651603,robotiq_gripper,http,127.0.0.1:35554,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":0}","{""sent"":[""position""]}",

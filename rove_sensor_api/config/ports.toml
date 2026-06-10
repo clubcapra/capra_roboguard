@@ -1,0 +1,22 @@
+# Canonical sim ⇄ rove_sensor_api port map (single source of truth).
+#
+# Read by BOTH the Rust rove_sensor_api (in sim-backend mode) and the Python
+# simulator (`sim_server --rsa-backend --ports <this file>`), so the two sides
+# can never drift into a port overlap.
+#
+# Served ports (autonomy-facing) are assigned served_base + 2*idx by registration
+# order: vectornav_sim=0, kinova_arm=1, robotiq_gripper=2, odrive_31..34=3..6,
+# livox_imu=7. The sim publishes telemetry on backend_base + 2*idx; the mock
+# drivers subscribe there and re-serve on the served ports.
+
+served_base   = 5000     # rove_sensor_api → autonomy (data=base+2i, cmd=base+2i+1)
+backend_base  = 6000     # sim → mock drivers (telemetry)
+# control_port MUST be clear of the served range: 11 sensors occupy 5000-5021, so
+# 5020 would collide with odrive_44's data port. 5100 leaves headroom for ~50 sensors.
+control_port  = 5100     # autonomy → sim (aggregate RoveControl)
+livox_imu_port = 56401   # sim → livox_imu mock (native Livox UDP IMU packets) [sim-only]
+
+# Optional per-sensor pins to dodge a specific conflict. Unset → base+offset rule.
+# [overrides.vectornav_sim]
+# served_data = 5100
+# backend     = 6100

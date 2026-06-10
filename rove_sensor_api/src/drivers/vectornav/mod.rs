@@ -13,6 +13,7 @@
 
 pub mod binary;
 pub mod config;
+pub mod mock;
 pub mod protocol;
 pub mod sensor;
 pub mod serial;

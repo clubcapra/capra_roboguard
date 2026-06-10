@@ -13,6 +13,85 @@ use super::worker::{Cmd, GripperCommand};
 
 pub const ROBOTIQ_ID: &str = "robotiq_gripper";
 
+/// Robotiq data schema. Free fn so the sim mock (`robotiq::mock`) serves it verbatim.
+pub fn data_schema() -> Vec<FieldDescriptor> {
+    vec![
+        FieldDescriptor::new("activated", "gACT — true once activated", "bool"),
+        FieldDescriptor::new("going_to_position", "gGTO — true while moving", "bool"),
+        FieldDescriptor::new(
+            "status",
+            "gSTA — 0=reset, 1=activating, 3=activation complete",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "object_status",
+            "gOBJ — 0=moving, 1=object detected opening, 2=object detected closing, 3=at position",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "fault",
+            "gFLT — 0=no fault, 0x05–0x0F=fault codes",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "position_request_echo",
+            "gPR — last commanded position (0=open, 255=closed)",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "position",
+            "gPO — actual jaw position (0=open, 255=closed)",
+            "u8",
+        ),
+        FieldDescriptor::new("current_raw", "gCU raw byte (× 10 mA)", "u8"),
+        FieldDescriptor::new("current_a", "Motor current", "f32").with_unit("A"),
+        FieldDescriptor::new("link_up", "Modbus channel reachable", "bool"),
+        FieldDescriptor::new(
+            "timestamp_ns",
+            "Unix timestamp (ns) of last status read; 0 until first poll",
+            "i64",
+        )
+        .with_unit("ns"),
+    ]
+}
+
+/// Robotiq command schema. Free fn so the sim mock can reuse it verbatim.
+pub fn command_schema() -> Vec<FieldDescriptor> {
+    vec![
+        FieldDescriptor::new(
+            "position",
+            "rPR — position request, 0=fully open .. 255=fully closed",
+            "u8",
+        ),
+        FieldDescriptor::new("speed", "rSP — speed, 0=min .. 255=max", "u8"),
+        FieldDescriptor::new(
+            "force",
+            "rFR — force, 0=min (no re-grasp) .. 255=max",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "goto",
+            "rGTO — true to start motion, false to stop",
+            "bool",
+        ),
+        FieldDescriptor::new(
+            "activate",
+            "rACT — true=activate, false=deactivate. Recovery from a fault needs a 0→1 edge across two packets.",
+            "bool",
+        ),
+        FieldDescriptor::new(
+            "auto_release",
+            "rATR/rARD — emergency auto-release: 0=closing, 1=opening. Omit for normal operation.",
+            "u8",
+        ),
+        FieldDescriptor::new(
+            "stop",
+            "Convenience: clears rGTO so the gripper holds at current position",
+            "bool",
+        ),
+    ]
+}
+
 pub struct RobotiqGripper {
     state: Arc<RwLock<RobotiqState>>,
     cmd_tx: mpsc::UnboundedSender<Cmd>,
@@ -45,80 +124,11 @@ impl SensorDriver for RobotiqGripper {
     }
 
     fn data_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            FieldDescriptor::new("activated", "gACT — true once activated", "bool"),
-            FieldDescriptor::new("going_to_position", "gGTO — true while moving", "bool"),
-            FieldDescriptor::new(
-                "status",
-                "gSTA — 0=reset, 1=activating, 3=activation complete",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "object_status",
-                "gOBJ — 0=moving, 1=object detected opening, 2=object detected closing, 3=at position",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "fault",
-                "gFLT — 0=no fault, 0x05–0x0F=fault codes",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "position_request_echo",
-                "gPR — last commanded position (0=open, 255=closed)",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "position",
-                "gPO — actual jaw position (0=open, 255=closed)",
-                "u8",
-            ),
-            FieldDescriptor::new("current_raw", "gCU raw byte (× 10 mA)", "u8"),
-            FieldDescriptor::new("current_a", "Motor current", "f32").with_unit("A"),
-            FieldDescriptor::new("link_up", "Modbus channel reachable", "bool"),
-            FieldDescriptor::new(
-                "timestamp_ns",
-                "Unix timestamp (ns) of last status read; 0 until first poll",
-                "i64",
-            )
-            .with_unit("ns"),
-        ]
+        data_schema()
     }
 
     fn command_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            FieldDescriptor::new(
-                "position",
-                "rPR — position request, 0=fully open .. 255=fully closed",
-                "u8",
-            ),
-            FieldDescriptor::new("speed", "rSP — speed, 0=min .. 255=max", "u8"),
-            FieldDescriptor::new(
-                "force",
-                "rFR — force, 0=min (no re-grasp) .. 255=max",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "goto",
-                "rGTO — true to start motion, false to stop",
-                "bool",
-            ),
-            FieldDescriptor::new(
-                "activate",
-                "rACT — true=activate, false=deactivate. Recovery from a fault needs a 0→1 edge across two packets.",
-                "bool",
-            ),
-            FieldDescriptor::new(
-                "auto_release",
-                "rATR/rARD — emergency auto-release: 0=closing, 1=opening. Omit for normal operation.",
-                "u8",
-            ),
-            FieldDescriptor::new(
-                "stop",
-                "Convenience: clears rGTO so the gripper holds at current position",
-                "bool",
-            ),
-        ]
+        command_schema()
     }
 
     fn read_data(&self) -> Result<Value, DriverError> {

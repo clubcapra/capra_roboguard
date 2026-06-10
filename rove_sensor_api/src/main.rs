@@ -29,8 +29,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
+    // --- Sim backend vs. real hardware ---
+    // If config/sim.toml is present (or ROVE_SIM_BACKEND is set), every driver is
+    // replaced by a per-sensor mock fed by the simulator, and the real hardware
+    // probes below are skipped entirely. Same served HTTP/UDP surface either way.
+    let sim_cfg = drivers::sim::config::SimConfig::resolve();
+
     // --- Sensor Registration ---
-    let registry = Arc::new(SensorRegistry::new(5000));
+    let registry = Arc::new(SensorRegistry::new(
+        sim_cfg.as_ref().map(|s| s.ports.served_base).unwrap_or(5000),
+    ));
+
+    let shared_endpoints: SharedEndpointMap = if let Some(sim) = &sim_cfg {
+        tracing::warn!(
+            host = %sim.host,
+            "SIM BACKEND MODE — drivers are mocked from the simulator (config/sim.toml or ROVE_SIM_BACKEND)"
+        );
+        drivers::sim::register_all(&registry, sim);
+        // No real ODrive endpoint map in sim mode; HTTP routes still work empty.
+        drivers::odrive::endpoints::new_shared()
+    } else {
 
     // --- VectorNav VN-300 ---
     // Configured via config/vectornav.toml. Missing file → driver skipped.
@@ -96,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let odrive_iface = std::env::var("CAN_IFACE").unwrap_or_else(|_| "can0".to_string());
     let watchdog = WatchdogConfig::default(); // 100ms, setpoint-only keepalive
 
-    let shared_endpoints: SharedEndpointMap = match discover_nodes(&odrive_iface, Duration::from_secs(2), watchdog).await {
+    match discover_nodes(&odrive_iface, Duration::from_secs(2), watchdog).await {
         Ok((nodes, ep_map)) => {
             for node in nodes {
                 registry.register(node);
@@ -107,7 +125,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing::warn!(error = %e, iface = odrive_iface, "ODrive discovery failed — continuing without ODrives");
             drivers::odrive::endpoints::new_shared()
         }
-    };
+    }
+    }; // end sim-backend / real-hardware selection
 
     // --- Logging ---
     // CSV files live under LOG_DIR (default ./logs). Per-sensor files split

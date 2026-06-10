@@ -19,6 +19,51 @@ The binary is `capra-rove-interface` (single Rust crate at the workspace
 root). HTTP is served on `0.0.0.0:8080`; UDP ports are auto-assigned starting
 at `5000` (data, cmd, data, cmd, …) in registration order.
 
+## Sim backend mode (run against the simulator instead of hardware)
+
+The **same binary** can be backed by the PyBullet simulator (`rove_sim`) instead
+of real hardware, so the autonomy / IK stack connects to a genuine
+`rove_sensor_api` that is indistinguishable from the real robot — it just happens
+to pull live values from physics.
+
+This API only ever covers **hardware wired to the Pi control board** — the
+VectorNav, Kinova, Robotiq, and ODrives. The lidars are a separate subsystem (the
+sim publishes their point clouds and built-in IMU on their own UDP streams,
+consumed directly by SLAM/mapping) and are **not** sensors here.
+
+Enable sim mode by setting `ROVE_SIM_BACKEND=<host>:<served_base>` (or by copying
+`config/sim.toml.example` → `config/sim.toml`). Every hardware probe is then
+skipped and replaced by a **per-sensor mock driver** (`src/drivers/*/mock.rs`,
+co-located with each real driver, reusing its exact schema) fed over UDP by the
+sim:
+
+```
+autonomy ──HTTP:8080 + UDP 5000+──▶ rove_sensor_api (sim mode)
+                                        │ mock drivers subscribe
+                                        ▼
+                       sim telemetry 6000+  ◀── rove_sim sim_server --rsa-backend
+                       Livox IMU 56401            (control back on 5020)
+```
+
+Ports for both sides come from one shared `config/ports.toml` (served_base,
+backend_base, control_port, livox_imu_port, optional per-sensor overrides) so the
+two processes can't drift into an overlap. The easiest way to run the whole thing:
+
+```bash
+# on the host desktop:
+rove_sim/tools/rove.sh headless --api      # sim + this binary, sim-backed
+curl http://127.0.0.1:8080/discover        # 8 sensors, sim-backed
+curl http://127.0.0.1:8080/vectornav_sim/data
+```
+
+Mock drivers (7, matching the real Pi-board hardware set): `vectornav_sim`,
+`kinova_arm`, `robotiq_gripper`, `odrive_31..34`. Telemetry is a verbatim
+passthrough of the real schemas; drive (ODrive→tracks) and gripper-position
+commands flow back to the sim. Kinova joint-space and fine ODrive setpoints are
+accepted but stubbed (no sim sink yet). The Livox Mid-360 IMU + point clouds are
+**not** here — the sim publishes them as separate UDP streams (IMU `:56401`
+native Livox packets, clouds `:5022/:5024`) for SLAM/mapping to read directly.
+
 ## How it works
 
 ```

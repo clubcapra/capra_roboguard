@@ -28,6 +28,65 @@ use super::protocol::format_command;
 use super::serial::{send_command, SerialWriter};
 use super::state::VectorNavState;
 
+/// The VN-300 data schema. A free fn so the sim mock (`vectornav::mock`) can
+/// serve the byte-identical schema without duplicating it.
+pub fn data_schema() -> Vec<FieldDescriptor> {
+    vec![
+        FieldDescriptor::new("port",                 "Serial device path",                                 "String"),
+        FieldDescriptor::new("gps_tow",              "GPS time of week",                "f64").with_unit("s"),
+        FieldDescriptor::new("gps_week",             "GPS week number",                                    "u16"),
+        FieldDescriptor::new("ins_status_raw",       "INS status bitfield (raw)",                          "u16"),
+        FieldDescriptor::new("ins_mode",             "INS mode (0=NotTracking, 1=Aligning, 2=Tracking, 3=LossOfGNSS)", "u8"),
+        FieldDescriptor::new("ins_error",            "INS sensor error code (0 = none)",                   "u8"),
+        FieldDescriptor::new("gnss_fix",             "GNSS receiver has a valid fix",                      "bool"),
+        FieldDescriptor::new("gnss_compass_active",  "GNSS compass operational",                           "bool"),
+        FieldDescriptor::new("gnss_heading_aiding",  "INS heading currently aided by GNSS compass",        "bool"),
+        FieldDescriptor::new("yaw",                  "Yaw / true heading",              "f32").with_unit("deg"),
+        FieldDescriptor::new("pitch",                "Pitch",                           "f32").with_unit("deg"),
+        FieldDescriptor::new("roll",                 "Roll",                            "f32").with_unit("deg"),
+        FieldDescriptor::new("latitude",             "WGS84 latitude",                  "f64").with_unit("deg"),
+        FieldDescriptor::new("longitude",            "WGS84 longitude",                 "f64").with_unit("deg"),
+        FieldDescriptor::new("altitude",             "Altitude above WGS84 ellipsoid",  "f64").with_unit("m"),
+        FieldDescriptor::new("vel_north",            "Velocity North (NED)",            "f32").with_unit("m/s"),
+        FieldDescriptor::new("vel_east",             "Velocity East (NED)",             "f32").with_unit("m/s"),
+        FieldDescriptor::new("vel_down",             "Velocity Down (NED)",             "f32").with_unit("m/s"),
+        FieldDescriptor::new("att_uncertainty",      "Attitude uncertainty (1σ)",       "f32").with_unit("deg"),
+        FieldDescriptor::new("pos_uncertainty",      "Position uncertainty (1σ)",       "f32").with_unit("m"),
+        FieldDescriptor::new("vel_uncertainty",      "Velocity uncertainty (1σ)",       "f32").with_unit("m/s"),
+        FieldDescriptor::new("mag_x",                "Magnetic field X (body)",         "f32").with_unit("Gauss"),
+        FieldDescriptor::new("mag_y",                "Magnetic field Y (body)",         "f32").with_unit("Gauss"),
+        FieldDescriptor::new("mag_z",                "Magnetic field Z (body)",         "f32").with_unit("Gauss"),
+        FieldDescriptor::new("accel_x",              "Acceleration X (body)",           "f32").with_unit("m/s²"),
+        FieldDescriptor::new("accel_y",              "Acceleration Y (body)",           "f32").with_unit("m/s²"),
+        FieldDescriptor::new("accel_z",              "Acceleration Z (body)",           "f32").with_unit("m/s²"),
+        FieldDescriptor::new("gyro_x",               "Angular rate X (body)",           "f32").with_unit("rad/s"),
+        FieldDescriptor::new("gyro_y",               "Angular rate Y (body)",           "f32").with_unit("rad/s"),
+        FieldDescriptor::new("gyro_z",               "Angular rate Z (body)",           "f32").with_unit("rad/s"),
+        FieldDescriptor::new("gnss_num_sats",        "GNSS satellites used",                               "u8"),
+        FieldDescriptor::new("gnss_fix_type",        "GNSS fix type (0/1/2/3)",                            "u8"),
+        FieldDescriptor::new("temperature",          "IMU temperature",                 "f32").with_unit("°C"),
+        FieldDescriptor::new("pressure",             "Barometric pressure",             "f32").with_unit("kPa"),
+        FieldDescriptor::new("last_async_header",    "Header of most recent parsed message",               "String"),
+        FieldDescriptor::new("messages_parsed",      "Total async messages parsed",                        "u64"),
+        FieldDescriptor::new("messages_dropped",     "Total malformed lines dropped",                      "u64"),
+        FieldDescriptor::new("timestamp_ns",         "Unix timestamp of most recent message",              "i64").with_unit("ns"),
+    ]
+}
+
+/// The VN-300 command schema. Free fn so the sim mock can reuse it verbatim.
+pub fn command_schema() -> Vec<FieldDescriptor> {
+    vec![
+        FieldDescriptor::new("tare",                     "Set current orientation as zero ($VNTAR)", "bool"),
+        FieldDescriptor::new("reset",                    "Soft-reboot the unit ($VNRST)",            "bool"),
+        FieldDescriptor::new("restore_factory_settings", "Restore factory defaults ($VNRFS)",        "bool"),
+        FieldDescriptor::new("write_settings",           "Persist current registers to flash ($VNWNV)", "bool"),
+        FieldDescriptor::new("set_initial_heading",      "Provide initial heading hint",        "f32").with_unit("deg"),
+        FieldDescriptor::new("set_async_type",           "ADOR (register 6) — async output type id",  "u32"),
+        FieldDescriptor::new("set_async_freq",           "ADOF (register 7) — async output rate",     "u32").with_unit("Hz"),
+        FieldDescriptor::new("raw",                      "Raw VN command body, e.g. \"VNRRG,1\" — checksum auto-appended", "String"),
+    ]
+}
+
 pub struct VectorNavSensor {
     id_str: String,
     display_name: String,
@@ -97,59 +156,11 @@ impl SensorDriver for VectorNavSensor {
     }
 
     fn data_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            FieldDescriptor::new("port",                 "Serial device path",                                 "String"),
-            FieldDescriptor::new("gps_tow",              "GPS time of week",                "f64").with_unit("s"),
-            FieldDescriptor::new("gps_week",             "GPS week number",                                    "u16"),
-            FieldDescriptor::new("ins_status_raw",       "INS status bitfield (raw)",                          "u16"),
-            FieldDescriptor::new("ins_mode",             "INS mode (0=NotTracking, 1=Aligning, 2=Tracking, 3=LossOfGNSS)", "u8"),
-            FieldDescriptor::new("ins_error",            "INS sensor error code (0 = none)",                   "u8"),
-            FieldDescriptor::new("gnss_fix",             "GNSS receiver has a valid fix",                      "bool"),
-            FieldDescriptor::new("gnss_compass_active",  "GNSS compass operational",                           "bool"),
-            FieldDescriptor::new("gnss_heading_aiding",  "INS heading currently aided by GNSS compass",        "bool"),
-            FieldDescriptor::new("yaw",                  "Yaw / true heading",              "f32").with_unit("deg"),
-            FieldDescriptor::new("pitch",                "Pitch",                           "f32").with_unit("deg"),
-            FieldDescriptor::new("roll",                 "Roll",                            "f32").with_unit("deg"),
-            FieldDescriptor::new("latitude",             "WGS84 latitude",                  "f64").with_unit("deg"),
-            FieldDescriptor::new("longitude",            "WGS84 longitude",                 "f64").with_unit("deg"),
-            FieldDescriptor::new("altitude",             "Altitude above WGS84 ellipsoid",  "f64").with_unit("m"),
-            FieldDescriptor::new("vel_north",            "Velocity North (NED)",            "f32").with_unit("m/s"),
-            FieldDescriptor::new("vel_east",             "Velocity East (NED)",             "f32").with_unit("m/s"),
-            FieldDescriptor::new("vel_down",             "Velocity Down (NED)",             "f32").with_unit("m/s"),
-            FieldDescriptor::new("att_uncertainty",      "Attitude uncertainty (1σ)",       "f32").with_unit("deg"),
-            FieldDescriptor::new("pos_uncertainty",      "Position uncertainty (1σ)",       "f32").with_unit("m"),
-            FieldDescriptor::new("vel_uncertainty",      "Velocity uncertainty (1σ)",       "f32").with_unit("m/s"),
-            FieldDescriptor::new("mag_x",                "Magnetic field X (body)",         "f32").with_unit("Gauss"),
-            FieldDescriptor::new("mag_y",                "Magnetic field Y (body)",         "f32").with_unit("Gauss"),
-            FieldDescriptor::new("mag_z",                "Magnetic field Z (body)",         "f32").with_unit("Gauss"),
-            FieldDescriptor::new("accel_x",              "Acceleration X (body)",           "f32").with_unit("m/s²"),
-            FieldDescriptor::new("accel_y",              "Acceleration Y (body)",           "f32").with_unit("m/s²"),
-            FieldDescriptor::new("accel_z",              "Acceleration Z (body)",           "f32").with_unit("m/s²"),
-            FieldDescriptor::new("gyro_x",               "Angular rate X (body)",           "f32").with_unit("rad/s"),
-            FieldDescriptor::new("gyro_y",               "Angular rate Y (body)",           "f32").with_unit("rad/s"),
-            FieldDescriptor::new("gyro_z",               "Angular rate Z (body)",           "f32").with_unit("rad/s"),
-            FieldDescriptor::new("gnss_num_sats",        "GNSS satellites used",                               "u8"),
-            FieldDescriptor::new("gnss_fix_type",        "GNSS fix type (0/1/2/3)",                            "u8"),
-            FieldDescriptor::new("temperature",          "IMU temperature",                 "f32").with_unit("°C"),
-            FieldDescriptor::new("pressure",             "Barometric pressure",             "f32").with_unit("kPa"),
-            FieldDescriptor::new("last_async_header",    "Header of most recent parsed message",               "String"),
-            FieldDescriptor::new("messages_parsed",      "Total async messages parsed",                        "u64"),
-            FieldDescriptor::new("messages_dropped",     "Total malformed lines dropped",                      "u64"),
-            FieldDescriptor::new("timestamp_ns",         "Unix timestamp of most recent message",              "i64").with_unit("ns"),
-        ]
+        data_schema()
     }
 
     fn command_schema(&self) -> Vec<FieldDescriptor> {
-        vec![
-            FieldDescriptor::new("tare",                     "Set current orientation as zero ($VNTAR)", "bool"),
-            FieldDescriptor::new("reset",                    "Soft-reboot the unit ($VNRST)",            "bool"),
-            FieldDescriptor::new("restore_factory_settings", "Restore factory defaults ($VNRFS)",        "bool"),
-            FieldDescriptor::new("write_settings",           "Persist current registers to flash ($VNWNV)", "bool"),
-            FieldDescriptor::new("set_initial_heading",      "Provide initial heading hint",        "f32").with_unit("deg"),
-            FieldDescriptor::new("set_async_type",           "ADOR (register 6) — async output type id",  "u32"),
-            FieldDescriptor::new("set_async_freq",           "ADOF (register 7) — async output rate",     "u32").with_unit("Hz"),
-            FieldDescriptor::new("raw",                      "Raw VN command body, e.g. \"VNRRG,1\" — checksum auto-appended", "String"),
-        ]
+        command_schema()
     }
 
     fn read_data(&self) -> Result<Value, DriverError> {
