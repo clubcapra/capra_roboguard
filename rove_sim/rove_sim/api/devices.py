@@ -18,6 +18,7 @@ loop round-trips exactly. TODO(calibrate) against hardware before real wiring.
 from __future__ import annotations
 
 import math
+import os
 import time
 from typing import Dict, List
 
@@ -115,7 +116,7 @@ class VectorNavDevice:
     a fixed datum. Carries the robot base pose in real mode."""
     channel = "vectornav"
 
-    def __init__(self, robot, datum=None, gnss_mode="nominal", seed=0):
+    def __init__(self, robot, datum=None, gnss_mode="nominal", seed=0, errors=None):
         self.robot = robot
         self.body = robot.body_id
         self.datum = dict(DEFAULT_DATUM, **(datum or {}))
@@ -123,6 +124,10 @@ class VectorNavDevice:
         # denied | spoofed. M4: degraded = big noise + dropouts; denied = no fix;
         # spoofed = an adversarial offset that creeps the reported position away.
         self.gnss_mode = gnss_mode
+        # Error model on/off. Default ON (realistic random-walk bias + white noise);
+        # set env ROVE_VN_ERRORS=0 to report the clean ground-truth pose -- useful
+        # for autonomy bring-up / deterministic CI before PositionService fusion.
+        self.errors = (os.environ.get("ROVE_VN_ERRORS", "1") != "0") if errors is None else errors
         self._rng = np.random.default_rng(seed)
         self._walk = np.zeros(2)          # slow position random walk (m)
         self._spoof = np.zeros(2)         # accumulating adversarial offset (m)
@@ -131,6 +136,8 @@ class VectorNavDevice:
 
     def _gnss_enu(self, x: float, y: float):
         m = self.gnss_mode
+        if not self.errors:
+            return x, y, True             # clean ground-truth pose (errors off)
         if m == "denied":
             return x, y, False            # no fix -- autonomy holds last / SLAM
         sigma = {"nominal": 0.4, "degraded": 4.0, "spoofed": 0.4}.get(m, 0.4)

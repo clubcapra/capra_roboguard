@@ -18,6 +18,9 @@ vectornav_id   = "vectornav_sim"   # /discover id; on the real robot this is "ve
 subscribe_ms   = 20                 # 50 Hz push
 pose_stale_ms  = 500                # no fresh fix for this long -> stop driving
 
+[position]                          # PositionService filter over the noisy VN GNSS
+correction_gain = 0.05              # per-sample pull toward raw GNSS (~0.4 s smoothing @50Hz)
+
 # ---------- Drive (track ODrives via rove_sensor_api) -------------------
 # Port of rove_control_bridge tracks_velocity strategy.
 [tracks]
@@ -64,8 +67,8 @@ max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
 # the start heading — the safest first live drive.
 [mission]
 relative_to_start = true
-demo_forward_m    = 0.0     # DISABLED: "forward along spawn heading" points at a cliff (spawn faces North; road is S/E)
-# Verified-solid road target (raycast of the collision mesh): East-ish, stays on the
-# z~0 road band. Spawn faces North (toward the cliff), so the robot pivots ~90deg CW
-# onto the road first, then drives. See the floor map in the build notes.
-waypoints         = [[6.0, -1.0]]
+demo_forward_m    = 0.0
+# Spawn now sits in open ground (world ~3,-6) facing South. Drive 5 m further South
+# (straight ahead, no turn) onto more open road -- all solid w/ margin per the
+# collision mesh + lidar. Reaches into the y in [-6,-15] solid band.
+waypoints         = [[0.0, -5.0]]

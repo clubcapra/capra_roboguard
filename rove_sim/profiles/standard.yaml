@@ -8,8 +8,14 @@ model:
   path: ../../rove_standard_urdf/rove_standard.urdf
   kind: urdf
   mesh_format: glb
-  base_position: [0, 0, 0.5]        # dropped onto plane, settles in M0
-  base_orientation: [0, 0, 0, 1]
+  # Spawn in the CENTRE of the open road area (world frame), not at the origin --
+  # the origin sits on the south rim of a cliff (no floor to the North), so the
+  # robot fell off when autonomy turned there. (3,-6) has solid ground + several
+  # metres of margin in every direction (verified vs collision mesh + lidar), so
+  # pose noise can't walk it over an edge. Facing South ([0,0,1,0] = 180deg yaw)
+  # points it down the open ground, away from the northern drop.
+  base_position: [3, -6, 0.5]       # dropped onto the road, settles in M0
+  base_orientation: [0, 0, 1, 0]    # face South (open ground)
 
 total_mass: 100.0    # real robot ~100 kg; role masses below scale to this
 
