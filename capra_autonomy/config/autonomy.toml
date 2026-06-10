@@ -1,0 +1,71 @@
+# capra_autonomy — engine config (GoTo vertical slice).
+#
+# The robot surface (sim or real) lives behind rove_sensor_api. In the current
+# dev topology that is think2 = 192.168.2.4 (sim-backed). Point this at the real
+# robot's Jetson by changing robot_host only — the wire seams are identical.
+
+robot_host = "192.168.2.4"
+http_port  = 8080          # rove_sensor_api /discover (resolves data + command ports)
+
+# ---------- Pose source (VectorNav VN-300 via rove_sensor_api) ----------
+[datum]                    # Thun datum — must match rove_sim (devices.py DEFAULT_DATUM)
+lat = 46.7512
+lon = 7.6131
+alt = 560.0
+
+[telemetry]
+vectornav_id   = "vectornav_sim"   # /discover id; on the real robot this is "vectornav"
+subscribe_ms   = 20                 # 50 Hz push
+pose_stale_ms  = 500                # no fresh fix for this long -> stop driving
+
+# ---------- Drive (track ODrives via rove_sensor_api) -------------------
+# Port of rove_control_bridge tracks_velocity strategy.
+[tracks]
+left_nodes    = [31, 34]
+right_nodes   = [32, 33]
+invert_left   = false
+invert_right  = true        # right-side motors physically mirrored
+max_velocity  = 25.0        # rev/s at full normalized deflection (mock clamps to its scale)
+slew_per_s    = 1.5         # ramp: full-scale command change takes ~0.67 s (no track-jerk)
+
+# ---------- Control loop + GoTo behaviour -------------------------------
+[control]
+rate_hz = 50.0
+
+[goto]                      # OUTER loop (GNSS pose) — heading target + forward speed
+arrive_tol_m = 0.6          # within this radius of a waypoint => waypoint done
+k_v          = 0.35         # forward gain (per metre of remaining distance), normalized
+v_max        = 0.45         # cap on normalized forward command (conservative; skid-steer is slippy)
+
+# INNER heading asservissement (IMU gyro_z vs track differential) — mud rejection.
+# turn = kp*heading_err + ki*∫err - kd*(gyro_sign*yaw_rate). ki=kd=0 => plain steer.
+[asserv]
+kp        = 1.2             # proportional on heading error (rad)
+ki        = 0.4             # integral — holds heading against sustained slip (cambered mud)
+kd        = 0.3             # gyro damping — counters slip-induced yaw the instant the IMU sees it
+i_gate    = 0.20            # only integrate within ~11deg of aligned (anti-windup on turns)
+i_clamp   = 0.5             # anti-windup bound on the integral term
+max_turn  = 0.35            # clamp on the normalized differential (gentle pivot — avoids chassis roll)
+gyro_sign = 1.0             # set -1 if gyro_z is CW-positive on this build (verified live)
+
+# ---------- L0 reflexes (safety gate — vetoes ALL driving) --------------
+# Hard bounds checked every tick before any behaviour. A trip latches an estop
+# and stops the mission (deliberate reset/restart to recover). This is what keeps
+# a misbehaving controller from driving the robot off the map.
+[reflex]
+geofence_radius_m = 8.0     # bring-up bound; covers the ~6 m road waypoint w/ margin, well short of the cliffs
+fall_floor_m      = 5.0     # estop if height drops >this below the datum (fell off terrain)
+max_roll_deg      = 35.0    # SAR L0: roll > 35deg -> kill drive
+max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
+
+# ---------- Mission (waypoints, ENU metres) -----------------------------
+# If `relative_to_start` is true, waypoints are offsets from the first GNSS fix.
+# With no explicit waypoints, `demo_forward_m` synthesises one straight ahead of
+# the start heading — the safest first live drive.
+[mission]
+relative_to_start = true
+demo_forward_m    = 0.0     # DISABLED: "forward along spawn heading" points at a cliff (spawn faces North; road is S/E)
+# Verified-solid road target (raycast of the collision mesh): East-ish, stays on the
+# z~0 road band. Spawn faces North (toward the cliff), so the robot pivots ~90deg CW
+# onto the road first, then drives. See the floor map in the build notes.
+waypoints         = [[6.0, -1.0]]

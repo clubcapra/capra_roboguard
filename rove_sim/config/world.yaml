@@ -1,0 +1,19 @@
+# World / terrain config (S5.8).
+# No real world map yet -> use the forest dirt-road GLB as stand-in terrain.
+# Static body: GLB->OBJ->GEOM_MESH with GEOM_FORCE_CONCAVE_TRIMESH (concave is
+# fine for a *static* body). A lon/lat datum is laid on top so the VN300 GNSS
+# (S5.6) projects ENU about a fixed origin -- the sim never hands out a clean
+# fix, but it needs a consistent frame.
+terrain:
+  source: ../../free_dirt_road_through_forest.glb   # relative to this file
+  static: true
+  concave: true
+  friction: 1.2            # seed 1.0-1.5; NOT traction truth (S5.8)
+  scale: 1.0               # TODO(verify 1 unit == 1 m on the forest GLB)
+
+# Datum the GNSS ENU projection is anchored to. Placed on top of the terrain
+# until a real georeferenced map exists. Thun-ish default; override per course.
+datum:
+  lat_deg: 46.7512
+  lon_deg: 7.6131
+  alt_m: 560.0
