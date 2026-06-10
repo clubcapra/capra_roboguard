@@ -29,6 +29,7 @@
 
 pub mod config;
 pub mod gripper;
+pub mod mock;
 pub mod state;
 pub mod worker;
 

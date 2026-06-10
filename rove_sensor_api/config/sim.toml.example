@@ -1,0 +1,16 @@
+# Sim-backend mode for rove_sensor_api.
+#
+# Copy this to `config/sim.toml` to make the binary run against the simulator
+# (`rove_sim`) instead of real hardware: every driver is replaced by a per-sensor
+# mock fed by the sim over UDP, while the served HTTP/UDP surface stays identical.
+#
+#   cp config/sim.toml.example config/sim.toml   # enable sim mode
+#   rm config/sim.toml                           # back to real hardware
+#
+# Equivalent without a file: set the env var
+#   ROVE_SIM_BACKEND=127.0.0.1:5000
+# (the unified launcher `rove_sim/tools/rove.sh --api` does this for you).
+
+host = "127.0.0.1"           # where the simulator is publishing
+odrive_max_vel_rev_s = 20.0  # rev/s that maps to full-scale track command (|v|=1)
+ports_file = "ports.toml"    # shared port map (relative to config/)

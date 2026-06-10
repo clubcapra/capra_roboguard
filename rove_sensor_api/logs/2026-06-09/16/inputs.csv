@@ -1,0 +1,4 @@
+timestamp_ns,sensor_id,source,client,user_agent,kind,payload,result,error
+1781021202776481736,robotiq_gripper,http,127.0.0.1:39040,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781021573994918016,robotiq_gripper,http,127.0.0.1:44502,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",
+1781023798022346184,robotiq_gripper,http,127.0.0.1:59728,Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0,command,"{""position"":255}","{""sent"":[""position""]}",

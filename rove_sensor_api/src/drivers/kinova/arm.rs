@@ -15,6 +15,84 @@ pub const KINOVA_ID: &str = "kinova_arm";
 
 const VELOCITY_INGEST_MIN_INTERVAL: Duration = Duration::from_millis(10);
 
+/// Kinova arm data schema. Free fn so the sim mock (`kinova::mock`) serves it verbatim.
+pub fn data_schema() -> Vec<FieldDescriptor> {
+    let mut v = Vec::with_capacity(32);
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_pos"), "Joint angle", "f32")
+                .with_unit("deg"),
+        );
+    }
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_vel"), "Joint velocity", "f32")
+                .with_unit("deg/s"),
+        );
+    }
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_current"), "Joint current", "f32")
+                .with_unit("A"),
+        );
+    }
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_temp"), "Actuator temperature", "f32")
+                .with_unit("°C"),
+        );
+    }
+    v.extend([
+        FieldDescriptor::new("bus_voltage", "Main 24 V supply", "f32").with_unit("V"),
+        FieldDescriptor::new("bus_current", "Total bus current", "f32").with_unit("A"),
+        FieldDescriptor::new("accel_x", "Base IMU accel X", "f32").with_unit("G"),
+        FieldDescriptor::new("accel_y", "Base IMU accel Y", "f32").with_unit("G"),
+        FieldDescriptor::new("accel_z", "Base IMU accel Z", "f32").with_unit("G"),
+        FieldDescriptor::new(
+            "timestamp_ns",
+            "Unix timestamp (ns) of last accepted position read; 0 until first valid poll",
+            "i64",
+        )
+        .with_unit("ns"),
+    ]);
+    v
+}
+
+/// Kinova arm command schema. Free fn so the sim mock can reuse it verbatim.
+pub fn command_schema() -> Vec<FieldDescriptor> {
+    let mut v = Vec::with_capacity(14);
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_pos"), "Joint position setpoint", "f32")
+                .with_unit("deg"),
+        );
+    }
+    for i in 1..=6 {
+        v.push(
+            FieldDescriptor::new(&format!("joint_{i}_vel"), "Joint velocity setpoint", "f32")
+                .with_unit("deg/s"),
+        );
+    }
+    v.extend([
+        FieldDescriptor::new(
+            "move_home",
+            "Drive to the firmware home pose (Ethernet_MoveHome).",
+            "bool",
+        ),
+        FieldDescriptor::new(
+            "erase_trajectories",
+            "Cancel queued position trajectories. Does not touch control state.",
+            "bool",
+        ),
+        FieldDescriptor::new(
+            "set_joint_zero",
+            "Persist the current physical position of joint N (1..=6) as its new zero (writes to actuator flash). Takes effect after power-cycle.",
+            "u8",
+        ),
+    ]);
+    v
+}
+
 pub struct KinovaArm {
     state: Arc<RwLock<KinovaState>>,
     cmd_tx: Sender<Cmd>,
@@ -70,79 +148,11 @@ impl SensorDriver for KinovaArm {
     }
 
     fn data_schema(&self) -> Vec<FieldDescriptor> {
-        let mut v = Vec::with_capacity(32);
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_pos"), "Joint angle", "f32")
-                    .with_unit("deg"),
-            );
-        }
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_vel"), "Joint velocity", "f32")
-                    .with_unit("deg/s"),
-            );
-        }
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_current"), "Joint current", "f32")
-                    .with_unit("A"),
-            );
-        }
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_temp"), "Actuator temperature", "f32")
-                    .with_unit("°C"),
-            );
-        }
-        v.extend([
-            FieldDescriptor::new("bus_voltage", "Main 24 V supply", "f32").with_unit("V"),
-            FieldDescriptor::new("bus_current", "Total bus current", "f32").with_unit("A"),
-            FieldDescriptor::new("accel_x", "Base IMU accel X", "f32").with_unit("G"),
-            FieldDescriptor::new("accel_y", "Base IMU accel Y", "f32").with_unit("G"),
-            FieldDescriptor::new("accel_z", "Base IMU accel Z", "f32").with_unit("G"),
-            FieldDescriptor::new(
-                "timestamp_ns",
-                "Unix timestamp (ns) of last accepted position read; 0 until first valid poll",
-                "i64",
-            )
-            .with_unit("ns"),
-        ]);
-        v
+        data_schema()
     }
 
     fn command_schema(&self) -> Vec<FieldDescriptor> {
-        let mut v = Vec::with_capacity(14);
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_pos"), "Joint position setpoint", "f32")
-                    .with_unit("deg"),
-            );
-        }
-        for i in 1..=6 {
-            v.push(
-                FieldDescriptor::new(&format!("joint_{i}_vel"), "Joint velocity setpoint", "f32")
-                    .with_unit("deg/s"),
-            );
-        }
-        v.extend([
-            FieldDescriptor::new(
-                "move_home",
-                "Drive to the firmware home pose (Ethernet_MoveHome).",
-                "bool",
-            ),
-            FieldDescriptor::new(
-                "erase_trajectories",
-                "Cancel queued position trajectories. Does not touch control state.",
-                "bool",
-            ),
-            FieldDescriptor::new(
-                "set_joint_zero",
-                "Persist the current physical position of joint N (1..=6) as its new zero (writes to actuator flash). Takes effect after power-cycle.",
-                "u8",
-            ),
-        ]);
-        v
+        command_schema()
     }
 
     fn read_data(&self) -> Result<Value, DriverError> {

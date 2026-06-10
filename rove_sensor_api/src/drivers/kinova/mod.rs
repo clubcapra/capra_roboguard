@@ -1,6 +1,7 @@
 pub mod arm;
 pub mod config;
 pub mod ffi;
+pub mod mock;
 pub mod sdk;
 pub mod state;
 pub mod worker;
