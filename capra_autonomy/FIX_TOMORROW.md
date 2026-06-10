@@ -127,3 +127,37 @@ traversable cells (around obstacles, never into unknown/off-road), GoTo `step_to
   turning); arrive tol loosened to 2.5 m (overshoot). Tighten once turning is solved.
 - Next: accumulate the cost map over odometry (persistent MAP, not just per-frame), classify
   stairs/hills as traversable-cost so the planner can choose a climb; global planner on the map.
+
+## 9. Turning + PositionService(GNSS-denied) + Mission framework (SAR) — 2026-06-10
+**Turning (DONE, validated):** arc-turn — the robot can't pivot in place on high-friction
+terrain (max_turn>v_max => inner track reverses => Stribeck stall), so goto FWD_FLOOR=0.85 +
+a control-loop ARC-CLAMP (turn<=forward+0.1) keep both tracks moving => it scrub-turns.
+Plus K-turn RECOVERY (reverse+pivot wiggle on a detected stall) and an unreachable-goal
+WATCHDOG (10 s no progress -> hold). East go-around converges; North-into-void holds near
+start (no wander, no fall).
+**PositionService GNSS-denied (DONE, unit-tested):** PositionFilter dead-reckons on VN
+velocity through GNSS loss; position_confidence decays (~40 s) + drift grows while denied,
+recover on re-fix. Control loop NO LONGER holds on !gnss_fix (it dead-reckons home); holds
+only if confidence ~0. Pose carries position_confidence + drift_m. NEXT: lidar scan-matching
+odometry vs the persistent cost map to bound drift harder (true SLAM).
+**Sim GNSS toggle (DONE, needs redeploy):** sim_server :5099 now takes 'GNSS denied|nominal|
+spoofed|degraded'; devices.py honors denied/spoofed even with ROVE_VN_ERRORS=0. Test homing:
+drive out, `printf 'GNSS denied'|nc -u think2 5099`, watch it dead-reckon back.
+**Mission framework (SAR, DONE, unit-tested + drives live):** mission/mod.rs — SAR Safe Points
+(origin/last_comms/last_gnss_trusted/last_stable/last_vision/operator) with confidence+drift,
+SetSafePoint/Clear, ReturnHome(target) resolves best by distance×conf×drift. Behaviors:
+GoTo/Waypoint/Patrol/ReturnHome/Orbit/Sentinel/Retreat/BacktrackComm/Explore -> compile to a
+router waypoint Plan + Terminal(Complete/Hold). Breadcrumb trail recorded for Retreat/Backtrack.
+Config [mission].behavior + params. (POIs = vision objects, stubbed until VisionService.)
+**Kind-aware cost-map inflation:** HAZARD (cliff/hole/unknown) gets 0.8 m margin, OBSTACLE
+(tree/wall) gets 0.4 m -> drop-safety kept, more maneuverable.
+
+### OPEN / weak spot
+- **Go-around through tight gaps is MARGINAL.** Single goals + big open turns work; threading
+  the specific 1.5 m two-trunk gap is run-to-run variable (wide detours, sometimes holds safely
+  short). Tension: arc-turn's high forward (needed to break friction) makes wide turns, bad for
+  tight avoidance. FIX IDEAS: lower forward / loosen arc-clamp when an obstacle is <2 m ahead
+  (sharper local turn); longer plan lookahead committing to one side earlier; prefer the more-
+  open side. Robot stays SAFE throughout (holds, no fall/crash).
+- Explore behavior + live Retreat/BacktrackComm need frontier-extraction + mission sequencing.
+- Live GNSS-denied homing test pending the sim redeploy.

@@ -25,6 +25,11 @@ pub struct Pose {
     /// asservissement damps on. Positive = CCW (heading-ENU increasing).
     pub yaw_rate: f64,
     pub gnss_fix: bool,
+    /// SAR position confidence in [0,1]: ~1 with trusted GNSS, decays while
+    /// GNSS-denied (dead-reckoning), recovers on re-fix. Gates missions.
+    pub position_confidence: f64,
+    /// Estimated position drift (m) accumulated since the last GNSS correction.
+    pub drift_m: f64,
     pub received_at: Instant,
 }
 
@@ -90,43 +95,78 @@ pub fn pose_from_vectornav(frame: &serde_json::Value, datum: &Datum) -> Option<P
         pitch_deg: r.pitch_deg,
         yaw_rate: r.yaw_rate,
         gnss_fix: r.gnss_fix,
+        position_confidence: if r.gnss_fix { 1.0 } else { 0.3 },
+        drift_m: 0.0,
         received_at: Instant::now(),
     })
 }
 
-/// Complementary position filter: dead-reckon from VN velocity (lag-free through
-/// motion), then pull slowly toward the raw GNSS fix (bounds drift + averages out
-/// the ±1 m white noise). The slow random-walk bias is followed, not removed —
-/// fine for relative GoTo; lidar-odometry fusion (M8) bounds it properly.
+/// Complementary position filter that HOLDS THROUGH GNSS LOSS. With a trusted
+/// fix it dead-reckons from VN velocity (lag-free) and pulls slowly toward GNSS
+/// (bounds drift + averages out the ±1 m noise). When GNSS drops it keeps
+/// dead-reckoning on velocity + IMU heading alone — so the ENU/lat-lon estimate
+/// survives a GNSS-denied stretch and the robot can still navigate home — while
+/// `confidence` decays and `drift` grows (the SAR position-quality signal). On
+/// re-fix it re-converges and resets drift. (Lidar scan-matching odometry against
+/// the persistent cost map is the next layer to bound drift harder.)
 pub struct PositionFilter {
     gain: f64,
     fx: f64,
     fy: f64,
     last: Option<Instant>,
+    confidence: f64,
+    drift_m: f64,
 }
+
+/// Confidence decay per second of GNSS denial (→ ~0.0 after ~40 s adrift).
+const CONF_DECAY_PER_S: f64 = 0.025;
+/// Confidence recovery per second once a trusted fix returns.
+const CONF_RECOVER_PER_S: f64 = 0.5;
+/// Dead-reckon error grows ≈ this fraction of distance travelled while denied.
+const DRIFT_FRAC: f64 = 0.06;
 
 impl PositionFilter {
     pub fn new(gain: f64) -> Self {
-        Self { gain, fx: 0.0, fy: 0.0, last: None }
+        Self { gain, fx: 0.0, fy: 0.0, last: None, confidence: 0.0, drift_m: 0.0 }
     }
 
-    fn update(&mut self, raw_x: f64, raw_y: f64, vel_e: f64, vel_n: f64, now: Instant) -> (f64, f64) {
+    /// Returns (x, y, confidence, drift_m).
+    fn update(
+        &mut self,
+        raw_x: f64,
+        raw_y: f64,
+        vel_e: f64,
+        vel_n: f64,
+        gnss_fix: bool,
+        now: Instant,
+    ) -> (f64, f64, f64, f64) {
         match self.last {
             None => {
                 self.fx = raw_x;
                 self.fy = raw_y;
+                self.confidence = if gnss_fix { 1.0 } else { 0.3 };
             }
             Some(prev) => {
-                // clamp dt so a stream hiccup can't fling the dead-reckon estimate
                 let dt = now.duration_since(prev).as_secs_f64().clamp(0.0, 0.1);
+                // always dead-reckon on velocity (works with or without GNSS)
                 self.fx += vel_e * dt;
                 self.fy += vel_n * dt;
-                self.fx += self.gain * (raw_x - self.fx);
-                self.fy += self.gain * (raw_y - self.fy);
+                if gnss_fix {
+                    // trusted fix: correct toward GNSS, recover confidence, reset drift
+                    self.fx += self.gain * (raw_x - self.fx);
+                    self.fy += self.gain * (raw_y - self.fy);
+                    self.confidence = (self.confidence + CONF_RECOVER_PER_S * dt).min(1.0);
+                    self.drift_m = 0.0;
+                } else {
+                    // GNSS-denied: pure dead-reckon; confidence decays, drift grows
+                    let step = vel_e.hypot(vel_n) * dt;
+                    self.drift_m += step * DRIFT_FRAC;
+                    self.confidence = (self.confidence - CONF_DECAY_PER_S * dt).max(0.0);
+                }
             }
         }
         self.last = Some(now);
-        (self.fx, self.fy)
+        (self.fx, self.fy, self.confidence, self.drift_m)
     }
 }
 
@@ -145,7 +185,8 @@ impl PositionService {
     /// Filtered pose from a VN frame. `None` if the frame lacks required fields.
     pub fn update(&mut self, frame: &serde_json::Value, now: Instant) -> Option<Pose> {
         let r = parse_vectornav(frame, &self.datum)?;
-        let (x, y) = self.filter.update(r.x, r.y, r.vel_e, r.vel_n, now);
+        let (x, y, conf, drift) =
+            self.filter.update(r.x, r.y, r.vel_e, r.vel_n, r.gnss_fix, now);
         Some(Pose {
             x,
             y,
@@ -155,6 +196,8 @@ impl PositionService {
             pitch_deg: r.pitch_deg,
             yaw_rate: r.yaw_rate,
             gnss_fix: r.gnss_fix,
+            position_confidence: conf,
+            drift_m: drift,
             received_at: now,
         })
     }
@@ -169,13 +212,13 @@ mod tests {
         let mut f = PositionFilter::new(0.05);
         let t0 = Instant::now();
         // Stationary truth at (10, 5) with +/-1 m jitter (no velocity).
-        f.update(10.0, 5.0, 0.0, 0.0, t0); // seed
+        f.update(10.0, 5.0, 0.0, 0.0, true, t0); // seed
         let mut fx = 0.0;
         let jit = [0.9, -1.1, 0.8, -0.7, 1.0, -0.9, 0.6, -0.8, 0.7, -0.5];
         let mut t = t0;
         for (i, j) in jit.iter().cycle().take(400).enumerate() {
             t += std::time::Duration::from_millis(20);
-            let (x, _) = f.update(10.0 + j, 5.0 - j, 0.0, 0.0, t);
+            let (x, ..) = f.update(10.0 + j, 5.0 - j, 0.0, 0.0, true, t);
             if i >= 399 {
                 fx = x;
             }
@@ -188,7 +231,7 @@ mod tests {
     fn filter_tracks_motion_via_velocity() {
         let mut f = PositionFilter::new(0.05);
         let t0 = Instant::now();
-        f.update(0.0, 0.0, 0.0, 0.0, t0);
+        f.update(0.0, 0.0, 0.0, 0.0, true, t0);
         // Truth moves east at 1 m/s; GNSS = truth + alternating jitter; vel = 1.0.
         // The filter should track the moving truth (dead reckon) while smoothing.
         let mut t = t0;
@@ -198,9 +241,27 @@ mod tests {
         for i in 0..100 {
             t += std::time::Duration::from_millis(20);
             truth += 1.0 * 0.02;
-            (x, _) = f.update(truth + jit[i % jit.len()], 0.0, 1.0, 0.0, t);
+            (x, ..) = f.update(truth + jit[i % jit.len()], 0.0, 1.0, 0.0, true, t);
         }
         // After 2 s truth = 2 m; filtered tracks it, not lagging at 0.
         assert!((x - 2.0).abs() < 0.3, "x={x} should track truth ~2.0");
+    }
+
+    #[test]
+    fn dead_reckons_and_loses_confidence_when_gnss_denied() {
+        let mut f = PositionFilter::new(0.05);
+        let t0 = Instant::now();
+        f.update(0.0, 0.0, 0.0, 0.0, true, t0);
+        // Drive east at 1 m/s for 3 s with NO gnss fix: position must still advance
+        // (dead reckon) and confidence must decay below 1.0.
+        let mut t = t0;
+        let (mut x, mut conf, mut drift) = (0.0, 1.0, 0.0);
+        for _ in 0..150 {
+            t += std::time::Duration::from_millis(20);
+            (x, _, conf, drift) = f.update(999.0, 999.0, 1.0, 0.0, false, t); // bogus GNSS, ignored
+        }
+        assert!((x - 3.0).abs() < 0.2, "dead-reckoned east ~3 m, got {x}");
+        assert!(conf < 1.0 && conf > 0.0, "confidence decayed, got {conf}");
+        assert!(drift > 0.0, "drift accrued, got {drift}");
     }
 }

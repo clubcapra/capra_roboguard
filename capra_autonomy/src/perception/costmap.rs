@@ -33,6 +33,11 @@ const CLIFF_DROP: f32 = 0.6; // neighbour ground this much lower => edge/hole (n
 const STEP_CLIMB: f32 = 0.45; // climbable step height (stairs)
 const NO_GO: f32 = f32::INFINITY;
 
+// no-go classes for kind-aware inflation
+const TRAVERSABLE: u8 = 0;
+const OBSTACLE: u8 = 1; // wall/tree — a collision (tighter margin)
+const HAZARD: u8 = 2; // cliff/hole/unknown — a FALL (full margin)
+
 const NEIGHBORS8: [(isize, isize, f32); 8] = [
     (1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0),
     (1, 1, 1.414), (1, -1, 1.414), (-1, 1, 1.414), (-1, -1, 1.414),
@@ -54,11 +59,13 @@ fn classify(
     origin: [f64; 2], cell: f64, n: usize, sensor: [f64; 3],
 ) -> CostMap {
     let mut cost = vec![NO_GO; n * n];
+    let mut kind = vec![TRAVERSABLE; n * n]; // per-cell no-go class for inflation
     for i in 0..n {
         for j in 0..n {
             let idx = i * n + j;
             if cnt[idx] == 0 {
-                continue; // unknown -> NO_GO
+                kind[idx] = HAZARD; // unknown / can't-see-the-bottom
+                continue;
             }
             let gr = gmin[idx];
             let obstacle_h = gmax[idx] - gr;
@@ -81,10 +88,12 @@ fn classify(
             let ascent_deg = (max_rise.max(0.0) as f64 / cell).atan().to_degrees();
             let descent_deg = (max_drop.max(0.0) as f64 / cell).atan().to_degrees();
             if obstacle_h > WALL_H || ascent_deg > ASCENT_DEG {
-                continue; // wall/tree / too steep to climb
+                kind[idx] = OBSTACLE; // wall/tree / too steep to climb
+                continue;
             }
             if max_drop > CLIFF_DROP || descent_deg > DESCENT_DEG {
-                continue; // deep hole OR steep DROP -> never descend into it
+                kind[idx] = HAZARD; // deep hole OR steep DROP -> never descend into it
+                continue;
             }
             // traversable: base + slope penalty (descending costs a bit more)
             let mut c = 1.0f32;
@@ -96,31 +105,37 @@ fn classify(
             cost[idx] = c;
         }
     }
-    // SAFETY INFLATION: a traversable cell within INFLATE cells of ANY no-go
-    // (wall, cliff, OR unknown/can't-see-the-bottom) becomes no-go, so the planner
-    // keeps the robot's centre a body-radius clear of every drop/edge/unseen hole.
-    const INFLATE: isize = 2; // cells (~0.8 m)
-    let nogo: Vec<bool> = cost.iter().map(|c| c.is_infinite()).collect();
-    let src = cost.clone();
+    // SAFETY INFLATION (kind-aware): keep the robot's centre clear of no-go, but
+    // give HAZARDS (cliffs / holes / unknown — fall risk) a full body-radius margin
+    // while OBSTACLES (trees/walls — a collision, not a fall) get a tighter margin,
+    // so it can still thread between trunks. Drop-safety preserved, maneuverable.
+    const HAZ_INFLATE: isize = 2; // ~0.8 m around drops/holes/unknown
+    const OBST_INFLATE: isize = 1; // ~0.4 m around trees/walls
+    let src_kind = kind.clone();
     for i in 0..n {
         for j in 0..n {
-            if src[i * n + j].is_infinite() {
+            if cost[i * n + j].is_infinite() {
                 continue;
             }
-            let mut near = false;
-            'scan: for di in -INFLATE..=INFLATE {
-                for dj in -INFLATE..=INFLATE {
+            let mut block = false;
+            'scan: for di in -HAZ_INFLATE..=HAZ_INFLATE {
+                for dj in -HAZ_INFLATE..=HAZ_INFLATE {
                     let a = i as isize + di;
                     let b = j as isize + dj;
-                    if a >= 0 && a < n as isize && b >= 0 && b < n as isize
-                        && nogo[a as usize * n + b as usize]
-                    {
-                        near = true;
-                        break 'scan;
+                    if a < 0 || a >= n as isize || b < 0 || b >= n as isize {
+                        continue;
+                    }
+                    match src_kind[a as usize * n + b as usize] {
+                        HAZARD => { block = true; break 'scan; }
+                        OBSTACLE if di.abs() <= OBST_INFLATE && dj.abs() <= OBST_INFLATE => {
+                            block = true;
+                            break 'scan;
+                        }
+                        _ => {}
                     }
                 }
             }
-            if near {
+            if block {
                 cost[i * n + j] = NO_GO;
             }
         }

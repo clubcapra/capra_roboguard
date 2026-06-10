@@ -136,10 +136,16 @@ class VectorNavDevice:
 
     def _gnss_enu(self, x: float, y: float):
         m = self.gnss_mode
-        if not self.errors:
-            return x, y, True             # clean ground-truth pose (errors off)
+        # denied/spoofed are DELIBERATE GNSS states (mission/test driven), so they
+        # apply even with the noise model off -- that's how we exercise the
+        # autonomy's GNSS-denied dead-reckoning / spoof rejection on a clean pose.
         if m == "denied":
             return x, y, False            # no fix -- autonomy holds last / SLAM
+        if not self.errors:
+            if m == "spoofed":
+                self._spoof += np.array([0.03, 0.0])   # adversarial creep east
+                return x + self._spoof[0], y + self._spoof[1], True
+            return x, y, True             # clean ground-truth pose (errors off)
         sigma = {"nominal": 0.4, "degraded": 4.0, "spoofed": 0.4}.get(m, 0.4)
         self._walk += self._rng.normal(0, 0.03, 2)
         noise = self._rng.normal(0, sigma, 2)

@@ -39,6 +39,9 @@ pub struct Router {
     waypoints: Vec<Waypoint>,
     idx: usize,
     goto: Goto,
+    /// Sentinel/Retreat/Backtrack: after the last waypoint, hold position and keep
+    /// watch instead of completing the mission.
+    hold_at_end: bool,
 }
 
 impl Router {
@@ -53,7 +56,12 @@ impl Router {
             waypoints,
             idx: 0,
             goto,
+            hold_at_end: false,
         }
+    }
+
+    pub fn set_hold_at_end(&mut self, hold: bool) {
+        self.hold_at_end = hold;
     }
 
     #[allow(dead_code)] // consumed by teleop/reflex arbitration (M7/M9)
@@ -88,6 +96,9 @@ impl Router {
             Mode::Idle | Mode::Estop => Action::Hold,
             Mode::Auto => {
                 let Some(wp) = self.waypoints.get(self.idx) else {
+                    if self.hold_at_end {
+                        return Action::Hold; // Sentinel/Retreat: keep watch
+                    }
                     self.mode = Mode::Idle;
                     return Action::MissionComplete;
                 };
@@ -103,11 +114,11 @@ impl Router {
                     },
                     goto::Step::Arrived => {
                         self.idx += 1;
-                        if self.idx >= self.waypoints.len() {
+                        if self.idx >= self.waypoints.len() && !self.hold_at_end {
                             self.mode = Mode::Idle;
                             Action::MissionComplete
                         } else {
-                            // Pivot toward the next one on the following tick.
+                            // Pivot toward the next one (or hold/watch) next tick.
                             Action::Hold
                         }
                     }
