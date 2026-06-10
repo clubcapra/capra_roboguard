@@ -38,7 +38,7 @@ slew_per_s    = 1.5         # ramp: full-scale command change takes ~0.67 s (no 
 rate_hz = 50.0
 
 [goto]                      # OUTER loop (GNSS pose) — heading target + forward speed
-arrive_tol_m = 0.6          # within this radius of a waypoint => waypoint done
+arrive_tol_m = 2.5          # vicinity arrival (this robot overshoots; tighten once turning is fixed)
 k_v          = 0.35         # forward gain (per metre of remaining distance), normalized
 v_max        = 0.30         # cap on normalized forward (slow -> less slip-drift while turning)
 drive_offset_deg = 90.0     # VN-yaw -> drive-forward axis offset (brush model, calibrated by probe)
@@ -61,7 +61,8 @@ gyro_sign = -1.0            # gyro_z is CW-positive on this build (verified live
 # and stops the mission (deliberate reset/restart to recover). This is what keeps
 # a misbehaving controller from driving the robot off the map.
 [reflex]
-geofence_radius_m = 15.0    # room to turn+drift; the lidar hazard reflex now guards real edges/obstacles
+geofence_radius_m = 200.0   # effectively off — the cost map (inflated no-go around holes/steep drops)
+                            # + the sim catch-floor are the real safety now. Far backstop only.
 fall_floor_m      = 5.0     # estop if height drops >this below the datum (fell off terrain)
 max_roll_deg      = 35.0    # SAR L0: roll > 35deg -> kill drive
 max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive

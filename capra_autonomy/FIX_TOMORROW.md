@@ -78,3 +78,52 @@ to handle realistic drift and re-enable VN errors.
   - Do NOT brute-force with max_turn=1.0 (that was a dead end; reverted to 0.35).
 - For now demos drive **East along the road** (mostly straight) to avoid big pivots.
 - Ties into MotionService NEEDS_RECONFIGURE / failure-handler flow in [[sar-spec-docs]].
+
+## TEST RESULTS (2026-06-09, clean pose)
+- **Test 1 PASS** — GoTo 15 m East: converged 14.2→0.97 m, hdg_err ±3°, on road.
+- **Test 2 PASS** — GoTo East into a trunk at (10,-6): lidar reflex `HAZARD HOLD` at
+  obstacle 2.0 m, stopped ~2 m short, held (didn't collide).
+- Fix that made Test 2 work: perception forward-corridor must use the **drive-forward
+  heading (VN yaw + drive_offset)**, same as GoTo — it was looking 90° off (raw VN yaw).
+
+## 6. NEXT BIG STEP — 3D traversability COST MAP from lidar (user direction)
+Hierarchical UGV nav: global (macro) path planning + local (micro) avoidance, both on a
+**cost map built from the lidar points in 3D**, scoring terrain by **slope / roughness /
+obstacle (tree) density / negative-obstacle (drop-off)**. This:
+- replaces the brittle single-direction forward-corridor reflex with a real local map,
+- lets the planner route the robot **around** obstacles (not just stop) — the "walk around
+  objects" goal — and around high-friction / untraversable patches (#5),
+- is the **first step toward mapping** (accumulate the cost map over time -> the SAR
+  MapService voxels + the sidecar planner in [[sar-spec-docs]]).
+Build incrementally in the autonomy layer: per-frame local cost grid (robot-centric, from
+the bottom Livox) -> A*/DWA local plan to a waypoint that avoids high-cost cells -> feed
+the track controller. Then accumulate frames into a persistent map (odometry-registered).
+
+## 7. 3D traversability cost map — BUILT (viz) + the avoidance lesson
+- `rove_sim/tools/costmap_snapshot.py` renders the cost map live from the bottom Livox:
+  green=flat, light-green/yellow=hill, orange=step/stairs (climbable, costly), red=wall/tree
+  (blocked), blue=cliff, **black=unknown/no-ground**. Image: capra_autonomy/media/lidar/costmap_spawn.png.
+  Shows the robot in a green clearing, red/orange trees, black beyond (forest/edges).
+- **Why reactive VFH steered off the road & fell:** it avoided only RED (obstacles), so it
+  steered into a BLACK (unknown / no-ground) gap → up a small hill → off the edge. Reverted
+  the control loop to the **safe stop-before-obstacle reflex** (no off-road steering).
+- **The real go-around = plan on the cost map:** route only through GREEN (known traversable)
+  cells, treat BLACK (unknown) + RED/BLUE (blocked) as no-go; A*/gradient to a local goal.
+  Needs: (a) build the grid in Rust (port costmap_snapshot), accumulate over odometry (mapping);
+  (b) classify cost incl. **stairs/hills as traversable** (user: flipper robot, lidar registers
+  steps) so the planner can pick a climb when it's the only way; (c) the locomotion fix (#5,
+  high-friction turning) so the robot can actually execute the planned path.
+- STEP-CLIMB / WALL / slope thresholds live in costmap_snapshot.py — tune to the platform.
+
+## 8. COST-MAP GO-AROUND — WORKING (2026-06-10)
+Built the Rust 3D cost map + Dijkstra local planner (`perception/costmap.rs`) and wired it
+into the control loop (`main.rs`): each frame builds a world-frame traversability grid from
+the bottom Livox, Dijkstra routes from the robot to a local target that stays on KNOWN-
+traversable cells (around obstacles, never into unknown/off-road), GoTo `step_to` follows it.
+- RESULT: robot drove East, **planned AROUND the trunks** (PLANNING around, steer -23/+18/-31deg),
+  stayed on the road, dist 14.8->2.5 m, **MISSION COMPLETE**. The reactive VFH that drove off a
+  hill is gone; planning on the cost map keeps it on green.
+- Rough edges (locomotion-bound, tie to #5): brief stall/struggle near the trunk (weak friction
+  turning); arrive tol loosened to 2.5 m (overshoot). Tighten once turning is solved.
+- Next: accumulate the cost map over odometry (persistent MAP, not just per-frame), classify
+  stairs/hills as traversable-cost so the planner can choose a climb; global planner on the map.

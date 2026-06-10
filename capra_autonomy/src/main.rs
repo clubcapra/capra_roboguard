@@ -19,7 +19,9 @@ use behaviors::goto::Waypoint;
 use config::Config;
 use control::heading::HeadingController;
 use control::tracks::TracksController;
+use perception::costmap::CostMap;
 use perception::Hazard;
+use std::sync::Arc;
 use position::{Pose, PositionService};
 use reflex::ReflexEngine;
 use router::{Action, Router};
@@ -30,6 +32,8 @@ use transport::{command::CommandSink, discover, telemetry};
 use validate::ground_truth::{self, Truth};
 
 const GROUND_TRUTH_PORT: u16 = 5030;
+/// How far ahead on the planned path to aim the local target (pure-pursuit).
+const PLAN_LOOKAHEAD: f64 = 3.0;
 
 struct Args {
     config: PathBuf,
@@ -120,16 +124,18 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // --- lidar forward-hazard reflex --------------------------------------
+    // --- lidar perception: hazard reflex + 3D cost map --------------------
     let (hazard_tx, hazard_rx) = watch::channel::<Hazard>(Hazard::none());
+    let (costmap_tx, costmap_rx) = watch::channel::<Option<Arc<CostMap>>>(None);
     {
         let host = cfg.robot_host.clone();
         let p = cfg.perception;
+        let off = cfg.goto.drive_offset_deg;
         let pose_rx = pose_rx.clone();
         tokio::spawn(async move {
             if let Err(e) = perception::run(
                 host, p.lidar_port, p.obstacle_stop_m, p.cliff_stop_m,
-                p.min_ground_per_bin, pose_rx, hazard_tx,
+                p.min_ground_per_bin, off, pose_rx, hazard_tx, costmap_tx,
             ).await {
                 tracing::warn!("perception task ended: {e:#}");
             }
@@ -183,7 +189,7 @@ async fn main() -> Result<()> {
     );
 
     // --- control loop -----------------------------------------------------
-    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &pose_rx, &truth_rx, &hazard_rx).await?;
+    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &pose_rx, &truth_rx, &hazard_rx, &costmap_rx).await?;
 
     // --- always leave the robot stopped + disarmed ------------------------
     tracks.idle().await.ok();
@@ -254,6 +260,7 @@ async fn run_control_loop(
     pose_rx: &watch::Receiver<Option<Pose>>,
     truth_rx: &watch::Receiver<Option<Truth>>,
     hazard_rx: &watch::Receiver<Hazard>,
+    costmap_rx: &watch::Receiver<Option<Arc<CostMap>>>,
 ) -> Result<()> {
     let dt = 1.0 / cfg.control.rate_hz;
     let period = Duration::from_secs_f64(dt);
@@ -290,34 +297,59 @@ async fn run_control_loop(
                 }
 
                 match router.tick(&pose) {
-                    Action::Drive { forward, heading_err, dist } => {
-                        // Lidar forward-hazard gate: stop before obstacles / edges.
+                    Action::Drive { forward: rf, heading_err: rh, dist } => {
                         let hz = *hazard_rx.borrow();
                         let fresh = hz.stamp.elapsed() < Duration::from_millis(800);
-                        if fresh && (hz.obstacle_ahead || hz.cliff_ahead) {
+                        // A drop-off is ALWAYS a hard stop — never trust a steer over an edge.
+                        if fresh && hz.cliff_ahead {
                             tracks.idle().await.ok();
                             heading.reset();
                             if ticks % (log_every / 2).max(1) == 0 {
-                                tracing::warn!(
-                                    "HAZARD HOLD — {} ahead (obstacle {:.1} m, cliff {:.1} m); dist-to-wp {:.1} m",
-                                    if hz.obstacle_ahead { "obstacle" } else { "drop-off" },
-                                    hz.obstacle_dist, hz.cliff_dist, dist,
-                                );
+                                tracing::warn!("HAZARD HOLD — drop-off ahead ({:.1} m)", hz.cliff_dist);
                             }
                             continue;
                         }
-                        // Inner IMU heading loop turns the heading error into the
-                        // track differential, damping slip-induced yaw (mud).
+                        // Cost-map PLANNER: route to a local target that stays on known
+                        // traversable ground (around obstacles, never into unknown/off-road).
+                        // Within a lookahead of the goal, just aim straight at it (no jitter).
+                        let cm = costmap_rx.borrow().clone();
+                        let goal = router.current_waypoint();
+                        let (forward, heading_err, planned) = if dist < PLAN_LOOKAHEAD + 1.0 {
+                            (rf, rh, false)
+                        } else { match (goal, cm) {
+                            (Some(w), Some(cm))
+                                if cm.stamp.elapsed() < Duration::from_millis(900) =>
+                            {
+                                match cm.plan([w.x, w.y], PLAN_LOOKAHEAD) {
+                                    Some(t) => {
+                                        let (f, h) = behaviors::goto::step_to(&pose, t, &cfg.goto);
+                                        (f, h, true)
+                                    }
+                                    None => {
+                                        // boxed in by no-go cells -> stop and wait for the map to fill
+                                        tracks.idle().await.ok();
+                                        heading.reset();
+                                        if ticks % (log_every / 2).max(1) == 0 {
+                                            tracing::warn!("HAZARD HOLD — no traversable path to goal");
+                                        }
+                                        continue;
+                                    }
+                                }
+                            }
+                            _ => (rf, rh, false), // no cost map yet -> head straight at the goal
+                        } };
                         let turn = heading.update(heading_err, pose.yaw_rate, dt);
-                        // Sim track convention (verified live by trajectory probe):
-                        //  * +track on BOTH sides drives FORWARD (along the drive axis).
-                        //  * turn>0 steers toward +heading_err: left>right.
-                        let drive = forward;
-                        let left = (drive + turn).clamp(-1.0, 1.0);
-                        let right = (drive - turn).clamp(-1.0, 1.0);
+                        let left = (forward + turn).clamp(-1.0, 1.0);
+                        let right = (forward - turn).clamp(-1.0, 1.0);
                         tracks.drive(left, right, dt).await?;
                         if ticks % log_every == 0 {
                             log_status(router, &pose, truth_rx, dist, heading_err, turn, left, right);
+                            if planned && (heading_err.abs() > 0.15 || hz.obstacle_ahead) {
+                                tracing::info!(
+                                    "PLANNING around — local target steer {:+.0}deg (obstacle {:.1} m)",
+                                    heading_err.to_degrees(), hz.obstacle_dist,
+                                );
+                            }
                         }
                     }
                     Action::Hold => { heading.reset(); tracks.idle().await.ok(); }

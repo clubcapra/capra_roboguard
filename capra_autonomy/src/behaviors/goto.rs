@@ -51,6 +51,22 @@ fn wrap_pi(a: f64) -> f64 {
     a
 }
 
+/// Outer-loop drive params toward an arbitrary world target (no arrival check) --
+/// used to follow the cost-map planner's local target. Returns (forward, heading_err).
+pub fn step_to(pose: &Pose, target: [f64; 2], g: &Goto) -> (f64, f64) {
+    let dx = target[0] - pose.x;
+    let dy = target[1] - pose.y;
+    let dist = dx.hypot(dy);
+    let bearing = dy.atan2(dx);
+    let drive_heading = pose.heading_enu_rad() + g.drive_offset_deg.to_radians();
+    let heading_err = wrap_pi(bearing - drive_heading);
+    let align = ((PIVOT_ZERO - heading_err.abs()) / (PIVOT_ZERO - PIVOT_FULL))
+        .clamp(0.0, 1.0)
+        .max(FWD_FLOOR);
+    let forward = (g.k_v * dist).clamp(0.0, g.v_max) * align;
+    (forward, heading_err)
+}
+
 /// One outer-loop step toward `wp` from `pose`.
 pub fn step(pose: &Pose, wp: &Waypoint, g: &Goto) -> Step {
     let dx = wp.x - pose.x;
