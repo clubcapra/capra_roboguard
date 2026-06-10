@@ -12,10 +12,13 @@ use std::f64::consts::PI;
 
 /// Forward speed is fully allowed within this heading error (rad, ~9deg)...
 const PIVOT_FULL: f64 = 0.15;
-/// ...and fully gated to zero beyond this (rad, ~34deg) so the robot turns in
-/// place rather than arcing/orbiting the waypoint. Skid-steer can't shrink its
-/// turn radius below the arrive tolerance, so arcing never converges.
-const PIVOT_ZERO: f64 = 0.60;
+/// ...and reduced (not zeroed) beyond this (rad, ~46deg). This robot CANNOT pivot
+/// in place — a pure pivot stalls in the brush model's static-grip regime (the
+/// tracks never scrub). It must keep moving so the forward motion engages the
+/// lateral scrub; so we keep a forward FLOOR and let it arc-turn toward the target.
+const PIVOT_ZERO: f64 = 0.80;
+/// Minimum forward fraction even at large heading error (keeps the scrub alive).
+const FWD_FLOOR: f64 = 0.45;
 
 /// A waypoint in local ENU metres.
 #[derive(Debug, Clone, Copy)]
@@ -62,12 +65,12 @@ pub fn step(pose: &Pose, wp: &Waypoint, g: &Goto) -> Step {
     let drive_heading = pose.heading_enu_rad() + g.drive_offset_deg.to_radians();
     let heading_err = wrap_pi(bearing - drive_heading);
 
-    // Gate forward toward zero as heading error grows: full speed within
-    // PIVOT_FULL, hard pivot-in-place beyond PIVOT_ZERO. This stops the robot
-    // arcing/orbiting a waypoint it can't out-turn. The turn itself comes from
-    // the inner IMU heading controller.
-    let align =
-        ((PIVOT_ZERO - heading_err.abs()) / (PIVOT_ZERO - PIVOT_FULL)).clamp(0.0, 1.0);
+    // Reduce forward as heading error grows (full within PIVOT_FULL), but never
+    // below FWD_FLOOR -- this robot must keep moving to scrub-turn (it can't pivot
+    // in place). So it arc-turns toward the target instead of stalling.
+    let align = ((PIVOT_ZERO - heading_err.abs()) / (PIVOT_ZERO - PIVOT_FULL))
+        .clamp(0.0, 1.0)
+        .max(FWD_FLOOR);
     let forward = (g.k_v * dist).clamp(0.0, g.v_max) * align;
 
     Step::Drive {

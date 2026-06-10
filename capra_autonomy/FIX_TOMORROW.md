@@ -63,3 +63,18 @@ cd /data/capra_stack/capra_roboguard/rove_sim && git pull && sudo ./scripts/inst
 This adds `ROVE_VN_ERRORS=0` (clean pose) + env-driven obstacle spawning. After it,
 GoTo should drive East cleanly on a stable pose; then build the PositionService fusion
 to handle realistic drift and re-enable VN errors.
+
+## 5. Pivoting on high-friction textures = a REAL autonomy problem (not a bug)
+- The robot is drum tracks; it pivots fine on flat floor. Adding the per-texture
+  **FrictionField** (some textures high μ) is the only change — so on those patches a
+  commanded pivot stalls (brush model stays in static-grip; `turn` high but
+  `yaw_rate ≈ 0`, robot slip-translates instead of rotating). Confirmed live: a 90°
+  South turn never rotated, it drifted to the geofence.
+- **This is genuinely something the autonomy must SOLVE**, like a real robot:
+  - **Stuck-turn detection** (M7 reflex): `|turn_cmd|` high AND `|yaw_rate|` ~0 for N
+    ticks → declare turn-stuck.
+  - **Recovery maneuver** (MotionService): back up a bit + re-attempt (3-point turn),
+    or wiggle, or route around the high-μ patch (use the FrictionField / map).
+  - Do NOT brute-force with max_turn=1.0 (that was a dead end; reverted to 0.35).
+- For now demos drive **East along the road** (mostly straight) to avoid big pivots.
+- Ties into MotionService NEEDS_RECONFIGURE / failure-handler flow in [[sar-spec-docs]].
