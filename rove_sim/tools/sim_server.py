@@ -225,7 +225,6 @@ def main():
                 acc_t = 0.0
                 api.publish()
                 if gt is not None:                      # true pose for scoring
-                    import pybullet as p
                     pos, orn = p.getBasePositionAndOrientation(sim.robot.body_id)
                     tele.publish("ground_truth", {"pos": list(pos), "orn": list(orn),
                                                   "t": sim.clock.now()})
