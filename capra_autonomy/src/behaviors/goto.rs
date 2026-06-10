@@ -1,0 +1,144 @@
+//! GoTo — the OUTER loop: steer the robot toward an ENU waypoint (GNSS pose).
+//!
+//! It emits a desired `forward` speed and a `heading_err` (radians); the INNER
+//! IMU heading controller (`control::heading`) turns that error into the track
+//! differential, servoing on measured yaw rate so a slipping track is corrected
+//! immediately (mud rejection). Conservative by design: skid steer on these
+//! tracks is slow and slippy (see rove_sim locomotion notes).
+
+use crate::config::Goto;
+use crate::position::Pose;
+use std::f64::consts::PI;
+
+/// Forward speed is fully allowed within this heading error (rad, ~9deg)...
+const PIVOT_FULL: f64 = 0.15;
+/// ...and fully gated to zero beyond this (rad, ~34deg) so the robot turns in
+/// place rather than arcing/orbiting the waypoint. Skid-steer can't shrink its
+/// turn radius below the arrive tolerance, so arcing never converges.
+const PIVOT_ZERO: f64 = 0.60;
+
+/// A waypoint in local ENU metres.
+#[derive(Debug, Clone, Copy)]
+pub struct Waypoint {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Step {
+    /// Keep driving: normalised `forward` speed + signed `heading_err` (rad,
+    /// positive = target is CCW of current heading). `dist` is metres remaining.
+    Drive {
+        forward: f64,
+        heading_err: f64,
+        dist: f64,
+    },
+    /// Within tolerance of the waypoint.
+    Arrived,
+}
+
+/// Wrap an angle (radians) to (-pi, pi].
+fn wrap_pi(a: f64) -> f64 {
+    let mut a = a % (2.0 * PI);
+    if a > PI {
+        a -= 2.0 * PI;
+    } else if a <= -PI {
+        a += 2.0 * PI;
+    }
+    a
+}
+
+/// One outer-loop step toward `wp` from `pose`.
+pub fn step(pose: &Pose, wp: &Waypoint, g: &Goto) -> Step {
+    let dx = wp.x - pose.x;
+    let dy = wp.y - pose.y;
+    let dist = dx.hypot(dy);
+    if dist < g.arrive_tol_m {
+        return Step::Arrived;
+    }
+
+    let bearing = dy.atan2(dx); // ENU, CCW from East
+    let heading_err = wrap_pi(bearing - pose.heading_enu_rad());
+
+    // Gate forward toward zero as heading error grows: full speed within
+    // PIVOT_FULL, hard pivot-in-place beyond PIVOT_ZERO. This stops the robot
+    // arcing/orbiting a waypoint it can't out-turn. The turn itself comes from
+    // the inner IMU heading controller.
+    let align =
+        ((PIVOT_ZERO - heading_err.abs()) / (PIVOT_ZERO - PIVOT_FULL)).clamp(0.0, 1.0);
+    let forward = (g.k_v * dist).clamp(0.0, g.v_max) * align;
+
+    Step::Drive {
+        forward,
+        heading_err,
+        dist,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::FRAC_PI_2;
+    use std::time::Instant;
+
+    fn pose(x: f64, y: f64, yaw_ned: f64) -> Pose {
+        Pose {
+            x,
+            y,
+            z: 0.0,
+            yaw_ned_deg: yaw_ned,
+            roll_deg: 0.0,
+            pitch_deg: 0.0,
+            yaw_rate: 0.0,
+            gnss_fix: true,
+            received_at: Instant::now(),
+        }
+    }
+
+    fn gains() -> Goto {
+        Goto {
+            arrive_tol_m: 0.6,
+            k_v: 0.35,
+            v_max: 0.45,
+        }
+    }
+
+    #[test]
+    fn arrives_within_tolerance() {
+        let p = pose(0.0, 0.0, 0.0);
+        let wp = Waypoint { x: 0.3, y: 0.0 };
+        assert_eq!(step(&p, &wp, &gains()), Step::Arrived);
+    }
+
+    #[test]
+    fn aligned_drives_straight() {
+        // yaw_ned = 90 => ENU heading 0 (facing East). Waypoint due East.
+        let p = pose(0.0, 0.0, 90.0);
+        let wp = Waypoint { x: 5.0, y: 0.0 };
+        match step(&p, &wp, &gains()) {
+            Step::Drive {
+                forward,
+                heading_err,
+                ..
+            } => {
+                assert!(heading_err.abs() < 1e-9, "should be aligned");
+                assert!(forward > 0.0, "should move forward");
+            }
+            _ => panic!("expected Drive"),
+        }
+    }
+
+    #[test]
+    fn heading_error_sign_is_ccw_positive() {
+        // Facing East (yaw_ned=90), waypoint due North => target bearing +pi/2,
+        // which is CCW of current heading => positive heading_err.
+        let p = pose(0.0, 0.0, 90.0);
+        let wp = Waypoint { x: 0.0, y: 5.0 };
+        match step(&p, &wp, &gains()) {
+            Step::Drive { heading_err, .. } => {
+                assert!((heading_err - FRAC_PI_2).abs() < 1e-9, "err={heading_err}")
+            }
+            _ => panic!("expected Drive"),
+        }
+    }
+}

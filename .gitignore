@@ -1,0 +1,17 @@
+# Rust build artifacts
+target/
+**/target/
+
+# Downloaded tool binaries
+rove_sim/tools/bin/ffmpeg
+rove_sim/tools/bin/ffprobe
+rove_sim/tools/bin/mediamtx
+
+# Large scene assets pulled in at runtime (>100MB, exceeds GitHub limit)
+free_dirt_road_through_forest.glb
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

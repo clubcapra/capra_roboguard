@@ -1,0 +1,191 @@
+# Profile: rove_standard  -- mobility + 6-DOF arm + dual Mid-360 + 7 cameras
+# "Project format": names the model, the API seam to speak, and the component
+# imports/bindings. Autonomy never reads this -- it reads the derived
+# capabilities. Swap `api.*` to retarget a different robot's wire contract.
+name: standard
+
+model:
+  path: ../../rove_standard_urdf/rove_standard.urdf
+  kind: urdf
+  mesh_format: glb
+  base_position: [0, 0, 0.5]        # dropped onto plane, settles in M0
+  base_orientation: [0, 0, 0, 1]
+
+total_mass: 100.0    # real robot ~100 kg; role masses below scale to this
+
+# Role masses (override loader defaults; scaled to total_mass). Real Robotiq
+# 2F-140 ~1.6 kg; the arm motors are sized to lift a 15 lb (6.8 kg) payload at
+# full reach, so the arm torques below (base_torque/wrist_torque) are set to the
+# real MOTOR capability, not the bare-arm holding torque.
+masses:
+  - {match: "robotiq_arg2f_base_link", mass: 0.9}
+  - {match: "*_outer_knuckle|*_inner_knuckle", mass: 0.1}
+  - {match: "*_outer_finger|*_inner_finger", mass: 0.1}
+  - {match: "*_inner_finger_pad", mass: 0.05}
+
+# Self-collision keep-out: the flippers (worm gear, non-backdrivable) and arm
+# (collaborative) refuse to drive within this margin of any other robot part,
+# checked on the REAL link meshes (FCL). 1 inch = 0.0254 m. Set enabled:false to
+# disable. Generic: any actuator exposing a `guard` slot is protected.
+safety:
+  enabled: true
+  self_collision_margin_m: 0.0254
+
+# Real end-effector gripper (Robotiq 2F-140): a separately-authored URDF spliced
+# onto the arm EE link as one body (see loader._inject_gripper). Mount transform
+# is tunable; mesh paths inside the URDF are absolute.
+gripper:
+  urdf: robotiq_2f140.urdf          # in the URDF dir (rove_standard_urdf/)
+  mount_link: JointGripper_pivot    # the REAL arm tip (not JointGripper, which
+                                    # the URDF brings back to the body origin)
+  base_link: robotiq_arg2f_base_link
+  mount_xyz: [0, 0, 0]
+  # gripper approach axis is its base +Z; with no rotation that points UP. The
+  # arm last segment points -X (forward), so pitch -90deg about Y aims the
+  # gripper's approach along the arm (forward), fingers opening horizontally.
+  mount_rpy: [0, -1.5708, 0]
+
+api:
+  sensors: rove_sensor_api          # adapter key (rove_sim/api registry)
+  control: rove_control_bridge
+  transport: {sensors: udp, control: udp}
+
+# Wheel joints must spin freely; the URDF's stale +/-pi drum limits are stripped
+# (matched against the joint's child link, e.g. DrumFL_pivot).
+continuous_joints: ["Drum*"]
+
+# Tracks are continuous belts: model each track's ground contact as a dense row
+# of SMALL (~1 inch) tread rollers along the bottom run, drum-to-drum, each as
+# WIDE as the drum -> a full-width contact patch (not a thin line), the stable
+# base a point turn needs. They are the GROUND CONTACT (drums set non-contact);
+# free-roll + low-lateral friction so the chassis force-drive pivots cleanly.
+# `count` is the only density knob: fewer = faster (Jetson), more = finer patch;
+# the row always spans the whole track either way.
+track_wheels:
+  count: 16
+  radius: 0.0127       # ~1 inch tread roller (small)
+  width: 0.089         # as wide as the drum
+  drum_radius: 0.0899  # drops the treads to the drum-bottom run
+  sides:
+    left:  {front: DrumFL, rear: DrumBL}
+    right: {front: DrumFR, rear: DrumBR}
+
+# Flipper belts: each tracked paddle's belt runs at its SIDE's main-track speed
+# (internal gear). With the brush-friction drive these need no driven joints (the
+# old injection segfaulted) -- they are just contact links the tracks actuator
+# drives. The flipper articulates on its revolute joint; its belt engages when
+# the flipper is deployed down to the ground (corner traction / tippy-toe / the
+# turn-on-flippers behaviour). Map each flipper link to its side:
+flipper_belts:
+  FlipperFL: left
+  FlipperBL: left
+  FlipperFR: right
+  FlipperBR: right
+
+# Collision = the actual 3D mesh (convex hull) per the real geometry, EXCEPT
+# Core which is a box with its bottom lifted (so wheels/flippers carry the
+# robot, not the chassis). Dynamic convex-hull meshes are stable in PyBullet
+# (only concave dynamic meshes are not). First fnmatch wins; default 'none'.
+collision_overrides:
+  - {match: "Core",  shape: box, raise_bottom: 0.12}    # only exception: box + lift
+  - {match: "Base|ASection|JointA|BSection|JointB|JointGripper", shape: convex}  # arm
+  # flipper paddles ARE the flipper-belt contact (convex hull); they engage the
+  # ground when the flipper is deployed down. Drums stay non-contact (the injected
+  # treads are the main ground contact). cage stays a hull.
+  - {match: "Flipper??", shape: convex}            # FlipperFL/FR/BL/BR paddles
+  - {match: "cage|cage_2", shape: convex}
+  # Sensor TOWER self-occlusion: the lidar must not shoot through its own mount.
+  # The mast ("pole") is an OPEN 4-stand cage around the two back-to-back Mid-360s
+  # -- a convex hull would be a solid box, so it gets a synced CONCAVE occluder
+  # from the real pole.glb (see `sensor_occluders` + robot/occluder.py): rays pass
+  # through the gaps between the 4 stands and the stands cast real shadows. The
+  # small Livox/camera/IMU housings stay convex (near-cone self-block per mount).
+  - {match: "dji_mid360|dji_mid360_2|vn300_vectornav", shape: convex}
+  - {match: "chinese_camera|chinese_camera_[2-7]", shape: convex}
+  - {match: "*",     shape: none}
+
+# Concave self-occluders rebuilt from these links' real meshes and synced to them
+# each tick (robot/occluder.py): the lidar is blocked by the actual open cage
+# geometry -- 4-stand shadows, gaps see through. No physics contact with the robot.
+sensor_occluders: [pole]
+
+# Actuator library imports. Bind by CHILD-LINK name (stable across robots);
+# `use` is the registry key. Capabilities are derived from these + sensors.
+actuators:
+  - use: differential_tracks
+    bind: {left: [DrumFL, DrumBL], right: [DrumFR, DrumBR]}
+    # Brush / Contact-Surface-Motion drive (see tracks.py). Treads are passive
+    # contact; per-step friction forces (capped at mu*N using real contact load)
+    # give traction + emergent slip. mu_long ~ rubber-on-hardwood; mu_lat low so
+    # the long, narrow-gauge track can skid-steer (tracks slide sideways). 46 rad/s
+    # * 0.09 m drum ~ 15 km/h top. motor_torque/current for M3 (6 A/motor pivot).
+    # mu_lat = pivot SCRUB (low: a point turn slides the track sideways); mu_lat_static
+    # = drive/arc GRIP (rubber-on-wood, so arcs hold the curve, no sideways wash-out).
+    params: {max_track_rad_s: 46.0, drum_radius: 0.0899, mu_long: 0.6, mu_lat: 0.15, mu_lat_static: 0.8, brush_stiffness: 3000.0, motor_torque: 50.0, motors_per_side: 2, nominal_torque: 20.0, current_limit_a: 7.2}
+  - use: stepped_flippers
+    bind: [FlipperFL, FlipperFR, FlipperBL, FlipperBR]
+    params: {step_rad: 0.087}              # ~5 deg/step; TODO(tune)
+  - use: arm_ik
+    bind: [Base, ASection, JointA, BSection, JointB, JointGripper]
+    # Motor capability (POSITION_CONTROL force = the MAX, only drawn under load):
+    # sized to hold/lift the gripper (~1.6 kg) + a 15 lb (6.8 kg) payload at full
+    # reach. Shoulder/elbow ~80 N.m do the lifting; wrist trio ~20 N.m orient.
+    # REAL EE is JointGripper_PIVOT: the URDF puts each link's geometry on a
+    # `_pivot` revolute child, then a fixed `_offset` brings the same-named link
+    # back to the origin (export artifact). So JointGripper sits at the body
+    # origin while JointGripper_pivot is the actual arm tip (~1.18 m fwd at rest
+    # = ~3.9 ft). Target/mount the pivot, not the link.
+    # ik_base = Core (the parent of the first arm link), so the Base YAW joint is
+    # IN the chain -- without this the IK can't swing the arm sideways.
+    params: {rate_hz: 75, ik: rove, ee_link: JointGripper_pivot, ik_base: Core,
+             base_torque: 110.0, wrist_torque: 50.0,
+             strong_links: [Base, ASection, JointA],
+             # CONTROL POINT = gripper pinch centre (midpoint of the finger pads):
+             # Ovis translation moves it, rotation pivots about it.
+             tcp_links: [left_inner_finger_pad, right_inner_finger_pad],
+             # folded home (shoulder up + elbow bent) so the arm starts retracted
+             # with room to deploy forward (URDF rest is nearly straight).
+             home_pose: {ASection: 1.0, JointA: 1.8},
+             # work-envelope cap (pinch-TCP distance from base) below full reach.
+             workspace_m: 1.3}
+  # Robotiq 2F-140 (the real gripper). One driven joint closes both fingers; the
+  # rest are mimic joints (PyBullet has none, so the actuator enforces them).
+  # gripper intent 0=open .. 1=closed -> finger_joint 0..closed_rad.
+  - use: mimic_gripper
+    bind: [robotiq_arg2f_base_link]
+    params:
+      driven_joint: finger_joint
+      closed_rad: 0.7
+      force: 60.0
+      mimic: {left_inner_knuckle_joint: -1, left_inner_finger_joint: 1,
+              right_outer_knuckle_joint: -1, right_inner_knuckle_joint: -1,
+              right_inner_finger_joint: 1}
+
+# Sensor library imports. `provides` feeds the capability set.
+sensors:
+  - {use: livox_mid360, as: livox_top,    bind: dji_mid360,    provides: [pointcloud, imu],
+     params: {rate_hz: 10, points_per_sec: 200000, range_m: 70}}
+  - {use: livox_mid360, as: livox_bottom, bind: dji_mid360_2,  provides: [pointcloud, imu],
+     params: {rate_hz: 10, points_per_sec: 200000, range_m: 70}}
+  - {use: vn300,        as: vn300,        bind: vn300_vectornav, provides: [imu, gnss, attitude],
+     params: {imu_rate_hz: 200}}
+  # Real units: 8 MP 3.6 mm 4:3, ~90 deg HFOV; the sim renders 4:3 at a lighter
+  # res. Each camera looks OUTWARD along its modelled lens (+X) from its housing
+  # CENTROID. Mapping by PARENT + +X direction (robot forward = -X, toward the arm):
+  #   chinese_camera_3 -> FRONT, chinese_camera -> REAR, _2 -> LEFT, _4 -> RIGHT
+  #   (all on the `pole` mast); chinese_camera_7 -> on JointGripper = the ARM cam.
+  - {use: camera, as: cam_front, bind: chinese_camera_3, provides: [camera],
+     params: {width: 640, height: 480, hfov_deg: 90.0}}
+  - {use: camera, as: cam_rear,  bind: chinese_camera,   provides: [camera],
+     params: {width: 640, height: 480, hfov_deg: 90.0}}
+  - {use: camera, as: cam_left,  bind: chinese_camera_2, provides: [camera],
+     params: {width: 640, height: 480, hfov_deg: 90.0}}
+  - {use: camera, as: cam_right, bind: chinese_camera_4, provides: [camera],
+     params: {width: 640, height: 480, hfov_deg: 90.0}}
+  # the REAL arm camera, mounted ON the gripper (parent JointGripper). It sits
+  # between the gripper base and the fingers, so it's AIMED at the grasp point
+  # (midpoint of the two finger pads) -- the ~-25 deg down look that keeps the
+  # gripper fingers in the lower frame with the workspace beyond.
+  - {use: camera, as: cam_arm,   bind: chinese_camera_7, provides: [camera],
+     params: {width: 640, height: 480, hfov_deg: 90.0,
+              aim_link: [left_inner_finger_pad, right_inner_finger_pad]}}

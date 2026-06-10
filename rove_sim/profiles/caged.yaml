@@ -1,0 +1,67 @@
+# Profile: rove_caged  -- mobility + cage + dual Mid-360 + 5 cameras, NO ARM.
+# Same composition model as standard.yaml; this is a *distinct robot setup*,
+# not standard-minus-arm. It simply declares no arm_ik actuator, so
+# capabilities.has_arm is False and no ArmService/IK is wired -- automatically.
+name: caged
+
+model:
+  path: ../../rove_caged_urdf/rove_caged.urdf
+  kind: urdf
+  mesh_format: glb
+  base_position: [0, 0, 0.5]
+  base_orientation: [0, 0, 0, 1]
+
+total_mass: 100.0    # real robot ~100 kg; role masses scale to this
+
+api:
+  sensors: rove_sensor_api
+  control: rove_control_bridge
+  transport: {sensors: udp, control: udp}
+
+continuous_joints: ["Drum*"]   # strip stale +/-pi drum limits; wheels spin free
+
+# small tread rollers along the bottom run, drum-to-drum, as wide as the drum
+# (see standard.yaml) -- the full-width contact patch the brush drive needs.
+track_wheels:
+  count: 16
+  radius: 0.0127
+  width: 0.089
+  drum_radius: 0.0899
+  sides:
+    left:  {front: DrumFL, rear: DrumBL}
+    right: {front: DrumFR, rear: DrumBR}
+
+# flipper belts coupled to their side (brush drive; no driven joints)
+flipper_belts:
+  FlipperFL: left
+  FlipperBL: left
+  FlipperFR: right
+  FlipperBR: right
+
+collision_overrides:
+  - {match: "Core",  shape: box, raise_bottom: 0.12}    # only exception: box + lift
+  - {match: "Flipper??", shape: convex}                 # flipper-belt contact
+  - {match: "cage|cage_2", shape: convex}
+  - {match: "*",     shape: none}
+
+actuators:
+  - use: differential_tracks
+    bind: {left: [DrumFL, DrumBL], right: [DrumFR, DrumBR]}
+    # brush / Contact-Surface-Motion drive (see standard.yaml + tracks.py)
+    params: {max_track_rad_s: 46.0, drum_radius: 0.0899, mu_long: 0.6, mu_lat: 0.15, mu_lat_static: 0.8, brush_stiffness: 3000.0, motor_torque: 50.0, motors_per_side: 2, nominal_torque: 20.0, current_limit_a: 7.2}
+  - use: stepped_flippers
+    bind: [FlipperFL, FlipperFR, FlipperBL, FlipperBR]
+    params: {step_rad: 0.087}              # TODO(tune)
+  # no arm_ik, no gripper -> has_arm / has_gripper False by construction.
+
+sensors:
+  - {use: livox_mid360, as: livox_top,    bind: dji_mid360,    provides: [pointcloud, imu],
+     params: {rate_hz: 10, points_per_sec: 200000, range_m: 70}}
+  - {use: livox_mid360, as: livox_bottom, bind: dji_mid360_2,  provides: [pointcloud, imu],
+     params: {rate_hz: 10, points_per_sec: 200000, range_m: 70}}
+  - {use: vn300,        as: vn300,        bind: vn300_vectornav, provides: [imu, gnss, attitude],
+     params: {imu_rate_hz: 200}}
+  - {use: camera, as: cam_front, bind: chinese_camera,   provides: [camera],
+     params: {width: 2048, height: 1536, hfov_deg: 90.0}}
+  - {use: camera, as: cam_rear,  bind: chinese_camera_3, provides: [camera],
+     params: {width: 2048, height: 1536, hfov_deg: 90.0}}

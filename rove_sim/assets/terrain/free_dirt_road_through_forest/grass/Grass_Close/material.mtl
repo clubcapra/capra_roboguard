@@ -1,0 +1,8 @@
+# https://github.com/mikedh/trimesh
+
+newmtl Grass_Close
+Ka 0.40000000 0.40000000 0.40000000
+Kd 0.89803922 0.89803922 0.89803922
+Ks 0.40000000 0.40000000 0.40000000
+Ns 1.00000000
+map_Kd Grass_Close.png
