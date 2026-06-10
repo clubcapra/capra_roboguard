@@ -105,8 +105,11 @@ class MockWorld(World):
             return
         root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         out_dir = os.path.join(root, "assets", "terrain")
+        # 60k (the full ground mesh) instead of 20k: decimating to 20k punched
+        # holes in the thin-shell collider (45% void near spawn vs 15% at full
+        # res) that the robot fell through. Override via terrain.collision_faces.
         manifest = terrain.build_assets(src, out_dir,
-                                        int(tspec.get("collision_faces", 20000)))
+                                        int(tspec.get("collision_faces", 60000)))
         data = json.load(open(manifest))
         # The manifest stores ABSOLUTE asset paths; if the stack was copied from
         # another machine those point at the old root. Rebase every cached path
@@ -135,8 +138,18 @@ class MockWorld(World):
                                             basePosition=[0, 0, 0])
         p.changeDynamics(self.terrain_id, -1,
                          lateralFriction=float(tspec.get("friction", 1.0)))
-        lo = p.getAABB(self.terrain_id)[0][2]
-        self.ground_id = p.loadURDF("plane.urdf", [0, 0, lo - 5.0])   # deep catch
+        # Catch FLOOR: the terrain is a thin shell with real cliffs/voids, so a
+        # robot that drives off lands here instead of falling to infinity. A LARGE
+        # THICK box (not the deep thin plane.urdf, which a fast fall tunnels through
+        # or misses) set ~16 m below the drivable high ground -- below the road so
+        # it never interferes, above the long fall that made the robot "disappear".
+        aabb = p.getAABB(self.terrain_id)
+        cx_t, cy_t = (aabb[0][0] + aabb[1][0]) / 2, (aabb[0][1] + aabb[1][1]) / 2
+        catch_top = aabb[1][2] - float(tspec.get("catch_drop", 16.0))
+        cbox = p.createCollisionShape(p.GEOM_BOX, halfExtents=[300, 300, 3])
+        self.ground_id = p.createMultiBody(
+            baseMass=0, baseCollisionShapeIndex=cbox,
+            basePosition=[cx_t, cy_t, catch_top - 3.0])
         p.changeVisualShape(self.ground_id, -1, rgbaColor=[0, 0, 0, 0])
 
         # full-scene visual: one body per source material. With texture on, the
