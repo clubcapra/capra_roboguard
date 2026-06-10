@@ -10,6 +10,7 @@ pub struct Config {
     pub http_port: u16,
     pub datum: Datum,
     pub telemetry: Telemetry,
+    pub position: Position,
     pub tracks: Tracks,
     pub control: Control,
     pub goto: Goto,
@@ -31,6 +32,14 @@ pub struct Telemetry {
     pub vectornav_id: String,
     pub subscribe_ms: u32,
     pub pose_stale_ms: u64,
+}
+
+/// PositionService filter — smooths the noisy VN GNSS into a usable pose.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct Position {
+    /// Per-sample pull of the dead-reckoned position toward raw GNSS [0..1].
+    /// Small = smoother (more lag-free dead reckoning), large = trusts GNSS more.
+    pub correction_gain: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -18,7 +18,7 @@ use behaviors::goto::Waypoint;
 use config::Config;
 use control::heading::HeadingController;
 use control::tracks::TracksController;
-use position::{pose_from_vectornav, Pose};
+use position::{Pose, PositionService};
 use reflex::ReflexEngine;
 use router::{Action, Router};
 use std::path::PathBuf;
@@ -82,11 +82,11 @@ async fn main() -> Result<()> {
     let (pose_tx, pose_rx) = watch::channel::<Option<Pose>>(None);
     {
         let host = cfg.robot_host.clone();
-        let datum = cfg.datum;
         let interval_ms = cfg.telemetry.subscribe_ms;
+        let mut possvc = PositionService::new(cfg.datum, cfg.position.correction_gain);
         tokio::spawn(async move {
-            let r = telemetry::subscribe(&host, vn_data_port, interval_ms, |frame| {
-                if let Some(p) = pose_from_vectornav(&frame, &datum) {
+            let r = telemetry::subscribe(&host, vn_data_port, interval_ms, move |frame| {
+                if let Some(p) = possvc.update(&frame, std::time::Instant::now()) {
                     let _ = pose_tx.send(Some(p));
                 }
             })
