@@ -189,13 +189,22 @@ def main():
         s.bind(("0.0.0.0", RESET_PORT))
         while True:
             try:
-                s.recvfrom(64)
-                reset_flag.set()
+                data, _ = s.recvfrom(64)
+                cmd = data.strip()
+                if cmd.upper().startswith(b"GNSS"):
+                    # "GNSS denied" | "GNSS nominal" | "GNSS spoofed" | "GNSS degraded"
+                    parts = cmd.split(None, 1)
+                    mode = parts[1].decode().strip().lower() if len(parts) > 1 else "nominal"
+                    if gt is not None and mode in ("nominal", "degraded", "denied", "spoofed"):
+                        gt.gnss_mode = mode
+                        print(f"  [sim] GNSS mode -> {mode}", flush=True)
+                else:
+                    reset_flag.set()
             except OSError:
                 break
 
     threading.Thread(target=_reset_listener, daemon=True).start()
-    print(f"  reset    UDP  : reset:{RESET_PORT} (send any datagram to respawn the robot)")
+    print(f"  reset    UDP  : reset:{RESET_PORT} (RESET respawns; 'GNSS denied|nominal|spoofed' toggles GNSS)")
 
     dt = 1.0 / sim.control_hz
     acc_t = acc_l = acc_i = 0.0

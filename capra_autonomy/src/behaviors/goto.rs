@@ -17,8 +17,11 @@ const PIVOT_FULL: f64 = 0.15;
 /// tracks never scrub). It must keep moving so the forward motion engages the
 /// lateral scrub; so we keep a forward FLOOR and let it arc-turn toward the target.
 const PIVOT_ZERO: f64 = 0.80;
-/// Minimum forward fraction even at large heading error (keeps the scrub alive).
-const FWD_FLOOR: f64 = 0.45;
+/// Minimum forward fraction even at large heading error. HIGH on purpose: the
+/// robot must keep real longitudinal speed to break the static-grip regime and
+/// scrub-turn (a near-stopped pivot stalls). The control loop also arc-clamps the
+/// differential so the inner track never deep-reverses into a stalling pivot.
+const FWD_FLOOR: f64 = 0.85;
 
 /// A waypoint in local ENU metres.
 #[derive(Debug, Clone, Copy)]
@@ -112,6 +115,8 @@ mod tests {
             pitch_deg: 0.0,
             yaw_rate: 0.0,
             gnss_fix: true,
+            position_confidence: 1.0,
+            drift_m: 0.0,
             received_at: Instant::now(),
         }
     }

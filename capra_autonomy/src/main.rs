@@ -7,6 +7,7 @@
 mod behaviors;
 mod config;
 mod control;
+mod mission;
 mod perception;
 mod position;
 mod reflex;
@@ -26,7 +27,7 @@ use position::{Pose, PositionService};
 use reflex::ReflexEngine;
 use router::{Action, Router};
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::watch;
 use transport::{command::CommandSink, discover, telemetry};
 use validate::ground_truth::{self, Truth};
@@ -170,15 +171,24 @@ async fn main() -> Result<()> {
         start.y,
         start.yaw_ned_deg
     );
-    let waypoints = resolve_waypoints(&cfg, &start);
-    if waypoints.is_empty() {
-        tracing::warn!("no waypoints — nothing to do (set [mission].demo_forward_m or waypoints)");
-    } else {
-        for (i, w) in waypoints.iter().enumerate() {
-            tracing::info!("waypoint {i}: ENU ({:.2}, {:.2})", w.x, w.y);
-        }
+    // SAR safe points: Origin = configured Home or the first fix.
+    let mut safe = mission::SafePoints::new();
+    let rel = |p: [f64; 2]| {
+        if cfg.mission.relative_to_start { [start.x + p[0], start.y + p[1]] } else { p }
+    };
+    let home = cfg.mission.home.map(rel).unwrap_or([start.x, start.y]);
+    safe.set(mission::SafeKind::Origin, home, 1.0, 0.0);
+
+    let (waypoints, terminal, behavior_name) = resolve_mission(&cfg, &start, &safe);
+    tracing::info!(
+        "mission: {} ({} waypoint(s), terminal {:?}); Home/origin ENU ({:.1}, {:.1})",
+        behavior_name, waypoints.len(), terminal, home[0], home[1],
+    );
+    for (i, w) in waypoints.iter().enumerate() {
+        tracing::info!("  wp {i}: ENU ({:.2}, {:.2})", w.x, w.y);
     }
     let mut router = Router::new(waypoints, cfg.goto);
+    router.set_hold_at_end(terminal == mission::Terminal::Hold);
     let mut reflexes = ReflexEngine::new(cfg.reflex, (start.x, start.y));
     tracing::info!(
         "reflexes armed: geofence {:.0} m, fall {:.0} m, roll/pitch {:.0}/{:.0} deg",
@@ -189,7 +199,7 @@ async fn main() -> Result<()> {
     );
 
     // --- control loop -----------------------------------------------------
-    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &pose_rx, &truth_rx, &hazard_rx, &costmap_rx).await?;
+    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &mut safe, &pose_rx, &truth_rx, &hazard_rx, &costmap_rx).await?;
 
     // --- always leave the robot stopped + disarmed ------------------------
     tracks.idle().await.ok();
@@ -222,34 +232,28 @@ async fn wait_for_fix(pose_rx: &watch::Receiver<Option<Pose>>) -> Result<Pose> {
     }
 }
 
-/// Build the ENU waypoint list from config + the start pose.
-fn resolve_waypoints(cfg: &Config, start: &Pose) -> Vec<Waypoint> {
+/// Compile the configured SAR behaviour into a flyable plan (waypoints + terminal).
+fn resolve_mission(
+    cfg: &Config,
+    start: &Pose,
+    safe: &mission::SafePoints,
+) -> (Vec<Waypoint>, mission::Terminal, String) {
     let m = &cfg.mission;
-    if !m.waypoints.is_empty() {
-        return m
-            .waypoints
-            .iter()
-            .map(|[x, y]| {
-                if m.relative_to_start {
-                    Waypoint {
-                        x: start.x + x,
-                        y: start.y + y,
-                    }
-                } else {
-                    Waypoint { x: *x, y: *y }
-                }
-            })
-            .collect();
-    }
-    if m.demo_forward_m > 0.0 {
-        // Straight ahead of the start heading — the safest first live drive.
+    let rel = |p: [f64; 2]| {
+        if m.relative_to_start { [start.x + p[0], start.y + p[1]] } else { p }
+    };
+    let mut wps: Vec<[f64; 2]> = m.waypoints.iter().map(|p| rel(*p)).collect();
+    // demo_forward fallback: a single waypoint straight ahead (safest first drive)
+    if wps.is_empty() && m.demo_forward_m > 0.0 {
         let h = start.heading_enu_rad();
-        return vec![Waypoint {
-            x: start.x + m.demo_forward_m * h.cos(),
-            y: start.y + m.demo_forward_m * h.sin(),
-        }];
+        wps.push([start.x + m.demo_forward_m * h.cos(), start.y + m.demo_forward_m * h.sin()]);
     }
-    Vec::new()
+    let behavior = mission::from_config(
+        &m.behavior, &wps, m.orbit_center.map(rel),
+        m.orbit_radius, m.orbit_laps, m.retreat_dist, &m.return_target,
+    );
+    let plan = mission::compile(&behavior, safe, [start.x, start.y], &[]);
+    (plan.waypoints, plan.terminal, m.behavior.clone())
 }
 
 async fn run_control_loop(
@@ -257,6 +261,7 @@ async fn run_control_loop(
     router: &mut Router,
     tracks: &mut TracksController<'_>,
     reflexes: &mut ReflexEngine,
+    safe: &mut mission::SafePoints,
     pose_rx: &watch::Receiver<Option<Pose>>,
     truth_rx: &watch::Receiver<Option<Truth>>,
     hazard_rx: &watch::Receiver<Hazard>,
@@ -269,6 +274,18 @@ async fn run_control_loop(
     let mut ticks: u64 = 0;
     let mut heading = HeadingController::new(cfg.asserv);
     let mut interval = tokio::time::interval(period);
+    // turn-stuck detection + recovery (high-friction skid-steer can stall a turn)
+    let mut stuck_ticks: u32 = 0;
+    let mut recovery_until: Option<Instant> = None;
+    let mut recovery_sign = 1.0_f64;
+    // progress watchdog -> hold if a goal can't be reached (e.g. fenced by no-go)
+    let mut best_dist = f64::INFINITY;
+    let mut last_progress = Instant::now();
+    let mut tracked_goal: Option<[f64; 2]> = None;
+    // SAR safe-point auto-update + breadcrumb trail + GNSS-quality logging
+    let mut breadcrumbs: Vec<[f64; 2]> = Vec::new();
+    let mut last_crumb = Instant::now();
+    let mut gnss_was_ok = true;
 
     loop {
         tokio::select! {
@@ -282,10 +299,42 @@ async fn run_control_loop(
                     Some(p) => p,
                     None => { tracks.idle().await.ok(); continue; }
                 };
-                if pose.received_at.elapsed() > stale || !pose.gnss_fix {
-                    tracing::warn!("pose stale/unfixed — holding");
+                // Hold only on a STALE stream. A lost GNSS fix does NOT stop us —
+                // the PositionService dead-reckons through it so we can still drive
+                // (e.g. home). Only give up if confidence collapses entirely.
+                if pose.received_at.elapsed() > stale {
+                    tracing::warn!("pose stale — holding");
                     tracks.idle().await.ok();
                     continue;
+                }
+                if pose.position_confidence < 0.05 {
+                    tracing::warn!("position lost (confidence ~0, drift {:.1} m) — holding", pose.drift_m);
+                    tracks.idle().await.ok();
+                    continue;
+                }
+
+                // SAR safe points: record trusted-GNSS + stable-ground posts, and
+                // log GNSS-quality transitions (the dead-reckoning signal).
+                if pose.gnss_fix && pose.position_confidence > 0.7 {
+                    safe.set(mission::SafeKind::LastGnssTrusted, [pose.x, pose.y], pose.position_confidence, pose.drift_m);
+                    if pose.roll_deg.abs() < 8.0 && pose.pitch_deg.abs() < 8.0 {
+                        safe.set(mission::SafeKind::LastStable, [pose.x, pose.y], pose.position_confidence, pose.drift_m);
+                    }
+                }
+                if pose.gnss_fix != gnss_was_ok {
+                    gnss_was_ok = pose.gnss_fix;
+                    if pose.gnss_fix {
+                        tracing::info!("GNSS REACQUIRED — confidence recovering");
+                    } else {
+                        tracing::warn!("GNSS LOST — dead-reckoning home on velocity + IMU (SLAM hold)");
+                    }
+                }
+                // breadcrumb trail (for Retreat / BacktrackComm)
+                if last_crumb.elapsed() > Duration::from_millis(500) {
+                    if breadcrumbs.last().map_or(true, |c| (c[0]-pose.x).hypot(c[1]-pose.y) > 2.0) {
+                        breadcrumbs.push([pose.x, pose.y]);
+                    }
+                    last_crumb = Instant::now();
                 }
 
                 // L0 reflex gate — vetoes ALL motion. A trip latches: stop the
@@ -298,6 +347,44 @@ async fn run_control_loop(
 
                 match router.tick(&pose) {
                     Action::Drive { forward: rf, heading_err: rh, dist } => {
+                        // --- active RECOVERY: back up while pivoting to break a stalled
+                        // high-friction turn (3-point-turn wiggle); overrides everything ---
+                        if let Some(until) = recovery_until {
+                            if Instant::now() < until {
+                                let rturn = recovery_sign * 0.7;
+                                let left = (-0.5 + rturn).clamp(-1.0, 1.0);
+                                let right = (-0.5 - rturn).clamp(-1.0, 1.0);
+                                tracks.drive(left, right, dt).await?;
+                                if ticks % (log_every / 2).max(1) == 0 {
+                                    tracing::warn!("RECOVERY — backing + pivoting to break a stalled turn");
+                                }
+                                continue;
+                            }
+                            recovery_until = None;
+                            heading.reset();
+                        }
+                        // progress watchdog: if we haven't gotten meaningfully closer to
+                        // this goal for a while, it's unreachable (walled off by no-go) ->
+                        // hold instead of wandering / arcing forever.
+                        let goal_xy = router.current_waypoint().map(|w| [w.x, w.y]);
+                        if goal_xy != tracked_goal {
+                            tracked_goal = goal_xy;
+                            best_dist = f64::INFINITY;
+                            last_progress = Instant::now();
+                        }
+                        if dist < best_dist - 0.5 {
+                            best_dist = dist;
+                            last_progress = Instant::now();
+                        }
+                        if last_progress.elapsed() > Duration::from_secs(10) {
+                            tracks.idle().await.ok();
+                            heading.reset();
+                            if ticks % (log_every * 2) == 0 {
+                                tracing::warn!(
+                                    "goal unreachable — no progress for 10 s (best {:.1} m) — holding", best_dist);
+                            }
+                            continue;
+                        }
                         let hz = *hazard_rx.borrow();
                         let fresh = hz.stamp.elapsed() < Duration::from_millis(800);
                         // A drop-off is ALWAYS a hard stop — never trust a steer over an edge.
@@ -339,6 +426,26 @@ async fn run_control_loop(
                             _ => (rf, rh, false), // no cost map yet -> head straight at the goal
                         } };
                         let turn = heading.update(heading_err, pose.yaw_rate, dt);
+                        // ARC-CLAMP: keep the inner track ~forward so the robot ARCS
+                        // (stays moving -> scrubs) instead of pivoting (stalls).
+                        let turn = turn.clamp(-(forward + 0.10), forward + 0.10);
+                        // turn-stuck: big heading error but barely yawing (even arcing can't
+                        // turn here -- tight spot) -> trigger a reverse-pivot K-turn recovery.
+                        if heading_err.abs() > 0.45 && pose.yaw_rate.abs() < 0.06 {
+                            stuck_ticks += 1;
+                        } else {
+                            stuck_ticks = 0;
+                        }
+                        if stuck_ticks >= 30 {
+                            recovery_until = Some(Instant::now() + Duration::from_millis(1200));
+                            recovery_sign = if heading_err >= 0.0 { 1.0 } else { -1.0 };
+                            stuck_ticks = 0;
+                            tracing::warn!(
+                                "turn-stuck (hdg_err {:+.0}deg, yaw_rate {:+.2}) -> K-turn recovery",
+                                heading_err.to_degrees(), pose.yaw_rate);
+                            tracks.idle().await.ok();
+                            continue;
+                        }
                         let left = (forward + turn).clamp(-1.0, 1.0);
                         let right = (forward - turn).clamp(-1.0, 1.0);
                         tracks.drive(left, right, dt).await?;

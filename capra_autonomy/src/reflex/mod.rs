@@ -101,6 +101,8 @@ mod tests {
             pitch_deg: pitch,
             yaw_rate: 0.0,
             gnss_fix: true,
+            position_confidence: 1.0,
+            drift_m: 0.0,
             received_at: Instant::now(),
         }
     }

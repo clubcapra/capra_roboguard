@@ -104,6 +104,41 @@ pub struct Mission {
     pub relative_to_start: bool,
     pub demo_forward_m: f64,
     pub waypoints: Vec<[f64; 2]>,
+    /// SAR behaviour: waypoint | goto | patrol | returnhome | orbit | sentinel |
+    /// retreat | backtrackcomm | explore. Default "waypoint".
+    #[serde(default = "default_behavior")]
+    pub behavior: String,
+    /// ReturnHome target safe point: origin | last_comms | last_gnss_trusted |
+    /// last_stable | last_vision | <operator-label>. Default "origin".
+    #[serde(default = "default_return_target")]
+    pub return_target: String,
+    #[serde(default)]
+    pub orbit_center: Option<[f64; 2]>,
+    #[serde(default = "default_orbit_radius")]
+    pub orbit_radius: f64,
+    #[serde(default = "default_orbit_laps")]
+    pub orbit_laps: u32,
+    #[serde(default = "default_retreat_dist")]
+    pub retreat_dist: f64,
+    /// Optional explicit Home (SetHome); if absent, origin = first fix.
+    #[serde(default)]
+    pub home: Option<[f64; 2]>,
+}
+
+fn default_behavior() -> String {
+    "waypoint".into()
+}
+fn default_return_target() -> String {
+    "origin".into()
+}
+fn default_orbit_radius() -> f64 {
+    4.0
+}
+fn default_orbit_laps() -> u32 {
+    1
+}
+fn default_retreat_dist() -> f64 {
+    5.0
 }
 
 impl Config {
