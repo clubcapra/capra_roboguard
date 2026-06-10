@@ -49,6 +49,7 @@ User=$RUN_USER
 WorkingDirectory=$PROJECT_DIR
 ExecStart=$ENTRY $ARGS
 Environment=PYOPENGL_PLATFORM=egl
+Environment=ROVE_SPAWN_TREES=1
 Restart=on-failure
 RestartSec=5
 # rove.sh's own trap + systemd's cgroup kill reap every worker (python/mediamtx/ffmpeg).

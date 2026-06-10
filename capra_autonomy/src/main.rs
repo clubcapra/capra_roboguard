@@ -7,6 +7,7 @@
 mod behaviors;
 mod config;
 mod control;
+mod perception;
 mod position;
 mod reflex;
 mod router;
@@ -18,6 +19,7 @@ use behaviors::goto::Waypoint;
 use config::Config;
 use control::heading::HeadingController;
 use control::tracks::TracksController;
+use perception::Hazard;
 use position::{Pose, PositionService};
 use reflex::ReflexEngine;
 use router::{Action, Router};
@@ -32,15 +34,21 @@ const GROUND_TRUTH_PORT: u16 = 5030;
 struct Args {
     config: PathBuf,
     dry_run: bool,
+    lidar_probe: bool,
+    no_reset: bool,
 }
 
 fn parse_args() -> Args {
     let mut config = PathBuf::from("config/autonomy.toml");
     let mut dry_run = false;
+    let mut lidar_probe = false;
+    let mut no_reset = false;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
             "--dry-run" => dry_run = true,
+            "--lidar-probe" => lidar_probe = true,
+            "--no-reset" => no_reset = true,
             "--config" | "-c" => {
                 if let Some(p) = it.next() {
                     config = PathBuf::from(p);
@@ -49,7 +57,15 @@ fn parse_args() -> Args {
             other => eprintln!("warning: ignoring unknown arg {other:?}"),
         }
     }
-    Args { config, dry_run }
+    Args { config, dry_run, lidar_probe, no_reset }
+}
+
+/// Ask the sim to respawn the robot at the start pose (sim_server reset port).
+async fn reset_robot(host: &str) -> Result<()> {
+    const RESET_PORT: u16 = 5099;
+    let sock = tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await?;
+    sock.send_to(b"RESET", (host, RESET_PORT)).await?;
+    Ok(())
 }
 
 #[tokio::main]
@@ -97,6 +113,29 @@ async fn main() -> Result<()> {
         });
     }
 
+    // --- lidar decoder validation (no driving) ----------------------------
+    if args.lidar_probe {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await; // let a fix arrive
+        perception::probe(&cfg.robot_host, 5024, pose_rx.clone()).await?; // bottom Livox = near sensing
+        return Ok(());
+    }
+
+    // --- lidar forward-hazard reflex --------------------------------------
+    let (hazard_tx, hazard_rx) = watch::channel::<Hazard>(Hazard::none());
+    {
+        let host = cfg.robot_host.clone();
+        let p = cfg.perception;
+        let pose_rx = pose_rx.clone();
+        tokio::spawn(async move {
+            if let Err(e) = perception::run(
+                host, p.lidar_port, p.obstacle_stop_m, p.cliff_stop_m,
+                p.min_ground_per_bin, pose_rx, hazard_tx,
+            ).await {
+                tracing::warn!("perception task ended: {e:#}");
+            }
+        });
+    }
+
     // --- ground-truth validator (best-effort) -----------------------------
     let (truth_tx, truth_rx) = watch::channel::<Option<Truth>>(None);
     tokio::spawn(async move {
@@ -109,6 +148,13 @@ async fn main() -> Result<()> {
     let sink = CommandSink::new(cfg.robot_host.clone(), args.dry_run).await?;
     let mut tracks = TracksController::new(&cfg.tracks, &sink, &disc)?;
     tracing::info!("track map: {}", tracks.map_summary());
+
+    // --- reset the robot to spawn (clean, repeatable runs) ----------------
+    if !args.dry_run && !args.no_reset {
+        tracing::info!("resetting robot to spawn…");
+        reset_robot(&cfg.robot_host).await.ok();
+        tokio::time::sleep(std::time::Duration::from_millis(1800)).await; // respawn + settle
+    }
 
     // --- wait for first fix, then resolve waypoints -----------------------
     let start = wait_for_fix(&pose_rx).await?;
@@ -137,7 +183,7 @@ async fn main() -> Result<()> {
     );
 
     // --- control loop -----------------------------------------------------
-    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &pose_rx, &truth_rx).await?;
+    run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &pose_rx, &truth_rx, &hazard_rx).await?;
 
     // --- always leave the robot stopped + disarmed ------------------------
     tracks.idle().await.ok();
@@ -207,6 +253,7 @@ async fn run_control_loop(
     reflexes: &mut ReflexEngine,
     pose_rx: &watch::Receiver<Option<Pose>>,
     truth_rx: &watch::Receiver<Option<Truth>>,
+    hazard_rx: &watch::Receiver<Hazard>,
 ) -> Result<()> {
     let dt = 1.0 / cfg.control.rate_hz;
     let period = Duration::from_secs_f64(dt);
@@ -244,11 +291,31 @@ async fn run_control_loop(
 
                 match router.tick(&pose) {
                     Action::Drive { forward, heading_err, dist } => {
+                        // Lidar forward-hazard gate: stop before obstacles / edges.
+                        let hz = *hazard_rx.borrow();
+                        let fresh = hz.stamp.elapsed() < Duration::from_millis(800);
+                        if fresh && (hz.obstacle_ahead || hz.cliff_ahead) {
+                            tracks.idle().await.ok();
+                            heading.reset();
+                            if ticks % (log_every / 2).max(1) == 0 {
+                                tracing::warn!(
+                                    "HAZARD HOLD — {} ahead (obstacle {:.1} m, cliff {:.1} m); dist-to-wp {:.1} m",
+                                    if hz.obstacle_ahead { "obstacle" } else { "drop-off" },
+                                    hz.obstacle_dist, hz.cliff_dist, dist,
+                                );
+                            }
+                            continue;
+                        }
                         // Inner IMU heading loop turns the heading error into the
                         // track differential, damping slip-induced yaw (mud).
                         let turn = heading.update(heading_err, pose.yaw_rate, dt);
-                        let left = (forward - turn).clamp(-1.0, 1.0);
-                        let right = (forward + turn).clamp(-1.0, 1.0);
+                        // Sim track convention (verified live by direct probe):
+                        //  * +track on BOTH sides drives the chassis BACKWARD, so to
+                        //    close range we drive with -forward.
+                        //  * turn>0 (toward +heading_err = CCW) is left>right.
+                        let drive = -forward;
+                        let left = (drive + turn).clamp(-1.0, 1.0);
+                        let right = (drive - turn).clamp(-1.0, 1.0);
                         tracks.drive(left, right, dt).await?;
                         if ticks % log_every == 0 {
                             log_status(router, &pose, truth_rx, dist, heading_err, turn, left, right);

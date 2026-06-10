@@ -19,8 +19,12 @@ with state.RoveSensorApiStateSource; read clouds with sensors.lidar.decode_cloud
 """
 import argparse
 import os
+import socket
 import sys
+import threading
 import time
+
+import pybullet as p
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -160,12 +164,49 @@ def main():
     if feeds:
         print(f"  camera RTSP   : {', '.join(feeds.urls())}")
 
+    # --- demo obstacles (trees on the road) --------------------------------
+    # ROVE_SPAWN_TREES=1 spawns a few static trunks south of spawn so autonomy can
+    # drive at them and the lidar forward-hazard reflex stops the robot in time.
+    if os.environ.get("ROVE_SPAWN_TREES"):
+        from rove_sim.world.scene import spawn_demo_trees
+        n = spawn_demo_trees(sim.world)
+        print(f"[sim_server] spawned {n} demo trees on the road (ROVE_SPAWN_TREES)")
+
+    # --- remote reset-to-spawn (UDP) ---------------------------------------
+    # Lets autonomy put the robot back at the start between runs (no sim restart).
+    # Send any datagram to host:RESET_PORT; the main loop reapplies the captured
+    # spawn pose + zeroes velocity. Bind 0.0.0.0 so a remote autonomy box can reach it.
+    RESET_PORT = 5099
+    for _ in range(60):                 # let the robot settle, then snapshot spawn pose
+        sim.step_control(1)
+    spawn_pose = p.getBasePositionAndOrientation(sim.robot.body_id)
+    reset_flag = threading.Event()
+
+    def _reset_listener():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("0.0.0.0", RESET_PORT))
+        while True:
+            try:
+                s.recvfrom(64)
+                reset_flag.set()
+            except OSError:
+                break
+
+    threading.Thread(target=_reset_listener, daemon=True).start()
+    print(f"  reset    UDP  : reset:{RESET_PORT} (send any datagram to respawn the robot)")
+
     dt = 1.0 / sim.control_hz
     acc_t = acc_l = acc_i = 0.0
     rt_t0 = time.time(); rt_ticks = 0               # realtime-factor counter
     try:
         while True:
             t0 = time.time()
+            if reset_flag.is_set():                    # remote respawn
+                reset_flag.clear()
+                p.resetBasePositionAndOrientation(sim.robot.body_id, spawn_pose[0], spawn_pose[1])
+                p.resetBaseVelocity(sim.robot.body_id, [0, 0, 0], [0, 0, 0])
+                print("[sim_server] robot reset to spawn")
             sim.set_intent(bridge.poll())              # autonomy command (or hold)
             sim.step_control(1)
             rt_ticks += 1

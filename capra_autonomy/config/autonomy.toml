@@ -27,7 +27,9 @@ correction_gain = 0.05              # per-sample pull toward raw GNSS (~0.4 s sm
 left_nodes    = [31, 34]
 right_nodes   = [32, 33]
 invert_left   = false
-invert_right  = true        # right-side motors physically mirrored
+invert_right  = false       # SIM models tracks logically (no physical mirror). Verified by probe:
+                            # opposite L/R node signs => rotate, same sign => translate. On the REAL
+                            # robot the right ODrives are mirrored -> set true there.
 max_velocity  = 25.0        # rev/s at full normalized deflection (mock clamps to its scale)
 slew_per_s    = 1.5         # ramp: full-scale command change takes ~0.67 s (no track-jerk)
 
@@ -38,7 +40,7 @@ rate_hz = 50.0
 [goto]                      # OUTER loop (GNSS pose) — heading target + forward speed
 arrive_tol_m = 0.6          # within this radius of a waypoint => waypoint done
 k_v          = 0.35         # forward gain (per metre of remaining distance), normalized
-v_max        = 0.45         # cap on normalized forward command (conservative; skid-steer is slippy)
+v_max        = 0.30         # cap on normalized forward (slow -> less slip-drift while turning)
 
 # INNER heading asservissement (IMU gyro_z vs track differential) — mud rejection.
 # turn = kp*heading_err + ki*∫err - kd*(gyro_sign*yaw_rate). ki=kd=0 => plain steer.
@@ -49,17 +51,28 @@ kd        = 0.3             # gyro damping — counters slip-induced yaw the ins
 i_gate    = 0.20            # only integrate within ~11deg of aligned (anti-windup on turns)
 i_clamp   = 0.5             # anti-windup bound on the integral term
 max_turn  = 0.35            # clamp on the normalized differential (gentle pivot — avoids chassis roll)
-gyro_sign = 1.0             # set -1 if gyro_z is CW-positive on this build (verified live)
+gyro_sign = -1.0            # gyro_z is CW-positive on this build (verified live): -1 -> CCW-positive
 
 # ---------- L0 reflexes (safety gate — vetoes ALL driving) --------------
 # Hard bounds checked every tick before any behaviour. A trip latches an estop
 # and stops the mission (deliberate reset/restart to recover). This is what keeps
 # a misbehaving controller from driving the robot off the map.
 [reflex]
-geofence_radius_m = 8.0     # bring-up bound; covers the ~6 m road waypoint w/ margin, well short of the cliffs
+geofence_radius_m = 15.0    # room to turn+drift; the lidar hazard reflex now guards real edges/obstacles
 fall_floor_m      = 5.0     # estop if height drops >this below the datum (fell off terrain)
 max_roll_deg      = 35.0    # SAR L0: roll > 35deg -> kill drive
 max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
+
+# ---------- Lidar forward-hazard reflex (perception) --------------------
+# Bottom Livox (near sensing) -> stop before obstacles (trees) and ground edges
+# (cliffs), regardless of pose error. This is what keeps GoTo from driving into
+# things or off the map. The top Livox (5022) has a ~6 m near blind spot (its
+# lowest beam is only -7deg), so near sensing uses the bottom one.
+[perception]
+lidar_port         = 5024
+obstacle_stop_m    = 2.5     # hold this far before a solid object ahead
+cliff_stop_m       = 3.0     # hold this far before a ground drop-off ahead
+min_ground_per_bin = 2       # < this many ground returns in a near range-bin => edge
 
 # ---------- Mission (waypoints, ENU metres) -----------------------------
 # If `relative_to_start` is true, waypoints are offsets from the first GNSS fix.
@@ -68,7 +81,7 @@ max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
 [mission]
 relative_to_start = true
 demo_forward_m    = 0.0
-# Spawn now sits in open ground (world ~3,-6) facing South. Drive 5 m further South
-# (straight ahead, no turn) onto more open road -- all solid w/ margin per the
-# collision mesh + lidar. Reaches into the y in [-6,-15] solid band.
-waypoints         = [[0.0, -5.0]]
+# Spawn sits at world ~(3,-6) facing South. Drive 10 m straight South (no turn) --
+# straight at the demo trees (3,-11.5 etc.), so the lidar hazard reflex stops the
+# robot before the trunk. Waypoint is PAST the trees on purpose.
+waypoints         = [[0.0, -10.0]]
