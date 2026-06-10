@@ -205,3 +205,19 @@ def load_scene_sim(path_or_scene, profile: str, mode: str = "headless",
                         world_overrides=scene.build_overrides(), **build_kwargs)
     apply_scene(sim, scene)
     return sim
+
+
+# Demo obstacles: a few static trunks on the road south of the standard spawn,
+# so autonomy can drive at them and the lidar forward-hazard reflex stops the
+# robot in time. Spawned in EVERY sim instance that raycasts/collides against
+# them (sim_server physics AND each lidar_worker), gated by env ROVE_SPAWN_TREES.
+DEMO_TREES = [("tree_a", (3.0, -11.5)), ("tree_b", (1.0, -14.5)), ("tree_c", (5.0, -14.5))]
+
+
+def spawn_demo_trees(world) -> int:
+    """Upsert the demo trunks into `world` (a MockWorld). Idempotent by id."""
+    for tid, (tx, ty) in DEMO_TREES:
+        world.spawn_object(SceneObject(
+            id=tid, pose=(tx, ty, 2.0), shape="cylinder", extents=(0.5, 0.5, 4.0),
+            rgba=(0.45, 0.30, 0.15, 1.0), mass=0.0, cls="tree"))
+    return len(DEMO_TREES)

@@ -16,6 +16,7 @@ pub struct Config {
     pub goto: Goto,
     pub asserv: Asserv,
     pub reflex: Reflex,
+    pub perception: Perception,
     pub mission: Mission,
 }
 
@@ -74,6 +75,15 @@ pub struct Asserv {
     pub i_clamp: f64,  // anti-windup bound on the integral term
     pub max_turn: f64, // clamp on the normalised differential
     pub gyro_sign: f64, // +1/-1 to align gyro_z with CCW-positive heading rate
+}
+
+/// Lidar forward-hazard reflex — stops the robot at obstacles / drop-offs.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct Perception {
+    pub lidar_port: u16,         // bottom Livox (near sensing) data port
+    pub obstacle_stop_m: f64,    // hold if a solid object is within this, ahead
+    pub cliff_stop_m: f64,       // hold if the ground edge is within this, ahead
+    pub min_ground_per_bin: u32, // ground-return floor per range bin (below => drop-off)
 }
 
 /// L0 reflex limits — hard safety bounds that gate all driving (`reflex`).
