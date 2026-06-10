@@ -51,7 +51,9 @@ ki        = 0.4             # integral — holds heading against sustained slip 
 kd        = 0.3             # gyro damping — counters slip-induced yaw the instant the IMU sees it
 i_gate    = 0.20            # only integrate within ~11deg of aligned (anti-windup on turns)
 i_clamp   = 0.5             # anti-windup bound on the integral term
-max_turn  = 0.35            # clamp on the normalized differential (gentle pivot — avoids chassis roll)
+max_turn  = 0.35            # gentle (Test-1 value). NOTE: pivoting on high-friction textures is a real
+                            # autonomy problem (drums turn fine on flat floor) -> needs stuck-turn detection
+                            # + a recovery maneuver (3-point turn / route around), NOT brute force. See FIX_TOMORROW.
 gyro_sign = -1.0            # gyro_z is CW-positive on this build (verified live): -1 -> CCW-positive
 
 # ---------- L0 reflexes (safety gate — vetoes ALL driving) --------------
@@ -88,4 +90,4 @@ demo_forward_m    = 0.0
 # straight aligned drive with no trees in the lane. Add [15,0],[0,0] for there-and-back.
 # For the obstacle-avoid demo instead: set sim env ROVE_OBSTACLES="9,0" (a trunk in
 # the East lane) and keep this waypoint past it.
-waypoints         = [[15.0, 0.0]]
+waypoints         = [[15.0, 0.0]]    # TEST 2: drive East along the road into the trunks (now at 10,-6) -> reflex HAZARD HOLD

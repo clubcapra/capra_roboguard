@@ -212,7 +212,10 @@ def load_scene_sim(path_or_scene, profile: str, mode: str = "headless",
 # collides against them (sim_server physics AND each lidar_worker). Default demo
 # positions; override with env ROVE_OBSTACLES="x,y;x,y;..." to place them anywhere
 # on the drivable road.
-DEMO_TREES = [(3.0, -11.5), (1.0, -14.5), (5.0, -14.5)]
+# ON the East road centerline (y≈-6, where GoTo East drives on solid ground) -- NOT
+# south of spawn (that's off the road / the no-collision void). Robot drives East
+# into them and the lidar reflex stops before the first trunk.
+DEMO_TREES = [(10.0, -6.0), (11.5, -6.0)]
 
 
 def parse_obstacles_env(s):
