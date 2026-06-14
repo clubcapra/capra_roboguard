@@ -19,6 +19,8 @@ from forgebot.core.model import IKProfile, JointComponent
 
 from .chain import count_movable_joints, find_ik_base
 from .config import IKConfig
+from .flippers import apply_flipper_command, apply_flipper_mirror
+from .motion import advance_motion, motion_joint_set
 from .proto import (
     EEPose,
     JointState,
@@ -46,6 +48,12 @@ _DEFAULT_MAX_TOTAL_DQ_STEP = 0.10
 
 def tick(state: EngineState, ik: IKConfig, dt: float) -> StateUpdate:
     _apply_kinova_mirror(state)
+    apply_flipper_mirror(state)
+    apply_flipper_command(state, dt)   # ramp any held flipper steps into the model
+    # A planned pose-to-pose move owns its joints this tick: advance it, and if
+    # still running, skip IK so the trajectory isn't fought by an Ovis frame.
+    if advance_motion(state):
+        return _build_state_update(state, state.elapsed(), diag=None)
     ovis = state.take_ovis()
     t = state.elapsed()
 
@@ -383,9 +391,12 @@ def _apply_kinova_mirror(state: EngineState) -> None:
         return
 
     positions = state.latest_kinova_positions
+    skip = motion_joint_set(state)
     for i, eid in enumerate(state.kinova_chain_joint_ids):
         if i >= len(positions):
             break
+        if eid in skip:
+            continue  # a planned move owns this joint right now
         sign = state.kinova_signs.get(eid, 1.0)
         offset = state.kinova_offsets.get(eid, 0.0)
         state.joint_values[eid] = sign * float(positions[i]) - offset

@@ -1,0 +1,41 @@
+syntax = "proto3";
+package telemetry;
+
+import "proto/core/Gripper.proto";
+import "proto/core/Orientation.proto";
+import "proto/core/Vector3.proto";
+
+// The tracks are driven via normalized scalar float values {-1, 1}
+
+// The Flippers are controlled via step incrementation (normalized scalar ints for steps {-1, 0, +1})
+
+// The Ovis arm is driven as a 6-DOF twist (normalized float scalars in {-1, 1})
+// That way IK engine can resolve joint commands from operator intent rather than per-actuator setpoints.
+
+message RoveControl {
+    Tracks tracks = 1;
+    Flippers flippers = 2;
+    Ovis ovis = 3;
+    Gripper gripper = 4;
+
+    uint64 timestamp_us = 5;
+}
+// Per-track {-1, 0, +1} float direction.
+message Tracks {
+    float left_vel = 1;
+    float right_vel = 2;
+}
+
+// Per-flipper {-1, 0, +1} step direction.
+message Flippers {
+    sint32 fl = 1;
+    sint32 fr = 2;
+    sint32 rl = 3;
+    sint32 rr = 4;
+}
+
+message Ovis {
+    Orientation orientation = 1; // {-1, 1}
+    Vector3 position = 2;        // {-1, 1}
+}
+

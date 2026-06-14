@@ -1,0 +1,11 @@
+syntax = "proto3";
+package telemetry;
+
+// Operator emergency stop — one flag, like CameraSwitch.
+//   active = true  -> ESTOP everywhere: stop the mission, drives into estop error
+//                     state, arm clears its position so it halts.
+//   active = false -> CLEAR: clear_errors on everything, revert the estop state.
+message Estop {
+    bool   active       = 1;
+    uint64 timestamp_us = 2;
+}

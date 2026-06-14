@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package forgebot.engine;
+
+message Vector3 {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message Orientation {
+    float yaw = 1;
+    float pitch = 2;
+    float roll = 3;
+}
+
+message Quaternion {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float w = 4;
+}
+
+// Client -> engine: normalized twist for `target`.
+// position/orientation are normalized to [-1, 1]; the engine scales them by
+// max_lin_vel / max_ang_vel from engine.toml before integrating.
+message Ovis {
+    Orientation orientation = 1;
+    Vector3 position = 2;
+    string target = 3;  // tip entity id (a joint or link in the scene)
+    // Offset from link origin to the actual pivot/target point (TCP), in
+    // the link's local frame. When set, position/orientation describe the
+    // motion of *the TCP*, not the link origin -- the chain pivots around
+    // the gripper centroid rather than swinging the centroid on the link's
+    // lever arm. Zero (default) keeps the legacy "pivot at link origin"
+    // behaviour.
+    Vector3 tcp_offset_local = 4;
+}
+
+message JointState {
+    string id = 1;
+    float q = 2;       // position (radians for revolute, metres for prismatic)
+    float qdot = 3;    // velocity commanded this tick
+}
+
+message EEPose {
+    string tip = 1;
+    Vector3 position = 2;
+    Quaternion orientation = 3;
+}
+
+message SolverDiag {
+    int32 iters = 1;
+    float pos_residual = 2;
+    float rot_residual = 3;
+    bool converged = 4;
+    bool collision_hit = 5;
+    string target = 6;
+}
+
+// Engine -> consumers: emitted every tick at rate_hz.
+message StateUpdate {
+    double t = 1;                  // seconds since engine start
+    repeated JointState joints = 2;
+    EEPose ee = 3;                 // populated when the latest Ovis had a tip
+    SolverDiag diag = 4;
+}

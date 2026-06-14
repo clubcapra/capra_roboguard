@@ -36,6 +36,10 @@ class InputConfig:
     ws_enabled: bool = True
     ws_bind: str = "0.0.0.0:9101"
     ws_path: str = "/ovis"
+    # Drive teleop (flipper steps + drum velocities) from the control bridge,
+    # JSON over UDP. Mirror of the Ovis (arm) input on its own port.
+    drive_udp_enabled: bool = True
+    drive_udp_bind: str = "0.0.0.0:9102"
 
 
 @dataclass
@@ -101,12 +105,79 @@ class HardwareConfig:
 
 
 @dataclass
+class FlipperNode:
+    """One drive: an ODrive node feeding one revolute joint entity."""
+
+    node_id: int                 # ODrive node id (31-34 drums, 41-44 flippers)
+    joint: str                   # model joint entity NAME (e.g. "FlipperFL")
+    data_port: int               # rove_sensor_api served data port for this node
+    sign: float = 1.0            # +1/-1 to align motor direction with model axis
+    # Per-node override of the bank gear ratio (motor revs per joint rev).
+    # None -> use FlippersConfig.gear_ratio.
+    gear_ratio: float | None = None
+    # ---- position output (commanding) ----
+    # Whether this node may receive position commands. Drums stay False; only
+    # flippers opt in. Still gated by FlippersConfig.output_enabled (master).
+    output: bool = False
+    cmd_port: int = 0            # rove_sensor_api served COMMAND port for this node
+    # Command mode: "position" (flippers — input_pos rev, control_mode 3) or
+    # "velocity" (drums — input_vel rev/s, control_mode 2). Drums are continuous
+    # drive wheels and must be velocity-commanded.
+    mode: str = "position"
+    max_vel_rev_s: float = 10.0  # velocity mode: motor rev/s at command = 1.0
+    min_deg: float | None = None  # position mode soft travel limit (model joint deg)
+    max_deg: float | None = None
+
+
+@dataclass
+class FlippersConfig:
+    """Read-only mirror of the flipper ODrives (41..44) into the model.
+
+    Same subscribe-push transport as the kinova bridge, but one subscriber
+    per ODrive node (each flipper is an independent drive). Each node reports
+    `pos_estimate` in MOTOR revolutions; the model joint angle is
+    `sign * (2*pi / gear_ratio) * pos`. The gear ratio is a hardware value
+    that is not yet known precisely, so it's a tunable here; verify the
+    mirror direction/scale by physically moving a flipper and watching the
+    model before trusting it.
+
+    Only 41/42 are wired on the current robot (43/44 are fried) — list just
+    the live nodes; a missing node is simply never mirrored.
+    """
+
+    enabled: bool = False
+    sensor_api_host: str = "127.0.0.1"
+    subscribe_interval_ms: int = 100
+    # Resolve each node's data/cmd ports from the robot's GET /discover at
+    # startup (ports are assigned by boot order and drift between restarts).
+    # Strongly recommended ON — a stale COMMAND port could drive the wrong
+    # motor. Falls back to the configured ports if discovery fails.
+    discover: bool = True
+    discover_http_port: int = 8080
+    # Flippers lose their encoder zero on power-cycle but can't physically move
+    # (worm gear). When True, restore the persisted physical angle and re-anchor
+    # the offset from the first frame, so a synced flipper survives a reboot.
+    reanchor_on_boot: bool = True
+    # Default motor revs per joint revolution. TUNABLE — real gearbox ratio TBD.
+    gear_ratio: float = 1.0
+    nodes: list[FlipperNode] = field(default_factory=list)
+    # ---- position output (commanding) ----
+    # MASTER SAFETY GATE for sending flipper position commands. Leave False
+    # (the engine computes targets + moves the model, but emits NO packets).
+    # Set True only against a target you intend to actuate.
+    output_enabled: bool = False
+    # How fast a held +1/-1 step ramps a flipper (model joint deg per second).
+    step_rate_deg_s: float = 20.0
+
+
+@dataclass
 class EngineConfig:
     robot: RobotConfig = field(default_factory=RobotConfig)
     ik: IKConfig = field(default_factory=IKConfig)
     input: InputConfig = field(default_factory=InputConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
+    flippers: FlippersConfig = field(default_factory=FlippersConfig)
     root: Path = field(default_factory=lambda: Path.cwd())
 
 
@@ -128,6 +199,15 @@ def load(path: Path) -> EngineConfig:
         cfg.output = OutputConfig(**data["output"])
     if "hardware" in data:
         cfg.hardware = HardwareConfig(**data["hardware"])
+    # The drive-mirror bank covers all position-fed ODrives (drums + flippers).
+    # Preferred key is [drives]; [flippers] is still accepted for compatibility.
+    drive_key = "drives" if "drives" in data else ("flippers" if "flippers" in data else None)
+    if drive_key is not None:
+        fdata = dict(data[drive_key])
+        # Nested [[drives.node]] / [[flippers.node]] tables arrive under "node".
+        node_dicts = fdata.pop("node", []) or fdata.pop("nodes", [])
+        cfg.flippers = FlippersConfig(**fdata)
+        cfg.flippers.nodes = [FlipperNode(**n) for n in node_dicts]
     return cfg
 
 

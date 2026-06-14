@@ -68,6 +68,77 @@ class UdpInput:
             self._transport.close()
 
 
+class _DriveInProtocol(asyncio.DatagramProtocol):
+    """Drive teleop from the control bridge: one JSON datagram per update,
+    `{"flippers":[fl,fr,rl,rr], "tracks":{"left":v,"right":v}}`. Flippers are
+    held steps {-1,0,+1} (ramp a flipper target); tracks are normalised
+    velocities [-1,1] for the drum sides. Like Ovis, it's a latest-wins stream —
+    dropped packets self-correct."""
+
+    # RoveControl flipper order [fl,fr,rl,rr] -> ODrive nodes.
+    _FLIP_NODES = (41, 42, 43, 44)
+    _LEFT_DRUMS = (31, 34)
+    _RIGHT_DRUMS = (32, 33)
+
+    def __init__(self, state: EngineState) -> None:
+        self.state = state
+        self._last_warn_t = 0.0
+
+    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
+        import json
+        from ..flippers import set_flipper_step
+        try:
+            body = json.loads(data)
+        except Exception as e:  # noqa: BLE001
+            import time as _t
+            now = _t.monotonic()
+            if now - self._last_warn_t > 30.0:
+                _log.warning("dropped malformed drive cmd from %s: %s", addr, e)
+                self._last_warn_t = now
+            return
+        if not isinstance(body, dict):
+            return
+        flips = body.get("flippers")
+        if isinstance(flips, list):
+            for i, step in enumerate(flips[: len(self._FLIP_NODES)]):
+                try:
+                    set_flipper_step(self.state, node_id=self._FLIP_NODES[i], step=int(step))
+                except Exception:  # noqa: BLE001 — unknown/unwired node is fine
+                    pass
+        tr = body.get("tracks")
+        if isinstance(tr, dict):
+            lv, rv = tr.get("left"), tr.get("right")
+            if isinstance(lv, (int, float)):
+                for n in self._LEFT_DRUMS:
+                    self.state.drive_vel_cmd[n] = float(lv)
+            if isinstance(rv, (int, float)):
+                for n in self._RIGHT_DRUMS:
+                    self.state.drive_vel_cmd[n] = float(rv)
+
+
+class DriveUdpInput:
+    """UDP listener for drive teleop (flipper steps + drum velocities) from the
+    control bridge. Mirror of `UdpInput` but for the drive chains."""
+
+    def __init__(self, state: EngineState, bind: str) -> None:
+        self.state = state
+        self.bind = bind
+        self._transport: asyncio.DatagramTransport | None = None
+
+    async def start(self) -> None:
+        host, port = parse_bind(self.bind)
+        loop = asyncio.get_running_loop()
+        self._transport, _ = await loop.create_datagram_endpoint(
+            lambda: _DriveInProtocol(self.state),
+            local_addr=(host, port),
+        )
+        _log.info("UDP drive input listening on %s:%d", host, port)
+
+    async def stop(self) -> None:
+        if self._transport is not None:
+            self._transport.close()
+
+
 class _OvisOutProtocol(asyncio.DatagramProtocol):
     """Surfaces ICMP / connection_lost so UdpOutput can log the breakage
     instead of silently sending into the void after the consumer dies."""
