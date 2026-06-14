@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "kinova": {
+    "chain_joint_ids": [
+      "ent_joint_6829915e",
+      "ent_joint_3e4dd248",
+      "ent_joint_2c15d7d3",
+      "ent_joint_d6fa25aa",
+      "ent_joint_577d5a5f",
+      "ent_joint_3f0529c9"
+    ],
+    "offsets": {
+      "ent_joint_6829915e": 4.8443832334922865,
+      "ent_joint_3e4dd248": -7.930064427463817,
+      "ent_joint_2c15d7d3": -4.557467982498061,
+      "ent_joint_d6fa25aa": -4.015960371104064,
+      "ent_joint_577d5a5f": -1.512535949523887,
+      "ent_joint_3f0529c9": -1.4925614423999658
+    },
+    "signs": {
+      "ent_joint_6829915e": 1.0,
+      "ent_joint_3e4dd248": -1.0,
+      "ent_joint_2c15d7d3": -1.0,
+      "ent_joint_d6fa25aa": -1.0,
+      "ent_joint_577d5a5f": -1.0,
+      "ent_joint_3f0529c9": -1.0
+    }
+  },
+  "drives": {
+    "gear_ratio": 540.0,
+    "signs": {},
+    "offsets": {
+      "ent_joint_1defe5d4": -8.454149397933831e-07,
+      "ent_joint_37ea415c": -9.744118050940963e-07,
+      "ent_joint_e0c4d9e2": 1.9974401707128162e-05,
+      "ent_joint_0fd59455": 2.2093834074649554e-05,
+      "ent_joint_88d7d57b": -3.323403110328049e-06,
+      "ent_joint_95cff96e": -1.460989194688571e-06
+    },
+    "positions": {
+      "ent_joint_1defe5d4": -1.8725351414619643e-08,
+      "ent_joint_37ea415c": -2.9058971269354187e-07,
+      "ent_joint_e0c4d9e2": -6.365925949436804e-06,
+      "ent_joint_0fd59455": -5.717473965263863e-06,
+      "ent_joint_88d7d57b": -3.733280246848058e-06,
+      "ent_joint_95cff96e": 3.6381580624050417e-06
+    }
+  },
+  "poses": {
+    "home": {
+      "ent_joint_95cff96e": -6.190419125645609e-07,
+      "ent_joint_88d7d57b": 3.797778679498414e-06,
+      "ent_joint_0fd59455": -1.3177099143621247e-06,
+      "ent_joint_e0c4d9e2": -1.3267258243024933e-06,
+      "ent_joint_35d71a2f": 0.0,
+      "ent_joint_37ea415c": -1.8066496457438584e-07,
+      "ent_joint_1defe5d4": 0.0,
+      "ent_joint_19790aee": 0.0,
+      "ent_joint_6829915e": 0.0,
+      "ent_joint_3e4dd248": 3.14159,
+      "ent_joint_2c15d7d3": 3.1415917310547083,
+      "ent_joint_d6fa25aa": 0.0,
+      "ent_joint_577d5a5f": 0.0,
+      "ent_joint_3f0529c9": 0.0
+    }
+  }
+}

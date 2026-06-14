@@ -1,0 +1,6 @@
+syntax = "proto3";
+package telemetry;
+
+message Gripper {
+    uint32 position = 1;  // 0 = fully open, 255 = fully closed
+}

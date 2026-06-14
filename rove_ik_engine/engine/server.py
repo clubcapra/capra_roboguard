@@ -13,9 +13,11 @@ from . import config as engine_config
 from . import ik_loop
 from .loader import load_robot
 from .hardware import KinovaCommandSender, KinovaStateListener
+from .flippers import FlipperBank, FlipperCommandSender
+from .calibration import OFFSETS_FILENAME, load_offsets, save_offsets
 from .state import EngineState
 from .tcp import compute_tcp_offsets
-from .transports import HttpWsServer, StateBus, UdpInput, UdpOutput
+from .transports import DriveUdpInput, HttpWsServer, StateBus, UdpInput, UdpOutput
 
 _log = logging.getLogger("forgebot.engine")
 
@@ -28,6 +30,32 @@ async def run(config_path: Path) -> None:
     # without restarting the engine.
     state.collision_aware = cfg.ik.collision_aware
     ik_loop.initialise_joint_values(state)
+    # Restore sync offsets captured in a previous session so a synced robot
+    # stays synced across restarts (mirrors resume once live frames arrive).
+    offsets_path = config_path.parent / OFFSETS_FILENAME
+    load_offsets(offsets_path, state, drive_gear_ratio=cfg.flippers.gear_ratio)
+    # Resolve served ports from the robot's /discover so reads/commands always
+    # hit the right sensor regardless of this boot's registration order.
+    if cfg.flippers.enabled and cfg.flippers.discover:
+        from . import discover as _discover
+        ports = _discover.fetch_ports(cfg.flippers.sensor_api_host, cfg.flippers.discover_http_port)
+        if ports:
+            for n in cfg.flippers.nodes:
+                hit = ports.get(f"odrive_{n.node_id}")
+                if hit:
+                    if (n.data_port, n.cmd_port) != hit:
+                        _log.info("drive %d ports %s -> %s (discover)", n.node_id, (n.data_port, n.cmd_port), hit)
+                    n.data_port, n.cmd_port = hit
+            km = ports.get("kinova_arm")
+            if km and cfg.hardware.enabled:
+                cfg.hardware.kinova_data_port, cfg.hardware.kinova_cmd_port = km
+        elif cfg.flippers.output_enabled:
+            # Discovery was requested but failed: configured cmd ports may be
+            # stale and a stale COMMAND port could drive the wrong motor. Refuse
+            # to command rather than risk it (reads still use configured ports).
+            cfg.flippers.output_enabled = False
+            _log.error("DRIVE OUTPUT DISABLED: port discovery failed, won't command on "
+                       "possibly-stale ports. Fix /discover reachability and restart.")
     state.tcp_offsets = compute_tcp_offsets(project)
     _apply_tcp_extras(state, cfg.ik.tcp_offset_extra)
     if state.tcp_offsets:
@@ -55,6 +83,10 @@ async def run(config_path: Path) -> None:
     if cfg.input.udp_enabled:
         udp_in = UdpInput(state, cfg.input.udp_bind)
         await udp_in.start()
+    drive_in: DriveUdpInput | None = None
+    if cfg.input.drive_udp_enabled:
+        drive_in = DriveUdpInput(state, cfg.input.drive_udp_bind)
+        await drive_in.start()
     if cfg.output.udp_enabled:
         udp_out = UdpOutput(bus, cfg.output.udp_target)
         await udp_out.start()
@@ -84,6 +116,31 @@ async def run(config_path: Path) -> None:
             expected_joint_count=expected_n,
         )
         await kinova_listener.start()
+
+    flipper_bank: FlipperBank | None = None
+    if cfg.flippers.enabled and cfg.flippers.nodes:
+        flipper_bank = FlipperBank(state, cfg.flippers)
+        await flipper_bank.start()
+        # Power-cycle recovery: the flipper ODrives boot with pos_estimate=0 at
+        # the (unchanged, worm-gear-locked) physical angle, so the persisted
+        # OFFSET is stale. Discard it, show the persisted physical angle now, and
+        # queue a re-anchor that re-derives the offset from the first frame.
+        if cfg.flippers.reanchor_on_boot and state.flipper_phys_persisted:
+            for eid, ang in state.flipper_phys_persisted.items():
+                if eid in state.flipper_joint_to_node:
+                    state.joint_values[eid] = ang
+                    state.flipper_offsets.pop(eid, None)
+                    state.flipper_reanchor.add(eid)
+            _log.info("flipper re-anchor queued for %d joint(s) from persisted positions",
+                      len(state.flipper_reanchor))
+
+    # GATED flipper/drum position output. Only created when the master gate is
+    # on, so with the default config no command socket even opens.
+    flipper_sender: FlipperCommandSender | None = None
+    if cfg.flippers.enabled and cfg.flippers.output_enabled:
+        flipper_sender = FlipperCommandSender(state, cfg.flippers)
+        flipper_sender.resolve_outputs()
+        await flipper_sender.start()
 
     kinova_sender: KinovaCommandSender | None = None
     if cfg.hardware.enabled and cfg.hardware.vel_output_enabled:
@@ -120,6 +177,8 @@ async def run(config_path: Path) -> None:
             ui_dir=ui_dir,
             data_dir=data_dir,
             hardware=cfg.hardware,
+            flippers=cfg.flippers,
+            offsets_path=offsets_path,
         )
         await http_server.start()
 
@@ -145,8 +204,12 @@ async def run(config_path: Path) -> None:
             pass
 
     tasks.append(
-        asyncio.create_task(_tick_loop(cfg, state, bus, stopping, kinova_sender))
+        asyncio.create_task(_tick_loop(cfg, state, bus, stopping, kinova_sender, flipper_sender))
     )
+    # Periodically persist physical flipper angles (they change when commanded)
+    # so a power-cycle recovers the latest position, not just the last Sync.
+    if cfg.flippers.enabled:
+        tasks.append(asyncio.create_task(_persist_loop(state, offsets_path, stopping)))
 
     await stopping.wait()
     _log.info("shutting down")
@@ -161,12 +224,37 @@ async def run(config_path: Path) -> None:
         await http_server.stop()
     if udp_in is not None:
         await udp_in.stop()
+    if drive_in is not None:
+        await drive_in.stop()
     if udp_out is not None:
         await udp_out.stop()
     if kinova_listener is not None:
         await kinova_listener.stop()
     if kinova_sender is not None:
         await kinova_sender.stop()
+    if flipper_bank is not None:
+        await flipper_bank.stop()
+    if flipper_sender is not None:
+        await flipper_sender.stop()
+
+
+async def _persist_loop(state: EngineState, offsets_path, stopping: asyncio.Event) -> None:
+    """Save offsets + physical flipper angles every few seconds, but only when a
+    synced flipper's angle has actually moved (avoids churning the file)."""
+    last: dict[str, float] = {}
+    while not stopping.is_set():
+        try:
+            await asyncio.sleep(5.0)
+            if stopping.is_set():
+                return
+            cur = {eid: round(state.joint_values.get(eid, 0.0), 4) for eid in state.flipper_offsets}
+            if cur and cur != last:
+                save_offsets(offsets_path, state)
+                last = cur
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("persist loop tick failed: %s", exc)
 
 
 async def _tick_loop(
@@ -175,6 +263,7 @@ async def _tick_loop(
     bus: StateBus,
     stopping: asyncio.Event,
     kinova_sender: KinovaCommandSender | None = None,
+    flipper_sender: FlipperCommandSender | None = None,
 ) -> None:
     # If the solver throws this many ticks in a row, bail so systemd's
     # Restart=on-failure can give us a clean process. Swallowing forever
@@ -196,6 +285,8 @@ async def _tick_loop(
             # tick -> state.joint_values reflects the real arm.
             if kinova_sender is not None:
                 kinova_sender.maybe_send()
+            if flipper_sender is not None:
+                flipper_sender.maybe_send()
             await bus.publish(update.SerializeToString())
             consecutive_fails = 0
         except Exception as e:  # noqa: BLE001

@@ -1,0 +1,23 @@
+[engine]
+name = "trained_67f67256"
+version = "0.1.0"
+description = "Trained RT-DETR on 107 classes"
+python_entry = "engine.py"
+
+[model]
+type = "rt-detr-hf"
+weights = "model"
+input_size = [ 640, 640,]
+device = "auto"
+
+[inference]
+confidence_threshold = 0.23
+nms_threshold = 0.5
+max_detections = 100
+temperature = 4.2
+
+[classes]
+names = [ "person_civilian", "person_military", "person_medic", "casualty", "handgun", "assault_rifle", "battle_rifle", "carbine", "designated_marksman_rifle", "sniper_rifle", "bolt_action_rifle", "shotgun", "submachine_gun", "machine_gun", "rocket_launcher", "grenade_launcher_standalone", "grenade_launcher_underbarrel", "anti_tank_guided_missile", "manpad", "grenade", "mortar_round", "artillery_shell", "landmine", "ied_suspected", "unexploded_ordnance", "knife", "bayonet_mounted", "machete", "axe", "stretcher", "tourniquet", "iv_bag", "medical_bag", "cervical_collar", "splint", "bandage_dressing", "chest_seal", "defibrillator_aed", "oxygen_equipment", "monitor_device", "helmet", "plate_carrier_vest", "radio", "night_vision_device", "binoculars_optics", "ammunition", "entrenching_tool", "sandbag", "wire_obstacle", "utility_belt", "backpack", "multirotor", "fixed_wing_uav", "vtol_hybrid_uav", "tracked_ugv", "wheeled_ugv", "legged_ugv", "ugv_with_arm", "ugv_with_weapon_station", "civilian_car", "civilian_truck", "civilian_bus", "motorcycle", "military_transport_truck", "apc", "ifv", "mrap", "tank", "ambulance", "fire_truck", "police_vehicle", "technical_improvised", "helicopter_utility", "helicopter_medevac", "helicopter_attack", "helicopter_civilian", "litter_carry_team", "casualty_collection_point", "helicopter_landing_zone", "vehicle_litter_rack", "drag_device", "triage_tag", "medevac_9line_card", "blood_product", "vs17_panel", "smoke_signal", "ir_strobe", "chem_light", "flag_panel", "ground_to_air_symbol", "building", "bridge", "tent_shelter", "shipping_container", "bunker_fortification", "checkpoint", "debris_pile", "fallen_tree", "crater", "barricade", "water_hazard", "minefield_marking", "danger_warning_sign", "route_direction_sign", "hazmat_placard", "unit_tactical_marking", "wound",]
+
+[tracking]
+enabled = true

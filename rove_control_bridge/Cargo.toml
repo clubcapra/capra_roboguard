@@ -1,0 +1,27 @@
+[package]
+name = "rove_control_bridge"
+version = "0.1.0"
+edition = "2021"
+description = "Capra Roboguard orchestrator: one front door for Control / Mission / Estop / CamChange. Runs autonomy (missions, cost-map nav, positioning, reflexes) AND teleop, dispatching intent to rove_ik_engine. (Merged capra_autonomy + the Python rove_control_bridge.)"
+
+[[bin]]
+name = "rove_control_bridge"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+ureq = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+prost = "0.13"          # RoveControl / Mission / CameraSwitch front-door protos
+
+[build-dependencies]
+prost-build = "0.13"
+protoc-bin-vendored = "3"   # self-contained protoc (no system install needed)
+
+[profile.release]
+lto = true

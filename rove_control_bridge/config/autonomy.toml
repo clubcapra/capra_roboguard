@@ -1,0 +1,102 @@
+# capra_autonomy — engine config (GoTo vertical slice).
+#
+# The robot surface (sim or real) lives behind rove_sensor_api. In the current
+# dev topology that is think2 = 192.168.2.4 (sim-backed). Point this at the real
+# robot's Jetson by changing robot_host only — the wire seams are identical.
+
+robot_host = "192.168.2.214"
+http_port  = 8080          # rove_sensor_api /discover (resolves data + command ports)
+
+# ---------- Pose source (VectorNav VN-300 via rove_sensor_api) ----------
+[datum]                    # Thun datum — must match rove_sim (devices.py DEFAULT_DATUM)
+lat = 46.7512
+lon = 7.6131
+alt = 560.0
+
+[telemetry]
+vectornav_id   = "vectornav_sim"   # /discover id; on the real robot this is "vectornav"
+subscribe_ms   = 20                 # 50 Hz push
+pose_stale_ms  = 500                # no fresh fix for this long -> stop driving
+
+[position]                          # PositionService filter over the noisy VN GNSS
+correction_gain = 0.05              # per-sample pull toward raw GNSS (~0.4 s smoothing @50Hz)
+
+# ---------- Drive (track ODrives via rove_sensor_api) -------------------
+# Port of rove_control_bridge tracks_velocity strategy.
+[tracks]
+left_nodes    = [31, 34]
+right_nodes   = [32, 33]
+invert_left   = false
+invert_right  = false       # SIM models tracks logically (no physical mirror). Verified by probe:
+                            # opposite L/R node signs => rotate, same sign => translate. On the REAL
+                            # robot the right ODrives are mirrored -> set true there.
+max_velocity  = 25.0        # rev/s at full normalized deflection (mock clamps to its scale)
+slew_per_s    = 1.5         # ramp: full-scale command change takes ~0.67 s (no track-jerk)
+
+# ---------- Control loop + GoTo behaviour -------------------------------
+[control]
+rate_hz = 50.0
+
+[goto]                      # OUTER loop (GNSS pose) — heading target + forward speed
+arrive_tol_m = 2.5          # vicinity arrival (this robot overshoots; tighten once turning is fixed)
+k_v          = 0.35         # forward gain (per metre of remaining distance), normalized
+v_max        = 0.30         # cap on normalized forward (slow -> less slip-drift while turning)
+drive_offset_deg = 90.0     # VN-yaw -> drive-forward axis offset (brush model, calibrated by probe)
+
+# INNER heading asservissement (IMU gyro_z vs track differential) — mud rejection.
+# turn = kp*heading_err + ki*∫err - kd*(gyro_sign*yaw_rate). ki=kd=0 => plain steer.
+[asserv]
+kp        = 1.2             # proportional on heading error (rad)
+ki        = 0.4             # integral — holds heading against sustained slip (cambered mud)
+kd        = 0.3             # gyro damping — counters slip-induced yaw the instant the IMU sees it
+i_gate    = 0.20            # only integrate within ~11deg of aligned (anti-windup on turns)
+i_clamp   = 0.5             # anti-windup bound on the integral term
+max_turn  = 0.50            # more authority to break high-friction scrub; backed by stuck-turn
+                            # detection + a reverse-pivot RECOVERY wiggle (main.rs) when a turn stalls.
+gyro_sign = -1.0            # gyro_z is CW-positive on this build (verified live): -1 -> CCW-positive
+
+# ---------- L0 reflexes (safety gate — vetoes ALL driving) --------------
+# Hard bounds checked every tick before any behaviour. A trip latches an estop
+# and stops the mission (deliberate reset/restart to recover). This is what keeps
+# a misbehaving controller from driving the robot off the map.
+[reflex]
+geofence_radius_m = 200.0   # effectively off — the cost map (inflated no-go around holes/steep drops)
+                            # + the sim catch-floor are the real safety now. Far backstop only.
+fall_floor_m      = 5.0     # estop if height drops >this below the datum (fell off terrain)
+max_roll_deg      = 35.0    # SAR L0: roll > 35deg -> kill drive
+max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
+
+# ---------- Lidar forward-hazard reflex (perception) --------------------
+# Bottom Livox (near sensing) -> stop before obstacles (trees) and ground edges
+# (cliffs), regardless of pose error. This is what keeps GoTo from driving into
+# things or off the map. The top Livox (5022) has a ~6 m near blind spot (its
+# lowest beam is only -7deg), so near sensing uses the bottom one.
+[perception]
+lidar_port         = 5024
+obstacle_stop_m    = 2.5     # hold this far before a solid object ahead
+cliff_stop_m       = 3.0     # hold this far before a ground drop-off ahead
+min_ground_per_bin = 2       # < this many ground returns in a near range-bin => edge
+
+# ---------- Mission (waypoints, ENU metres) -----------------------------
+# If `relative_to_start` is true, waypoints are offsets from the first GNSS fix.
+# With no explicit waypoints, `demo_forward_m` synthesises one straight ahead of
+# the start heading — the safest first live drive.
+[mission]
+relative_to_start = true
+demo_forward_m    = 0.0
+# ALONG-THE-ROAD test (drive up/down the road, not across into the no-collision
+# bounds). At spawn the drive-forward axis is EAST, and the road is solid to 24 m+
+# East/South (raycast of the collision mesh; N/NE/NW are cliffs). 15 m East = a
+# straight aligned drive with no trees in the lane. Add [15,0],[0,0] for there-and-back.
+# For the obstacle-avoid demo instead: set sim env ROVE_OBSTACLES="9,0" (a trunk in
+# the East lane) and keep this waypoint past it.
+waypoints         = [[15.0, 0.0]]
+
+# ---------- Front door (operator) + rove_ik_engine ----------------------
+[comms]
+teleop_port  = 5005
+mission_port = 5006
+estop_port   = 5007
+engine_host  = "127.0.0.1"
+engine_port  = 9100
+arm_target_entity = "ent_link_07ca91a1"   # JointGripper tip; "" disables arm->engine

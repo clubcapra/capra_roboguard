@@ -1,0 +1,9 @@
+# Osiris WebRTC gateway (MediaMTX): WebRTC (WHIP) in -> RTSP out for the API.
+# Ports are set by run.sh from config.env (OSIRIS_RTSP_PORT / OSIRIS_WEBRTC_PORT).
+rtmp: no
+hls: no
+srt: no
+rtspAddress: :8554
+webrtcAddress: :8889
+paths:
+  all_others:
