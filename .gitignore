@@ -7,6 +7,12 @@ rove_sim/tools/bin/ffmpeg
 rove_sim/tools/bin/ffprobe
 rove_sim/tools/bin/mediamtx
 
+# Vision bundle: vendored binaries + model weights (exceed GitHub's 100MB limit;
+# distribute the osiris-bundle separately, not via git)
+rove_vision_engines/osiris-bundle/gateway/mediamtx
+*.onnx
+*.safetensors
+
 # Large scene assets pulled in at runtime (>100MB, exceeds GitHub limit)
 free_dirt_road_through_forest.glb
 
