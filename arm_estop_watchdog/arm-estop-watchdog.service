@@ -1,0 +1,31 @@
+[Unit]
+Description=Arm-ping e-stop + device-health watchdog (drives the tower light)
+Documentation=file:///home/capra/data/capra_rove_stack/capra_roboguard/arm_estop_watchdog/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=capra
+Group=capra
+WorkingDirectory=/home/capra/data/capra_rove_stack/capra_roboguard/arm_estop_watchdog
+
+ExecStart=/usr/bin/python3 /home/capra/data/capra_rove_stack/capra_roboguard/arm_estop_watchdog/arm_estop_watchdog.py
+
+# Tower API is local on the Jetson; default 127.0.0.1:3000 needs nothing.
+# SENSOR_API_URL MUST point at the Pi running rove_sensor_api -- edit the IP.
+Environment=SENSOR_API_URL=http://192.168.2.X:8080
+# Uncomment to override defaults:
+# Environment=ARM_IP=192.168.2.50
+# Environment=PING_INTERVAL=5
+# Environment=PING_TIMEOUT=1
+# Environment=DEVICE_IPS=192.168.2.2,192.168.2.7,192.168.2.10,...
+
+Restart=on-failure
+RestartSec=2s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
