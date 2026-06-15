@@ -92,6 +92,12 @@ class EngineState:
     # Velocity command (normalised -1..1) per ODrive node for velocity-mode
     # drives (drums). Held until changed; scaled by the node's max_vel_rev_s.
     drive_vel_cmd: dict[int, float] = field(default_factory=dict)
+    # Monotonic time of the last drive frame (drums + flipper steps) received on
+    # the drive UDP input. The drive watchdog stops the ODrives when this goes
+    # stale — drive_vel_cmd / flipper_cmd_steps PERSIST (unlike consume-once
+    # Ovis), so without it the drums hold their last velocity and the flippers
+    # keep ramping the last step forever when packets stop.
+    latest_drive_t: float = 0.0
 
     # Named pose library (name -> {joint eid -> angle rad}). "home" is just a
     # reserved name used by Reset-to-home / from-home Sync. Captured via "Set

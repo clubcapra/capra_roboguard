@@ -1,10 +1,9 @@
-//! Bridge → rove_ik_engine: forward arm intent (an `Ovis` twist) to the engine's
-//! UDP input (:9100, raw proto, no framing). The engine resolves IK + self-collision
-//! and drives the kinova arm on rove_sensor_api.
+//! Bridge → rove_ik_engine: forward all control-proto motion to the engine, which
+//! resolves IK + self-collision and drives the actuators on rove_sensor_api.
 //!
-//! Phase 4(a): the ARM path through the engine (the engine already speaks this).
-//! Phase 4(b) — tracks + flippers + their collision — lands when the engine learns
-//! those chains; the bridge will send the same kind of intent here.
+//! Two channels: the arm twist (`Ovis` proto on :9100) and drive teleop (flipper
+//! steps + drum velocities as JSON on :9102). The gripper is NOT here — it goes
+//! straight to the robot API (the engine has no gripper chain).
 
 use prost::Message;
 use tokio::net::UdpSocket;

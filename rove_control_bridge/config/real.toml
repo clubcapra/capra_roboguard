@@ -93,16 +93,19 @@ demo_forward_m    = 0.0
 waypoints         = []
 
 # ---------- Front door (operator) + rove_ik_engine ----------------------
+# Front-door ports MUST stay clear of rove_sensor_api's served block (5000-5017:
+# data=5000+2i, cmd=5001+2i for 9 devices) — e.g. 5005 is the gripper cmd port,
+# 5007 is odrive_31's cmd port. Keep these in the 5050+ band.
 [comms]
-teleop_port  = 5005
-mission_port = 5006
-estop_port   = 5007
+teleop_port  = 5050        # RoveControl in (Steam Deck) — was 5005 (== gripper cmd!)
+mission_port = 5051        # Mission in            — was 5006 (== odrive_31 data)
+estop_port   = 5052        # Estop in              — was 5007 (== odrive_31 cmd)
+telemetry_out_port = 5053  # RoveTelemetry out     — was 5010 (== odrive_41 data)
 engine_host  = "127.0.0.1"
 engine_port  = 9100                        # arm (Ovis) UDP
 engine_drive_port = 9102                   # flippers + drums (JSON) UDP
 arm_target_entity = "ent_link_07ca91a1"    # JointGripper tip; "" disables arm->engine
-# Route ALL drive teleop (flippers + drums) through the IK engine. When true the
-# bridge forwards RoveControl tracks/flippers to the engine and does NOT drive the
-# drums directly. The engine's own output gates ([drives].output_enabled, [hardware].
+# All control-proto motion (RoveControl tracks + flippers + arm ovis) routes through the
+# IK engine; the gripper goes straight to the robot API. The bridge never drives the drums
+# for teleop. The engine's own output gates ([drives].output_enabled, [hardware].
 # vel_output_enabled) decide whether a real packet reaches the robot.
-drive_via_engine = true

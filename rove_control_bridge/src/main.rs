@@ -213,8 +213,81 @@ async fn main() -> Result<()> {
         tokio::time::sleep(std::time::Duration::from_millis(1800)).await; // respawn + settle
     }
 
-    // --- wait for first fix, then resolve waypoints -----------------------
-    let start = wait_for_fix(&pose_rx).await?;
+    // --- front door FIRST: teleop must work with or without a position fix -
+    // The operator drives the robot through the IK engine (tracks/flippers/ovis)
+    // and the gripper straight to the API — none of which need a pose. So bring
+    // the front door up NOW, before any GNSS wait, so teleop is live immediately.
+    let (teleop_tx, teleop_rx) = watch::channel::<Option<comms::TeleopIntent>>(None);
+    let (mission_tx, mission_rx) = watch::channel::<Option<comms::proto::Mission>>(None);
+    // IK engine forwarder: ALL control-proto motion (tracks + flippers + arm
+    // ovis) routes through the engine, so this is the mandatory drive path —
+    // always created. If the engine is unreachable at startup the forwarder is
+    // disabled and control-proto motion is dropped (degraded, same as the
+    // engine being down); the gripper still reaches the API directly.
+    let ik_fwd = match ik::IkForwarder::new(
+        &cfg.comms.engine_host,
+        cfg.comms.engine_port,
+        cfg.comms.engine_drive_port,
+        cfg.comms.arm_target_entity.clone(),
+    )
+    .await
+    {
+        Ok(f) => Some(std::sync::Arc::new(f)),
+        Err(e) => {
+            tracing::warn!("ik forwarder disabled — control-proto motion will be dropped: {e:#}");
+            None
+        }
+    };
+    // Gripper goes DIRECT to the robot API (the IK engine has no gripper).
+    let gripper = std::sync::Arc::new(gripper::GripperSender::new(
+        &cfg.robot_host, cfg.http_port, args.dry_run,
+    ));
+    {
+        let port = cfg.comms.teleop_port;
+        let ik_fwd = ik_fwd.clone();
+        let gripper = gripper.clone();
+        tokio::spawn(async move {
+            if let Err(e) = comms::run_teleop_listener(port, teleop_tx, ik_fwd, gripper).await {
+                tracing::warn!("teleop listener ended: {e:#}");
+            }
+        });
+    }
+    {
+        let port = cfg.comms.mission_port;
+        tokio::spawn(async move {
+            if let Err(e) = comms::run_mission_listener(port, mission_tx).await {
+                tracing::warn!("mission listener ended: {e:#}");
+            }
+        });
+    }
+    let (estop_tx, estop_rx) = watch::channel::<bool>(false);
+    {
+        let port = cfg.comms.estop_port;
+        tokio::spawn(async move {
+            if let Err(e) = comms::run_estop_listener(port, estop_tx).await {
+                tracing::warn!("estop listener ended: {e:#}");
+            }
+        });
+    }
+
+    // --- wait for a GNSS fix to ARM AUTONOMY (not mandatory) --------------
+    // GNSS is NOT required to run: teleop above is already live. Autonomy
+    // (missions, reflexes, cost-map nav) needs a trustworthy position, so it
+    // waits here for a settled fix. Without one (e.g. GNSS down during bring-up)
+    // the bridge stays a teleop pass-through; autonomy arms automatically once a
+    // fix arrives. Ctrl-C ends a no-fix/teleop-only session cleanly.
+    tracing::info!(
+        "front door up (teleop :{}, mission :{}, estop :{}) — TELEOP LIVE; waiting for a GNSS fix to arm autonomy (Ctrl-C to stop)…",
+        cfg.comms.teleop_port, cfg.comms.mission_port, cfg.comms.estop_port,
+    );
+    let start = tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Ctrl-C before a fix — ending teleop-only session");
+            tracks.idle().await.ok();
+            return Ok(());
+        }
+        fix = wait_for_fix(&pose_rx) => fix?,
+    };
     tracing::info!(
         "first fix: ENU ({:.2}, {:.2}) yaw_ned {:.1}deg",
         start.x,
@@ -247,62 +320,6 @@ async fn main() -> Result<()> {
         cfg.reflex.max_roll_deg,
         cfg.reflex.max_pitch_deg
     );
-
-    // --- front door (Steam Deck via udp_multiplexer) ----------------------
-    let (teleop_tx, teleop_rx) = watch::channel::<Option<comms::TeleopIntent>>(None);
-    let (mission_tx, mission_rx) = watch::channel::<Option<comms::proto::Mission>>(None);
-    // IK engine forwarder: arm intent (always, if a target is set) and drive
-    // teleop (when drive_via_engine). Created if either is wanted.
-    let ik_fwd = if cfg.comms.arm_target_entity.is_empty() && !cfg.comms.drive_via_engine {
-        None
-    } else {
-        match ik::IkForwarder::new(
-            &cfg.comms.engine_host,
-            cfg.comms.engine_port,
-            cfg.comms.engine_drive_port,
-            cfg.comms.arm_target_entity.clone(),
-        )
-        .await
-        {
-            Ok(f) => Some(std::sync::Arc::new(f)),
-            Err(e) => {
-                tracing::warn!("ik forwarder disabled: {e:#}");
-                None
-            }
-        }
-    };
-    // Gripper goes DIRECT to the robot API (the IK engine has no gripper).
-    let gripper = std::sync::Arc::new(gripper::GripperSender::new(
-        &cfg.robot_host, cfg.http_port, args.dry_run,
-    ));
-    {
-        let port = cfg.comms.teleop_port;
-        let ik_fwd = ik_fwd.clone();
-        let via_engine = cfg.comms.drive_via_engine;
-        let gripper = gripper.clone();
-        tokio::spawn(async move {
-            if let Err(e) = comms::run_teleop_listener(port, teleop_tx, ik_fwd, via_engine, gripper).await {
-                tracing::warn!("teleop listener ended: {e:#}");
-            }
-        });
-    }
-    {
-        let port = cfg.comms.mission_port;
-        tokio::spawn(async move {
-            if let Err(e) = comms::run_mission_listener(port, mission_tx).await {
-                tracing::warn!("mission listener ended: {e:#}");
-            }
-        });
-    }
-    let (estop_tx, estop_rx) = watch::channel::<bool>(false);
-    {
-        let port = cfg.comms.estop_port;
-        tokio::spawn(async move {
-            if let Err(e) = comms::run_estop_listener(port, estop_tx).await {
-                tracing::warn!("estop listener ended: {e:#}");
-            }
-        });
-    }
 
     // --- control loop -----------------------------------------------------
     run_control_loop(&cfg, &mut router, &mut tracks, &mut reflexes, &mut safe, &pose_rx, &truth_rx, &hazard_rx, &costmap_rx, &teleop_rx, mission_rx, &estop_rx).await?;
@@ -487,24 +504,19 @@ async fn run_control_loop(
                     }
                 }
 
-                // TELEOP PREEMPTS the mission: fresh, active operator intent drives
-                // the tracks raw (operator owns heading). The L0 reflex above still
-                // vetoes it. (Flippers/arm route through rove_ik_engine — Phase 4.)
+                // TELEOP PREEMPTS the mission: fresh, active operator intent owns the
+                // robot (operator owns heading). The L0 reflex above still vetoes it.
+                // Tracks + flippers + arm all route through rove_ik_engine — the teleop
+                // listener already forwarded them, so the control loop never drives the
+                // drums for teleop (no double-command). Here we just hold off the mission.
                 if let Some(t) = *teleop_rx.borrow() {
                     if t.is_active() && t.stamp.elapsed() < Duration::from_millis(500) {
                         heading.reset();
-                        // When drives route through the IK engine, the teleop
-                        // listener already forwarded tracks+flippers there — don't
-                        // also drive the drums here (would double-command them).
-                        if !cfg.comms.drive_via_engine {
-                            tracks.drive(t.left as f64, t.right as f64, dt).await?;
-                        }
                         if ticks % log_every == 0 {
                             tracing::info!(
-                                "TELEOP — L{:+.2} R{:+.2} flippers {:?}{}{}",
+                                "TELEOP [via engine] — L{:+.2} R{:+.2} flippers {:?}{}",
                                 t.left, t.right, t.flippers,
                                 if t.has_arm { " +arm" } else { "" },
-                                if cfg.comms.drive_via_engine { " [via engine]" } else { "" },
                             );
                         }
                         continue;

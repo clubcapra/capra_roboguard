@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "saved_at": "2026-06-13T18:06:10Z",
+  "chain": [
+    "ent_joint_6829915e",
+    "ent_joint_3e4dd248",
+    "ent_joint_2c15d7d3",
+    "ent_joint_d6fa25aa",
+    "ent_joint_577d5a5f",
+    "ent_joint_3f0529c9"
+  ],
+  "offsets_rad": {
+    "ent_joint_6829915e": 4.864140692987367,
+    "ent_joint_3e4dd248": -7.921883196595094,
+    "ent_joint_2c15d7d3": -4.571126936254913,
+    "ent_joint_d6fa25aa": -4.032823507126445,
+    "ent_joint_577d5a5f": -1.5647223221386983,
+    "ent_joint_3f0529c9": -1.4818241095169842
+  },
+  "signs": {
+    "ent_joint_6829915e": 1.0,
+    "ent_joint_3e4dd248": -1.0,
+    "ent_joint_2c15d7d3": -1.0,
+    "ent_joint_d6fa25aa": -1.0,
+    "ent_joint_577d5a5f": -1.0,
+    "ent_joint_3f0529c9": -1.0
+  }
+}

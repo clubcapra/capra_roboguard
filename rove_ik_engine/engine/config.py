@@ -168,6 +168,12 @@ class FlippersConfig:
     output_enabled: bool = False
     # How fast a held +1/-1 step ramps a flipper (model joint deg per second).
     step_rate_deg_s: float = 20.0
+    # Drive watchdog: if no drive frame (drums/flipper steps) arrives within this
+    # many seconds, the engine self-stops the drives — zero drum velocity and halt
+    # flipper ramps. Clones the old rove_control_bridge_py idle watchdog (0.5 s).
+    # Make it comfortably longer than the worst-case inter-packet gap on the
+    # (low-bandwidth) operator link, or it will stop-start during driving.
+    drive_idle_timeout_s: float = 0.5
 
 
 @dataclass

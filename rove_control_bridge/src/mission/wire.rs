@@ -113,3 +113,18 @@ pub fn compile_mission(
     }
     (wps, terminal, compiled)
 }
+
+/// Whether a mission needs a trustworthy position fix before it may start — the
+/// GNSS pre-flight reflex. Every navigation behaviour compiles to ENU waypoints
+/// about the datum (and several are relative to the current position), so they
+/// all require a fix today. A position-free command (e.g. a future arm-only or
+/// `wait` step) opts out by being listed in `POSITION_FREE`.
+#[allow(dead_code)] // wired into the mission-start pre-flight (control-loop refactor, in progress)
+pub fn requires_position(m: &proto::Mission) -> bool {
+    /// Commands that can run with no position fix (none yet).
+    const POSITION_FREE: &[&str] = &[];
+    m.sequence.iter().any(|s| {
+        let cmd = s.command.to_ascii_lowercase();
+        !POSITION_FREE.contains(&cmd.as_str())
+    })
+}

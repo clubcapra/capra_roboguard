@@ -35,7 +35,7 @@ pub struct Comms {
     pub telemetry_out_port: u16, // bridge republishes RoveTelemetry to subscribers here
     #[serde(default = "default_telemetry_out_hz")]
     pub telemetry_out_hz: f64,
-    // --- rove_ik_engine (arm intent goes here; tracks/flippers later) ---
+    // --- rove_ik_engine (all control-proto motion: tracks + flippers + arm ovis) ---
     #[serde(default = "default_engine_host")]
     pub engine_host: String,
     #[serde(default = "default_engine_port")]
@@ -46,11 +46,6 @@ pub struct Comms {
     /// Tip entity the engine drives for the arm. Empty disables arm forwarding.
     #[serde(default)]
     pub arm_target_entity: String,
-    /// Route drive teleop (flippers + drums) THROUGH the IK engine instead of the
-    /// bridge driving the drums directly. When true the teleop branch forwards to
-    /// the engine and does not call tracks.drive (avoids double-commanding).
-    #[serde(default)]
-    pub drive_via_engine: bool,
 }
 
 impl Default for Comms {
@@ -65,13 +60,12 @@ impl Default for Comms {
             engine_port: default_engine_port(),
             engine_drive_port: default_engine_drive_port(),
             arm_target_entity: String::new(),
-            drive_via_engine: false,
         }
     }
 }
 
 fn default_telemetry_out_port() -> u16 {
-    5010
+    5053 // clear of rove_sensor_api served block 5000-5017 (5010 = odrive_41 data)
 }
 fn default_telemetry_out_hz() -> f64 {
     20.0
@@ -87,14 +81,16 @@ fn default_engine_drive_port() -> u16 {
     9102
 }
 
+// Front-door ports stay clear of rove_sensor_api's served block (5000-5017):
+// 5005 = gripper cmd, 5006/5007 = odrive_31 data/cmd. Use the 5050+ band.
 fn default_teleop_port() -> u16 {
-    5005
+    5050
 }
 fn default_mission_port() -> u16 {
-    5006
+    5051
 }
 fn default_estop_port() -> u16 {
-    5007
+    5052
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]

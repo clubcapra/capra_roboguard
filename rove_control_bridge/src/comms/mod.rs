@@ -6,7 +6,7 @@
 //! arbitrates against the running mission (teleop preempts; estop clamps).
 
 use prost::Message;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
 use tokio::sync::watch;
 
@@ -101,25 +101,35 @@ pub async fn run_mission_listener(
     }
 }
 
-/// Listen for RoveControl datagrams (teleop): publish the [`TeleopIntent`] for the
-/// drive arbitration, and forward the arm twist (`ovis`) straight to the IK engine.
+/// Listen for RoveControl datagrams (teleop): publish the [`TeleopIntent`] so the
+/// control loop preempts the mission, forward tracks + flippers + arm twist (`ovis`)
+/// to the IK engine, and send the gripper straight to the robot API.
 pub async fn run_teleop_listener(
     port: u16,
     tx: watch::Sender<Option<TeleopIntent>>,
     ik: Option<std::sync::Arc<crate::ik::IkForwarder>>,
-    drive_via_engine: bool,
     gripper: std::sync::Arc<crate::gripper::GripperSender>,
 ) -> anyhow::Result<()> {
     let sock = UdpSocket::bind(("0.0.0.0", port)).await?;
     tracing::info!(
-        "teleop front door: listening for RoveControl on :{port} (drives via engine: {drive_via_engine})");
+        "teleop front door: listening for RoveControl on :{port} (tracks/flippers/ovis -> IK engine, gripper -> API); ik forwarder: {}",
+        if ik.is_some() { "ENABLED" } else { "DISABLED — arm/drums/flippers WILL BE DROPPED (engine unreachable at startup)" },
+    );
     let mut buf = vec![0u8; 8192];
+    let mut rx_count: u64 = 0;
+    let mut bad_count: u64 = 0;
+    let mut last_trace = Instant::now();
     loop {
-        let n = sock.recv(&mut buf).await?;
+        let (n, addr) = sock.recv_from(&mut buf).await?;
         match proto::RoveControl::decode(&buf[..n]) {
             Ok(rc) => {
+                rx_count += 1;
+                if rx_count == 1 {
+                    tracing::info!("RX ✓ first RoveControl from {addr} ({n} B) — teleop IS reaching the bridge");
+                }
                 let intent = intent_from(&rc);
                 let _ = tx.send(Some(intent));
+                let arm = rc.ovis.is_some();
                 if let Some(ik) = &ik {
                     // arm twist -> IK engine (it resolves IK + collision, drives the arm)
                     if let Some(ov) = &rc.ovis {
@@ -131,18 +141,32 @@ pub async fn run_teleop_listener(
                         )
                         .await;
                     }
-                    // flippers + drums -> IK engine. The control loop skips
-                    // tracks.drive when drive_via_engine, so no double-command.
-                    if drive_via_engine {
-                        ik.send_drive(intent.flippers, intent.left, intent.right).await;
-                    }
+                    // tracks (drums) + flippers -> IK engine. The control loop never
+                    // drives the drums for teleop, so there's no double-command.
+                    ik.send_drive(intent.flippers, intent.left, intent.right).await;
                 }
                 // gripper -> robot API DIRECT (the IK engine has no gripper).
                 if let Some(pos) = intent.gripper {
                     gripper.send(pos).await;
                 }
+                // ~1 Hz trace: what arrived and where it was forwarded. Proves the
+                // bridge is receiving AND fanning out (or shows where it stops).
+                if last_trace.elapsed() >= Duration::from_secs(1) {
+                    last_trace = Instant::now();
+                    tracing::info!(
+                        "RX #{rx_count} {addr}: tracks L{:+.2} R{:+.2} flip {:?} arm={arm} grip={:?} => engine[{}] (drive+arm), gripper->API={:?}",
+                        intent.left, intent.right, intent.flippers, intent.gripper,
+                        if ik.is_some() { "ON" } else { "OFF: DROPPED" }, intent.gripper,
+                    );
+                }
             }
-            Err(e) => tracing::warn!("dropping malformed RoveControl ({n} B): {e}"),
+            Err(e) => {
+                bad_count += 1;
+                if last_trace.elapsed() >= Duration::from_secs(1) {
+                    last_trace = Instant::now();
+                    tracing::warn!("RX bad: malformed RoveControl from {addr} ({n} B), {bad_count} total: {e}");
+                }
+            }
         }
     }
 }

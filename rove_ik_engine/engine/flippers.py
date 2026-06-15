@@ -332,8 +332,12 @@ def apply_flipper_mirror(state: EngineState) -> None:
     skip = motion_joint_set(state)
     now = time.monotonic()
     for eid, offset in state.flipper_offsets.items():
-        if eid in skip or eid in state.flipper_targets:
-            continue  # owned by a planned move or an active flipper command
+        if eid in skip:
+            continue  # owned by a planned pose-to-pose move
+        # NOTE: commanded flippers are NOT skipped any more. We drive the real
+        # flipper in velocity toward flipper_targets (see _send_position), so the
+        # model must keep mirroring the live encoder — that IS "the engine
+        # following the flipper". flipper_targets is the goal, not the display.
         node_id = state.flipper_joint_to_node.get(eid)
         if node_id is None:
             continue
@@ -369,11 +373,18 @@ def set_flipper_step(state: EngineState, *, joint: str = "", node_id: int | None
     s = 1 if step > 0 else (-1 if step < 0 else 0)
     if node is not None:
         state.flipper_cmd_steps[node] = s
-    # Seed the target from the current model angle the first time we command it,
-    # so the ramp starts where the flipper visually is.
-    state.flipper_targets.setdefault(eid, float(state.joint_values.get(eid, 0.0)))
+    # Enter commanded mode (seed the ramp target from the current model angle)
+    # ONLY on a non-zero step, or if this flipper is already commanded. A step==0
+    # on an un-commanded flipper is a NO-OP — it must NOT pull the flipper out of
+    # read-only mirror mode. Otherwise a client that streams [fl,fr,rl,rr] every
+    # frame (the control bridge forwarding teleop drive) seizes every flipper into
+    # commanded mode the instant any drive packet arrives, dropping them to their
+    # seeded target instead of tracking the real flipper.
+    if s != 0 or eid in state.flipper_targets:
+        state.flipper_targets.setdefault(eid, float(state.joint_values.get(eid, 0.0)))
+    tgt = state.flipper_targets.get(eid, float(state.joint_values.get(eid, 0.0)))
     return {"ok": True, "joint": eid, "node": node, "step": s,
-            "target_deg": round(state.flipper_targets[eid] * 180.0 / math.pi, 1)}
+            "target_deg": round(tgt * 180.0 / math.pi, 1)}
 
 
 def release_flipper(state: EngineState, *, joint: str = "", node_id: int | None = None) -> dict:
@@ -426,9 +437,11 @@ def set_flipper_sign(state: EngineState, *, joint: str = "", node_id: int | None
 
 
 def apply_flipper_command(state: EngineState, dt: float) -> None:
-    """Per-tick: ramp each commanded flipper's target by its held step and write
-    it into the model. Runs after the mirror; commanded joints are excluded from
-    the mirror, so the command wins. Pure model update — no packets here."""
+    """Per-tick: ramp each commanded flipper's TARGET by its held step. The target
+    (model rad, clamped to the joint limits) is the goal position the velocity
+    servo in `_send_position` drives the real flipper to. We do NOT write the
+    model here — the mirror keeps the model on the live encoder so it tracks the
+    real flipper. Pure target update — no packets."""
     if not state.flipper_targets:
         return
     rate = state.flipper_step_rate_rad_s
@@ -441,7 +454,28 @@ def apply_flipper_command(state: EngineState, dt: float) -> None:
             if lim is not None:
                 target = max(lim[0], min(lim[1], target))
             state.flipper_targets[eid] = target
-        state.joint_values[eid] = target
+
+
+def apply_drive_watchdog(state: EngineState, timeout_s: float) -> None:
+    """Self-stop the drives on input silence — clone of the old
+    rove_control_bridge_py idle watchdog, run per tick.
+
+    `drive_vel_cmd` (drums) and `flipper_cmd_steps` (the held flipper ramp step)
+    PERSIST — unlike consume-once Ovis (which is why the arm halts on its own).
+    So if drive frames stop arriving (operator releases, or the low-bandwidth
+    link drops out) the drums keep their last velocity and the flippers keep
+    ramping the last step forever. When no drive frame has arrived within
+    `timeout_s`, zero the drum velocities (they brake to a stop on the next send)
+    and halt the flipper ramps. The flipper HOLDS its current target (not
+    released), so it stays put rather than going limp under gravity."""
+    if timeout_s <= 0.0:
+        return
+    if time.monotonic() - state.latest_drive_t <= timeout_s:
+        return
+    for n in state.drive_vel_cmd:
+        state.drive_vel_cmd[n] = 0.0
+    for n in state.flipper_cmd_steps:
+        state.flipper_cmd_steps[n] = 0
 
 
 _CONTROL_MODE_VELOCITY = 2
@@ -449,6 +483,13 @@ _CONTROL_MODE_POSITION = 3
 _INPUT_MODE_PASSTHROUGH = 1
 _AXIS_CLOSED_LOOP = 8
 _AXIS_IDLE = 1
+
+# Flipper position->velocity servo (motor-rev space). The engine commands a
+# velocity proportional to the target-vs-encoder error, saturated at the node's
+# max_vel_rev_s. Working in motor revs (not model rad) makes convergence
+# sign-independent (commanding +vel always increases the encoder). Tunables:
+_FLIP_SERVO_KP = 15.0          # rev/s of command per rev of error (saturates fast)
+_FLIP_SERVO_DEADBAND_REV = 0.2  # |error| below this -> command 0 (hold, no hunting)
 
 
 class FlipperCommandSender:
@@ -527,9 +568,19 @@ class FlipperCommandSender:
             self._last_pos.pop(eid, None)
 
     def _send_position(self, eid: str, o: dict, owned) -> None:
+        """Velocity servo to the flipper's target — drives the ODrive in VELOCITY
+        mode and NEVER sends input_pos. The IK side increments flipper_targets[eid]
+        (model rad) from the held step; here we plan a velocity proportional to the
+        target-vs-encoder error (saturated at the node's max_vel) and command
+        input_vel every tick (keepalive). The model mirrors the live encoder, so it
+        follows the real flipper; the servo holds actively against drift."""
         cmd_port, node_id = o["cmd_port"], o["node_id"]
-        if eid not in self.state.flipper_targets and eid not in owned:
-            self._idle(eid, cmd_port)        # not commanded -> release the axis
+        target_model = self.state.flipper_targets.get(eid)
+        if target_model is None and eid in owned:
+            # A planned pose-to-pose move owns the joint: servo to its trajectory.
+            target_model = float(self.state.joint_values.get(eid, 0.0))
+        if target_model is None:
+            self._idle(eid, cmd_port)        # not commanded -> release (worm gear holds)
             return
         offset = self.state.flipper_offsets.get(eid)
         if offset is None:
@@ -538,23 +589,28 @@ class FlipperCommandSender:
                 _log.warning("flipper %s commanded but not synced — not sending", node_id)
                 self._last_warn = now
             return
+        cur_rev = self.state.latest_flipper_positions.get(node_id)
+        if cur_rev is None:
+            return  # no encoder reading yet -> nothing to servo against
         sign = self.state.flipper_signs.get(eid, 1.0)
         scale = self.state.flipper_scales.get(eid, 2.0 * math.pi)
-        # Invert the mirror: pos_rev = (model_q + offset) / (sign*scale).
-        pos_rev = (float(self.state.joint_values.get(eid, 0.0)) + offset) / (sign * scale)
-        if self._armed.get(eid) != _CONTROL_MODE_POSITION:
-            # Arm once, seeding input_pos from the live encoder so the axis holds
-            # where it is rather than snapping to the new setpoint.
-            actual = self.state.latest_flipper_positions.get(node_id)
-            seed = float(actual) if actual is not None else pos_rev
-            self._send({"axis_state": _AXIS_CLOSED_LOOP, "control_mode": _CONTROL_MODE_POSITION,
-                        "input_mode": _INPUT_MODE_PASSTHROUGH, "input_pos": seed}, cmd_port)
-            self._armed[eid] = _CONTROL_MODE_POSITION
-            self._last_pos[eid] = seed
-            return
-        if abs(pos_rev - self._last_pos.get(eid, pos_rev)) > 1e-4:
-            self._send({"input_pos": float(pos_rev)}, cmd_port)
-        self._last_pos[eid] = pos_rev
+        # Goal in MOTOR revs (inverse of the mirror map), then error vs the encoder.
+        # Working in motor revs makes it sign-independent: +input_vel always raises
+        # the encoder, so the loop converges regardless of the model sign.
+        goal_rev = (float(target_model) + offset) / (sign * scale)
+        err = goal_rev - float(cur_rev)
+        max_vel = float(o["max_vel"])
+        if abs(err) < _FLIP_SERVO_DEADBAND_REV:
+            vel = 0.0
+        else:
+            vel = max(-max_vel, min(max_vel, _FLIP_SERVO_KP * err))
+        # Arm VELOCITY mode once, then re-assert closed-loop + setpoint every tick
+        # (keepalive — re-arms a faulted ODrive, same as the drums).
+        if self._armed.get(eid) != _CONTROL_MODE_VELOCITY:
+            self._send({"axis_state": _AXIS_CLOSED_LOOP, "control_mode": _CONTROL_MODE_VELOCITY,
+                        "input_mode": _INPUT_MODE_PASSTHROUGH}, cmd_port)
+            self._armed[eid] = _CONTROL_MODE_VELOCITY
+        self._send({"axis_state": _AXIS_CLOSED_LOOP, "input_vel": float(vel)}, cmd_port)
 
     def _send_velocity(self, eid: str, o: dict) -> None:
         cmd_port, node_id = o["cmd_port"], o["node_id"]
@@ -566,7 +622,12 @@ class FlipperCommandSender:
                 self._send({"axis_state": _AXIS_CLOSED_LOOP, "control_mode": _CONTROL_MODE_VELOCITY,
                             "input_mode": _INPUT_MODE_PASSTHROUGH}, cmd_port)
                 self._armed[eid] = _CONTROL_MODE_VELOCITY
-            self._send({"input_vel": float(vel)}, cmd_port)
+            # Re-assert ClosedLoopControl on EVERY tick alongside the setpoint
+            # (clone of the old rove_control_bridge_py keepalive). If the ODrive
+            # faults / resets / hits its own watchdog mid-drive, this re-arms it
+            # next tick instead of leaving it stuck — which otherwise shows up as
+            # the drum juddering/vibrating.
+            self._send({"axis_state": _AXIS_CLOSED_LOOP, "input_vel": float(vel)}, cmd_port)
             self._vel_zeroed[eid] = False
         elif eid in self._armed and not self._vel_zeroed.get(eid, False):
             self._send({"input_vel": 0.0}, cmd_port)   # one stop, then idle
