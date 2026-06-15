@@ -117,16 +117,21 @@ class TestHttpRoundTrip(unittest.TestCase):
     def setUp(self):
         _Recorder.calls.clear()
 
+    def test_set_led_clears_then_sets(self):
+        self.assertTrue(awd.set_led(awd.RED))
+        # each color change is /clear then /set
+        self.assertEqual([p for p, _ in _Recorder.calls], ["/clear", "/set"])
+        set_body = json.loads(_Recorder.calls[1][1])
+        self.assertEqual(set_body, {"red": True, "orange": False, "green": False})
+
     def test_set_led_payloads(self):
         self.assertTrue(awd.set_led(awd.RED))
         self.assertTrue(awd.set_led(awd.ORANGE))
         self.assertTrue(awd.set_led(awd.GREEN))
-        paths = [p for p, _ in _Recorder.calls]
-        self.assertEqual(paths, ["/set", "/set", "/set"])
-        bodies = [json.loads(b) for _, b in _Recorder.calls]
-        self.assertEqual(bodies[0], {"red": True, "yellow": False, "green": False})
-        self.assertEqual(bodies[1], {"red": False, "yellow": True, "green": False})
-        self.assertEqual(bodies[2], {"red": False, "yellow": False, "green": True})
+        set_bodies = [json.loads(b) for p, b in _Recorder.calls if p == "/set"]
+        self.assertEqual(set_bodies[0], {"red": True, "orange": False, "green": False})
+        self.assertEqual(set_bodies[1], {"red": False, "orange": True, "green": False})
+        self.assertEqual(set_bodies[2], {"red": False, "orange": False, "green": True})
 
     def test_reload_hits_endpoint(self):
         self.assertTrue(awd.reload_sensors())

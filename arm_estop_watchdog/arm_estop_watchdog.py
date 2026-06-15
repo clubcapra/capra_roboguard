@@ -54,14 +54,17 @@ PING_INTERVAL = float(os.environ.get("PING_INTERVAL", "5"))
 PING_TIMEOUT = int(float(os.environ.get("PING_TIMEOUT", "1")))
 HTTP_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "3"))
 
-# Tower /set channel booleans per color.
+# Tower /set channel booleans per color. The deployed tower has physical
+# channels red/orange/green/buzzer -- there is NO yellow channel ("yellow" is
+# only a derived read-only flag for red+orange+green all on). Orange is its own
+# physical channel, so our ORANGE state drives `orange`, not `yellow`.
 RED = "red"
 ORANGE = "orange"
 GREEN = "green"
 _LED_CHANNELS = {
-    RED:    {"red": True,  "yellow": False, "green": False},
-    ORANGE: {"red": False, "yellow": True,  "green": False},
-    GREEN:  {"red": False, "yellow": False, "green": True},
+    RED:    {"red": True,  "orange": False, "green": False},
+    ORANGE: {"red": False, "orange": True,  "green": False},
+    GREEN:  {"red": False, "orange": False, "green": True},
 }
 
 log = logging.getLogger("arm_estop_watchdog")
@@ -90,35 +93,37 @@ def ping(ip: str) -> bool:
         return False
 
 
-def set_led(color: str) -> bool:
-    """POST /set to the tower API. Returns True on success."""
-    body = json.dumps(_LED_CHANNELS[color]).encode()
-    req = urllib.request.Request(
-        f"{TOWER_URL}/set",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+def _post(url: str, payload: dict | None = None) -> bool:
+    """POST JSON (or empty body) to *url*. Returns True on HTTP success."""
+    data = json.dumps(payload).encode() if payload is not None else b""
+    headers = {"Content-Type": "application/json"} if payload is not None else {}
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
             resp.read()
         return True
     except (urllib.error.URLError, OSError) as exc:
-        log.error("set_led(%s) failed: %s", color, exc)
+        log.error("POST %s failed: %s", url, exc)
         return False
+
+
+def set_led(color: str) -> bool:
+    """Clear the tower, then assert the channels for *color*.
+
+    The tower retains prior channel state and blink tasks, so a plain /set can
+    leave an old color lingering. /clear cancels everything first; /set is then
+    authoritative for the result. Returns True only if the /set succeeds.
+    """
+    _post(f"{TOWER_URL}/clear")  # best-effort; /set below is what matters
+    return _post(f"{TOWER_URL}/set", _LED_CHANNELS[color])
 
 
 def reload_sensors() -> bool:
     """POST /reload to the sensor API on the Pi. Returns True on success."""
-    req = urllib.request.Request(f"{SENSOR_API_URL}/reload", data=b"", method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-            resp.read()
+    if _post(f"{SENSOR_API_URL}/reload"):
         log.info("POST /reload -> sensor API accepted (process bounce scheduled)")
         return True
-    except (urllib.error.URLError, OSError) as exc:
-        log.error("reload_sensors() failed: %s", exc)
-        return False
+    return False
 
 
 def sweep(pool: ThreadPoolExecutor) -> tuple[bool, list[str]]:
