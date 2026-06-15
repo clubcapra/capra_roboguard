@@ -98,6 +98,9 @@ class _DriveInProtocol(asyncio.DatagramProtocol):
             return
         if not isinstance(body, dict):
             return
+        # Stamp the arrival for the drive watchdog (self-stop on silence).
+        import time as _t
+        self.state.latest_drive_t = _t.monotonic()
         flips = body.get("flippers")
         if isinstance(flips, list):
             for i, step in enumerate(flips[: len(self._FLIP_NODES)]):

@@ -13,7 +13,7 @@ from . import config as engine_config
 from . import ik_loop
 from .loader import load_robot
 from .hardware import KinovaCommandSender, KinovaStateListener
-from .flippers import FlipperBank, FlipperCommandSender
+from .flippers import FlipperBank, FlipperCommandSender, apply_drive_watchdog
 from .calibration import OFFSETS_FILENAME, load_offsets, save_offsets
 from .state import EngineState
 from .tcp import compute_tcp_offsets
@@ -279,6 +279,10 @@ async def _tick_loop(
         dt = now - last
         last = now
         try:
+            # Drive watchdog FIRST: zero drum velocity + halt flipper ramps if no
+            # drive frame arrived within drive_idle_timeout_s. Runs before tick()
+            # so the halted flipper steps take effect this tick's ramp.
+            apply_drive_watchdog(state, cfg.flippers.drive_idle_timeout_s)
             update = ik_loop.tick(state, cfg.ik, dt)
             # Close the loop: push IK velocities to kinova_arm before
             # broadcasting telemetry. Kinova moves -> mirror updates next

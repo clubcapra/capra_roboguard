@@ -64,6 +64,11 @@ def plan_to_pose(state: EngineState, name: str, *,
     targets: dict[str, float] = {}
     eids: list[str] = []
     for eid, target in pose.items():
+        # Drums + flippers are VELOCITY-driven (drive bank); a pose-move must
+        # never ramp them as joint-space positions — that would spin the drums
+        # and fight the flipper servo. Poses are arm-only.
+        if eid in state.flipper_joint_to_node:
+            continue
         ent = scene.entities.get(eid)
         joint = ent.get("joint") if ent else None
         if joint is None or joint.type == "fixed":

@@ -93,10 +93,16 @@ demo_forward_m    = 0.0
 waypoints         = [[15.0, 0.0]]
 
 # ---------- Front door (operator) + rove_ik_engine ----------------------
+# Front-door ports stay clear of rove_sensor_api's served block 5000-5017
+# (5005 = gripper cmd, 5006/5007 = odrive_31 data/cmd).
 [comms]
-teleop_port  = 5005
-mission_port = 5006
-estop_port   = 5007
+teleop_port  = 5050
+mission_port = 5051
+estop_port   = 5052
+telemetry_out_port = 5053
 engine_host  = "127.0.0.1"
-engine_port  = 9100
+engine_port  = 9100                       # arm (Ovis) UDP
+engine_drive_port = 9102                  # tracks (drums) + flippers (JSON) UDP
 arm_target_entity = "ent_link_07ca91a1"   # JointGripper tip; "" disables arm->engine
+# Control-proto teleop (tracks + flippers + arm ovis) routes through the IK engine; the
+# gripper goes direct to the API. Autonomy missions still drive the drums directly.

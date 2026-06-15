@@ -26,9 +26,11 @@ impl GripperSender {
     /// Send a gripper position (0..255). No-op if unchanged since the last send.
     pub async fn send(&self, position: u32) {
         let p = position.min(255) as i64;
-        if self.last.swap(p, Ordering::Relaxed) == p {
+        let prev = self.last.swap(p, Ordering::Relaxed);
+        if prev == p {
             return; // unchanged — don't spam the gripper
         }
+        let first = prev == -1; // first command since startup
         if self.dry_run {
             tracing::info!("GRIPPER (dry-run) -> position {p}");
             return;
@@ -36,11 +38,18 @@ impl GripperSender {
         let url = self.url.clone();
         tokio::task::spawn_blocking(move || {
             let body = serde_json::json!({ "position": p }).to_string();
-            if let Err(e) = ureq::post(&url)
+            match ureq::post(&url)
                 .set("Content-Type", "application/json")
                 .send_string(&body)
             {
-                tracing::warn!("gripper command to {url} failed: {e}");
+                // First successful POST logged at INFO (proves the gripper->API
+                // path); subsequent ones at DEBUG so a toggling gripper can't
+                // flood the log. Failures always WARN.
+                Ok(resp) if first => {
+                    tracing::info!("GRIPPER first POST ok ({}) -> {url} position {p}", resp.status())
+                }
+                Ok(resp) => tracing::debug!("GRIPPER POST ok ({}) position {p}", resp.status()),
+                Err(e) => tracing::warn!("GRIPPER POST to {url} FAILED: {e}"),
             }
         });
     }

@@ -1,0 +1,107 @@
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: #1c2127;
+  color: #f6f7f9;
+  font-family: -apple-system, system-ui, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-body {
+  flex: 1;
+  padding: 16px;
+  overflow: auto;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 16px;
+}
+
+.sensor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sensor-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sensor-card-header h3 {
+  margin: 0 0 4px;
+}
+
+.sensor-card-id {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78em;
+  margin-right: 6px;
+}
+
+.sensor-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shared-timeline {
+  border-top: 1px solid #2f343c;
+  padding: 8px 16px;
+  background: #232934;
+  position: sticky;
+  bottom: 0;
+}
+
+.tl-root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tl-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tl-chart {
+  position: relative;
+}
+
+.tl-brush {
+  position: absolute;
+  top: 0;
+  bottom: 18px; /* leave room for uPlot axis */
+  background: rgba(109, 184, 255, 0.18);
+  border-left: 1px solid #6db8ff;
+  border-right: 1px solid #6db8ff;
+  pointer-events: none;
+}
+
+/* Highlight calendar days that have logs. */
+.rdp-day.rdp-has-data:not(.rdp-day_selected) {
+  font-weight: 600;
+  color: #6db8ff;
+  position: relative;
+}
+.rdp-day.rdp-has-data:not(.rdp-day_selected)::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #6db8ff;
+}

@@ -134,7 +134,7 @@ max_vel_rev_s = 10.0
 joint = "DrumFL"
 data_port = 5006
 sign = 1.0
-output = false
+output = true
 cmd_port = 5007
 
 [[drives.node]]
@@ -144,7 +144,7 @@ max_vel_rev_s = 10.0
 joint = "DrumBL"
 data_port = 5014
 sign = 1.0
-output = false
+output = true
 cmd_port = 5015
 
 [[drives.node]]
@@ -153,8 +153,8 @@ mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumFR"
 data_port = 5012
-sign = 1.0
-output = false
+sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
+output = true
 cmd_port = 5013
 
 [[drives.node]]
@@ -163,20 +163,24 @@ mode = "velocity"
 max_vel_rev_s = 10.0
 joint = "DrumBR"
 data_port = 5016
-sign = 1.0
-output = false
+sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
+output = true
 cmd_port = 5017
 
 # FLIPPERS: only 41/42 are wired (43/44 are fried — absent from /discover).
+# mode="position" now means "velocity-servo to a position target": the engine
+# increments a target from the operator's steps and drives the ODrive in VELOCITY
+# (input_vel, capped at max_vel_rev_s) to reach it — no input_pos is ever sent.
 [[drives.node]]
 node_id = 41
 mode = "position"
 joint = "FlipperFL"
 data_port = 5012   # fallback only — overridden by /discover at startup
-sign = 1.0         # flip to -1.0 if the model rotates opposite the real flipper
+sign = -1.0        # FL mirror-flipped to match FR (was 1.0: FL drove in sync w/ FR; should mirror)
 output = true
 cmd_port = 5013
-min_deg = -90.0    # soft travel limits for commanded ramps
+max_vel_rev_s = 20.0  # cap on the servo's velocity command (motor rev/s)
+min_deg = -90.0    # soft travel limits (clamp the target)
 max_deg = 90.0
 
 [[drives.node]]
@@ -187,5 +191,6 @@ data_port = 5016   # fallback only — overridden by /discover at startup
 sign = 1.0
 output = true
 cmd_port = 5017
+max_vel_rev_s = 20.0
 min_deg = -90.0
 max_deg = 90.0
