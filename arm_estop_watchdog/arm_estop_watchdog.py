@@ -43,11 +43,11 @@ ARM_IP = os.environ.get("ARM_IP", "192.168.2.50")
 _DEFAULT_DEVICES = (
     "192.168.2.2,192.168.2.7,192.168.2.10,192.168.2.12,"
     "192.168.2.40,192.168.2.41,"
-    "192.168.2.31,192.168.2.32,192.168.2.33,192.168.2.34,192.168.2.35,192.168.2.36"
+    "192.168.2.31,192.168.2.32,192.168.2.33,192.168.2.34,192.168.2.35"
 )
 DEVICE_IPS = [ip.strip() for ip in os.environ.get("DEVICE_IPS", _DEFAULT_DEVICES).split(",") if ip.strip()]
 
-TOWER_URL = os.environ.get("TOWER_URL", "http://127.0.0.1:3000").rstrip("/")
+TOWER_URL = os.environ.get("TOWER_URL", "http://192.168.2.3:3000").rstrip("/")
 SENSOR_API_URL = os.environ.get("SENSOR_API_URL", "http://192.168.2.X:8080").rstrip("/")
 
 PING_INTERVAL = float(os.environ.get("PING_INTERVAL", "5"))
