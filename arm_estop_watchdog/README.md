@@ -10,42 +10,50 @@ Runs on the **Jetson** as a systemd service. Stdlib Python only — no deps.
 
 ## What it does
 
-Every 5 s it pings the arm and a list of other devices (in parallel) and drives
-the tower light (`status-light-rove-2026` API, local on the Jetson) by priority:
+Every 5 s it pings the arm + a few hosts (in parallel) and drives the tower
+light (`status-light-rove-2026` API on the Jetson) by priority, most → least
+important. **The buzzer beeps once on every state change.**
 
-| Light  | Meaning                                              |
-|--------|------------------------------------------------------|
-| 🔴 RED    | Arm `.50` unreachable → **e-stopped**. Highest priority. |
-| 🟡 YELLOW | Arm up, but a **comms host** (steamdeck / station side) unreachable. Above orange. *Artificial: red+orange+green all on.* |
-| 🟠 ORANGE | Arm up, comms ok, but ≥1 other device unreachable → not fully booted. |
-| 🟢 GREEN  | Arm up and every monitored device reachable.         |
+| Light | Trigger | Default host |
+|-------|---------|--------------|
+| 🔴 solid RED       | arm down → **e-stopped** | `192.168.2.50` |
+| 🟠 blinking ORANGE | local comm down          | `10.10.62.22` |
+| 🟡 blinking YELLOW | station comm down        | `10.10.62.21` |
+| 🟡 solid YELLOW    | steamdeck down           | `192.168.2.4` |
+| 🟠 solid ORANGE    | any local device down    | `DEVICE_IPS` |
+| 🟢 solid GREEN     | everything up            | — |
+
+Yellow is the tower's *virtual* channel (lights red+orange+green together);
+blinking uses software blink (`/{color}/blink`, the only blink mode the virtual
+yellow supports).
 
 On an arm **down→up** transition (e-stop recovery) it POSTs `/reload` to the
 sensor API on the Pi (`rove_sensor_api`), which bounces the process so every
 driver re-runs its connect path — the reliable fix for the arm not answering
-after a power-cycle. `/reload` fires **only** on arm recovery: not at startup,
-not every poll, and not when a health-set device flaps.
+after a power-cycle. `/reload` fires **only** on arm recovery.
 
-## Monitored devices
+## Monitored hosts
 
-- **E-stop proxy (red):** `192.168.2.50` (arm).
-- **Comms hosts (yellow):** `192.168.2.4` (steamdeck), `10.10.62.21` (station side).
-  If either is unreachable → yellow (takes precedence over orange).
-- **Health set (orange):** the remaining devices (`DEVICE_IPS`).
+Each of these is pinged individually and has its own priority/color (see table):
+`ARM_IP`, `LOCAL_COMM_IP`, `STATION_COMM_IP`, `STEAMDECK_IP`, plus the
+`DEVICE_IPS` health set (solid orange if any are down).
 
 ## Configuration (env vars)
 
-| Var              | Default                  | Meaning |
-|------------------|--------------------------|---------|
-| `ARM_IP`         | `192.168.2.50`           | e-stop proxy host (red) |
-| `DEVICE_IPS`     | health-set IPs (CSV)     | health set → orange |
-| `COMMS_IPS`      | `192.168.2.4,10.10.62.21`| comms hosts → yellow (steamdeck, station) |
-| `TOWER_URL`      | `http://192.168.2.3:3000`| tower-api (Jetson) |
-| `SENSOR_API_URL` | `http://192.168.2.2:8080`| Pi `rove_sensor_api` |
-| `PING_INTERVAL`  | `5`                      | seconds between sweeps |
-| `PING_TIMEOUT`   | `1`                      | per-ping timeout (s) |
-| `HTTP_TIMEOUT`   | `3`                      | tower/sensor HTTP timeout (s) |
-| `LOG_LEVEL`      | `INFO`                   | logging level |
+| Var               | Default                  | Meaning |
+|-------------------|--------------------------|---------|
+| `ARM_IP`          | `192.168.2.50`           | e-stop proxy → solid red |
+| `LOCAL_COMM_IP`   | `10.10.62.22`            | → blinking orange |
+| `STATION_COMM_IP` | `10.10.62.21`            | → blinking yellow |
+| `STEAMDECK_IP`    | `192.168.2.4`            | → solid yellow |
+| `DEVICE_IPS`      | health-set IPs (CSV)     | → solid orange if any down |
+| `TOWER_URL`       | `http://192.168.2.3:3000`| tower-api (Jetson) |
+| `SENSOR_API_URL`  | `http://192.168.2.2:8080`| Pi `rove_sensor_api` |
+| `BLINK_ON_MS` / `BLINK_OFF_MS` | `400` / `400` | blink period |
+| `PING_INTERVAL`   | `5`                      | seconds between sweeps |
+| `PING_TIMEOUT`    | `1`                      | per-ping timeout (s) |
+| `HTTP_TIMEOUT`    | `3`                      | tower/sensor HTTP timeout (s) |
+| `LOG_LEVEL`       | `INFO`                   | logging level |
 
 ## Install
 
