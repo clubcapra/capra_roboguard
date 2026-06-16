@@ -13,7 +13,6 @@ Two layers:
   * TestSweep -- fakes ping() to confirm parallel ping aggregation.
 """
 
-import json
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -69,6 +68,21 @@ class TestStateMachine(unittest.TestCase):
         wd.act(arm_up=False, down=["192.168.2.36"])  # arm down wins
         self.assertEqual(self.led_calls, [awd.RED])
 
+    def test_yellow_when_comms_down(self):
+        wd = awd.Watchdog()
+        wd.act(arm_up=True, down=[], comms_down=["192.168.2.4"])
+        self.assertEqual(self.led_calls, [awd.YELLOW])
+
+    def test_yellow_takes_priority_over_orange(self):
+        wd = awd.Watchdog()
+        wd.act(arm_up=True, down=["192.168.2.33"], comms_down=["10.10.62.21"])
+        self.assertEqual(self.led_calls, [awd.YELLOW])
+
+    def test_red_takes_priority_over_comms(self):
+        wd = awd.Watchdog()
+        wd.act(arm_up=False, down=[], comms_down=["192.168.2.4"])  # e-stop still wins
+        self.assertEqual(self.led_calls, [awd.RED])
+
     def test_reload_fires_once_on_recovery_only(self):
         wd = awd.Watchdog()
         wd.act(arm_up=True, down=[])     # GREEN, no reload (first run)
@@ -117,21 +131,17 @@ class TestHttpRoundTrip(unittest.TestCase):
     def setUp(self):
         _Recorder.calls.clear()
 
-    def test_set_led_clears_then_sets(self):
+    def test_set_led_clears_then_turns_on(self):
         self.assertTrue(awd.set_led(awd.RED))
-        # each color change is /clear then /set
-        self.assertEqual([p for p, _ in _Recorder.calls], ["/clear", "/set"])
-        set_body = json.loads(_Recorder.calls[1][1])
-        self.assertEqual(set_body, {"red": True, "orange": False, "green": False})
+        # each color change is /clear then /{color}/on
+        self.assertEqual([p for p, _ in _Recorder.calls], ["/clear", "/red/on"])
 
-    def test_set_led_payloads(self):
-        self.assertTrue(awd.set_led(awd.RED))
-        self.assertTrue(awd.set_led(awd.ORANGE))
-        self.assertTrue(awd.set_led(awd.GREEN))
-        set_bodies = [json.loads(b) for p, b in _Recorder.calls if p == "/set"]
-        self.assertEqual(set_bodies[0], {"red": True, "orange": False, "green": False})
-        self.assertEqual(set_bodies[1], {"red": False, "orange": True, "green": False})
-        self.assertEqual(set_bodies[2], {"red": False, "orange": False, "green": True})
+    def test_set_led_paths(self):
+        for c in (awd.RED, awd.YELLOW, awd.ORANGE, awd.GREEN):
+            self.assertTrue(awd.set_led(c))
+        on_calls = [p for p, _ in _Recorder.calls if p.endswith("/on")]
+        # yellow is the virtual channel (lights all three + sets yellow flag)
+        self.assertEqual(on_calls, ["/red/on", "/yellow/on", "/orange/on", "/green/on"])
 
     def test_reload_hits_endpoint(self):
         self.assertTrue(awd.reload_sensors())
@@ -144,25 +154,28 @@ class TestHttpRoundTrip(unittest.TestCase):
         wd.act(arm_up=True, down=["192.168.2.36"])    # /reload + ORANGE
         paths = [p for p, _ in _Recorder.calls]
         self.assertEqual(paths.count("/reload"), 1)
-        self.assertEqual(paths.count("/set"), 3)
-        # /reload must precede the ORANGE /set that follows it
+        on_calls = [p for p in paths if p.endswith("/on")]
+        self.assertEqual(on_calls, ["/green/on", "/red/on", "/orange/on"])
+        # /reload must precede the ORANGE /on that follows it
         self.assertLess(paths.index("/reload"), len(paths) - 1)
 
 
 class TestSweep(unittest.TestCase):
     def test_parallel_ping_aggregation(self):
-        orig_ping, orig_arm, orig_devs = awd.ping, awd.ARM_IP, awd.DEVICE_IPS
-        reachable = {"10.0.0.50", "10.0.0.1"}  # arm + one device up; .2 down
+        orig = (awd.ping, awd.ARM_IP, awd.DEVICE_IPS, awd.COMMS_IPS)
+        reachable = {"10.0.0.50", "10.0.0.1", "10.0.0.9"}  # arm + one device + one comms up
         awd.ping = lambda ip: ip in reachable
         awd.ARM_IP = "10.0.0.50"
-        awd.DEVICE_IPS = ["10.0.0.1", "10.0.0.2"]
+        awd.DEVICE_IPS = ["10.0.0.1", "10.0.0.2"]  # .2 down
+        awd.COMMS_IPS = ["10.0.0.9", "10.0.0.8"]   # .8 down
         try:
-            with ThreadPoolExecutor(max_workers=4) as pool:
-                arm_up, down = awd.sweep(pool)
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                arm_up, down, comms_down = awd.sweep(pool)
             self.assertTrue(arm_up)
             self.assertEqual(down, ["10.0.0.2"])
+            self.assertEqual(comms_down, ["10.0.0.8"])
         finally:
-            awd.ping, awd.ARM_IP, awd.DEVICE_IPS = orig_ping, orig_arm, orig_devs
+            awd.ping, awd.ARM_IP, awd.DEVICE_IPS, awd.COMMS_IPS = orig
 
 
 if __name__ == "__main__":

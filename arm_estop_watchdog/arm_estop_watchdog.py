@@ -10,8 +10,9 @@ Stopgap until the robot exposes a real e-stop status feed. The Kinova arm
 Every PING_INTERVAL seconds this pings the arm plus a list of other networked
 devices (in parallel) and drives the tower light by priority:
 
-    RED     arm down (e-stopped)                      -- highest priority
-    ORANGE  arm up, but >=1 other device unreachable  -- not fully booted
+    RED     arm down (e-stopped)                       -- highest priority
+    YELLOW  arm up, but a comms host (steamdeck / station) unreachable
+    ORANGE  arm up, comms ok, but >=1 other device unreachable
     GREEN   arm up and every device reachable
 
 On an arm down->up transition (e-stop recovery) it POSTs /reload to the sensor
@@ -48,6 +49,12 @@ _DEFAULT_DEVICES = (
 )
 DEVICE_IPS = [ip.strip() for ip in os.environ.get("DEVICE_IPS", _DEFAULT_DEVICES).split(",") if ip.strip()]
 
+# Comms hosts -> drive YELLOW (takes precedence over ORANGE). Losing the
+# steamdeck or the station side of the link is more urgent than a single sensor
+# being down, so it gets its own color.
+_DEFAULT_COMMS = "192.168.2.4,10.10.62.21"  # steamdeck, station side
+COMMS_IPS = [ip.strip() for ip in os.environ.get("COMMS_IPS", _DEFAULT_COMMS).split(",") if ip.strip()]
+
 TOWER_URL = os.environ.get("TOWER_URL", "http://192.168.2.3:3000").rstrip("/")
 SENSOR_API_URL = os.environ.get("SENSOR_API_URL", "http://192.168.2.2:8080").rstrip("/")
 
@@ -55,18 +62,16 @@ PING_INTERVAL = float(os.environ.get("PING_INTERVAL", "5"))
 PING_TIMEOUT = int(float(os.environ.get("PING_TIMEOUT", "1")))
 HTTP_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "3"))
 
-# Tower /set channel booleans per color. The deployed tower has physical
-# channels red/orange/green/buzzer -- there is NO yellow channel ("yellow" is
-# only a derived read-only flag for red+orange+green all on). Orange is its own
-# physical channel, so our ORANGE state drives `orange`, not `yellow`.
+# Tower colors. We drive the tower with POST /{color}/on: red/orange/green are
+# physical channels; "yellow" is a virtual channel that lights red+orange+green
+# together and sets the firmware yellow flag. The virtual yellow ONLY activates
+# via /yellow/on -- turning the three physical channels on individually (e.g.
+# via /set) does not, so we must use the per-channel /on route.
 RED = "red"
+YELLOW = "yellow"
 ORANGE = "orange"
 GREEN = "green"
-_LED_CHANNELS = {
-    RED:    {"red": True,  "orange": False, "green": False},
-    ORANGE: {"red": False, "orange": True,  "green": False},
-    GREEN:  {"red": False, "orange": False, "green": True},
-}
+COLORS = (RED, YELLOW, ORANGE, GREEN)
 
 log = logging.getLogger("arm_estop_watchdog")
 
@@ -109,14 +114,14 @@ def _post(url: str, payload: dict | None = None) -> bool:
 
 
 def set_led(color: str) -> bool:
-    """Clear the tower, then assert the channels for *color*.
+    """Clear the tower, then turn on the channel for *color*.
 
-    The tower retains prior channel state and blink tasks, so a plain /set can
-    leave an old color lingering. /clear cancels everything first; /set is then
-    authoritative for the result. Returns True only if the /set succeeds.
+    Uses POST /{color}/on (red/orange/green physical; yellow virtual = all three
+    + the yellow flag). /clear first cancels any prior color/blink so exactly one
+    color shows. Returns True only if the /{color}/on succeeds.
     """
-    _post(f"{TOWER_URL}/clear")  # best-effort; /set below is what matters
-    return _post(f"{TOWER_URL}/set", _LED_CHANNELS[color])
+    _post(f"{TOWER_URL}/clear")  # best-effort; the /on below is what matters
+    return _post(f"{TOWER_URL}/{color}/on")
 
 
 def reload_sensors() -> bool:
@@ -127,22 +132,29 @@ def reload_sensors() -> bool:
     return False
 
 
-def sweep(pool: ThreadPoolExecutor) -> tuple[bool, list[str]]:
-    """Ping arm + all devices in parallel. Return (arm_up, [down device ips])."""
+def sweep(pool: ThreadPoolExecutor) -> tuple[bool, list[str], list[str]]:
+    """Ping arm + devices + comms hosts in parallel.
+
+    Returns (arm_up, [down device ips], [down comms ips]).
+    """
     arm_future = pool.submit(ping, ARM_IP)
     device_futures = {ip: pool.submit(ping, ip) for ip in DEVICE_IPS}
+    comms_futures = {ip: pool.submit(ping, ip) for ip in COMMS_IPS}
     arm_up = arm_future.result()
     down = [ip for ip, fut in device_futures.items() if not fut.result()]
-    return arm_up, down
+    comms_down = [ip for ip, fut in comms_futures.items() if not fut.result()]
+    return arm_up, down, comms_down
 
 
-def decide_color(arm_up: bool, down: list[str]) -> str:
-    """Pure color-priority rule: RED > ORANGE > GREEN."""
+def decide_color(arm_up: bool, down: list[str], comms_down: list[str] = ()) -> str:
+    """Pure color-priority rule: RED > YELLOW > ORANGE > GREEN."""
     if not arm_up:
         return RED
-    if not down:
-        return GREEN
-    return ORANGE
+    if comms_down:
+        return YELLOW
+    if down:
+        return ORANGE
+    return GREEN
 
 
 class Watchdog:
@@ -158,11 +170,11 @@ class Watchdog:
         self.last_arm_up: bool | None = None
 
     def tick(self, pool: ThreadPoolExecutor) -> None:
-        arm_up, down = sweep(pool)
-        self.act(arm_up, down)
+        arm_up, down, comms_down = sweep(pool)
+        self.act(arm_up, down, comms_down)
 
-    def act(self, arm_up: bool, down: list[str]) -> None:
-        desired = decide_color(arm_up, down)
+    def act(self, arm_up: bool, down: list[str], comms_down: list[str] = ()) -> None:
+        desired = decide_color(arm_up, down, comms_down)
 
         # E-stop recovery: arm came back after being down. None->True
         # (first run) does NOT count.
@@ -173,7 +185,9 @@ class Watchdog:
 
         if desired != self.last_color:
             detail = ""
-            if desired == ORANGE:
+            if desired == YELLOW:
+                detail = f" (comms down: {', '.join(comms_down)})"
+            elif desired == ORANGE:
                 detail = f" (down: {', '.join(down)})"
             elif desired == RED:
                 detail = " (arm unreachable / e-stopped)"
@@ -194,14 +208,14 @@ def main() -> int:
     signal.signal(signal.SIGINT, _handle_signal)
 
     log.info(
-        "starting: arm=%s devices=%d tower=%s sensor_api=%s interval=%ss",
-        ARM_IP, len(DEVICE_IPS), TOWER_URL, SENSOR_API_URL, PING_INTERVAL,
+        "starting: arm=%s devices=%d comms=%d tower=%s sensor_api=%s interval=%ss",
+        ARM_IP, len(DEVICE_IPS), len(COMMS_IPS), TOWER_URL, SENSOR_API_URL, PING_INTERVAL,
     )
     if "192.168.2.X" in SENSOR_API_URL:
         log.warning("SENSOR_API_URL still has placeholder IP (192.168.2.X) -- /reload will fail")
 
     wd = Watchdog()
-    with ThreadPoolExecutor(max_workers=len(DEVICE_IPS) + 1) as pool:
+    with ThreadPoolExecutor(max_workers=len(DEVICE_IPS) + len(COMMS_IPS) + 1) as pool:
         while _running:
             cycle_start = time.monotonic()
             try:
