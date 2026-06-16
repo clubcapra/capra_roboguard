@@ -14,7 +14,7 @@ ExecStart=/usr/bin/python3 /home/capra/data/capra_rove_stack/capra_roboguard/arm
 
 # Tower API is local on the Jetson; default 127.0.0.1:3000 needs nothing.
 # SENSOR_API_URL MUST point at the Pi running rove_sensor_api -- edit the IP.
-Environment=SENSOR_API_URL=http://192.168.2.X:8080
+Environment=SENSOR_API_URL=http://192.168.2.2:8080
 # Uncomment to override defaults:
 # Environment=ARM_IP=192.168.2.50
 # Environment=PING_INTERVAL=5
