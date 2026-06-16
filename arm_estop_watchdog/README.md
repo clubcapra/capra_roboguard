@@ -16,7 +16,8 @@ the tower light (`status-light-rove-2026` API, local on the Jetson) by priority:
 | Light  | Meaning                                              |
 |--------|------------------------------------------------------|
 | 🔴 RED    | Arm `.50` unreachable → **e-stopped**. Highest priority. |
-| 🟠 ORANGE | Arm up, but ≥1 other device unreachable → not fully booted. |
+| 🟡 YELLOW | Arm up, but a **comms host** (steamdeck / station side) unreachable. Above orange. *Artificial: red+orange+green all on.* |
+| 🟠 ORANGE | Arm up, comms ok, but ≥1 other device unreachable → not fully booted. |
 | 🟢 GREEN  | Arm up and every monitored device reachable.         |
 
 On an arm **down→up** transition (e-stop recovery) it POSTs `/reload` to the
@@ -27,18 +28,20 @@ not every poll, and not when a health-set device flaps.
 
 ## Monitored devices
 
-- **E-stop proxy:** `192.168.2.50` (arm).
-- **Health set (orange):** `.2 .7 .10 .12 .40 .41 .31 .32 .33 .34 .35 .36`.
-  - `.36` is currently offline **for testing**, so expect orange until it's back.
+- **E-stop proxy (red):** `192.168.2.50` (arm).
+- **Comms hosts (yellow):** `192.168.2.4` (steamdeck), `10.10.62.21` (station side).
+  If either is unreachable → yellow (takes precedence over orange).
+- **Health set (orange):** the remaining devices (`DEVICE_IPS`).
 
 ## Configuration (env vars)
 
 | Var              | Default                  | Meaning |
 |------------------|--------------------------|---------|
-| `ARM_IP`         | `192.168.2.50`           | e-stop proxy host |
-| `DEVICE_IPS`     | the 12 IPs above (CSV)   | health set → orange |
-| `TOWER_URL`      | `http://127.0.0.1:3000`  | local tower-api |
-| `SENSOR_API_URL` | `http://192.168.2.X:8080`| **set to the Pi's IP** |
+| `ARM_IP`         | `192.168.2.50`           | e-stop proxy host (red) |
+| `DEVICE_IPS`     | health-set IPs (CSV)     | health set → orange |
+| `COMMS_IPS`      | `192.168.2.4,10.10.62.21`| comms hosts → yellow (steamdeck, station) |
+| `TOWER_URL`      | `http://192.168.2.3:3000`| tower-api (Jetson) |
+| `SENSOR_API_URL` | `http://192.168.2.2:8080`| Pi `rove_sensor_api` |
 | `PING_INTERVAL`  | `5`                      | seconds between sweeps |
 | `PING_TIMEOUT`   | `1`                      | per-ping timeout (s) |
 | `HTTP_TIMEOUT`   | `3`                      | tower/sensor HTTP timeout (s) |

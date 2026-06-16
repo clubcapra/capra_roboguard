@@ -20,6 +20,7 @@ Environment=SENSOR_API_URL=http://192.168.2.2:8080
 # Environment=PING_INTERVAL=5
 # Environment=PING_TIMEOUT=1
 # Environment=DEVICE_IPS=192.168.2.2,192.168.2.7,192.168.2.10,...
+# Environment=COMMS_IPS=192.168.2.4,10.10.62.21   # steamdeck, station -> yellow
 
 Restart=on-failure
 RestartSec=2s
