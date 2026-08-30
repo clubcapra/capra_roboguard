@@ -11,9 +11,10 @@ use crate::core::error::DriverError;
 use super::bus::CanBus;
 use super::endpoints::SharedEndpointMap;
 use super::protocol::{
-    encode_set_axis_state, encode_set_input_pos, encode_sdo_write_bool, encode_sdo_write_f32,
-    encode_sdo_write_i32,
-    CMD_CLEAR_ERRORS, CMD_ESTOP, CMD_REBOOT, CMD_SET_AXIS_STATE, CMD_SET_CONTROLLER_MODE,
+    decode_odrive_errors, encode_sdo_call, encode_set_axis_state, encode_set_input_pos,
+    encode_sdo_write_bool, encode_sdo_write_f32, encode_sdo_write_i32, procedure_result_name,
+    CMD_CLEAR_ERRORS, CMD_ESTOP, CMD_REBOOT, CMD_RXSDO, CMD_SET_AXIS_STATE,
+    CMD_SET_CONTROLLER_MODE,
     CMD_SET_INPUT_POS, CMD_SET_INPUT_TORQUE, CMD_SET_INPUT_VEL, CMD_SET_LIMITS,
     CMD_SET_POSITION_GAIN, CMD_SET_TRAJ_ACCEL_LIMITS, CMD_SET_TRAJ_INERTIA,
     CMD_SET_TRAJ_VEL_LIMIT, CMD_SET_VEL_GAINS,
@@ -319,8 +320,10 @@ impl SensorDriver for OdriveNode {
         vec![
             FieldDescriptor::new("node_id",           "ODrive CAN node ID",                         "u8"),
             FieldDescriptor::new("axis_error",         "Axis error flags (0 = no error)",            "u32"),
+            FieldDescriptor::new("axis_error_words",   "axis_error decoded to ODrive.Error flag names", "string[]"),
             FieldDescriptor::new("axis_state",         "Current axis state (8 = ClosedLoopControl)", "u8"),
             FieldDescriptor::new("procedure_result",   "Procedure_Result (fw≥0.6 Heartbeat byte 5)", "u8"),
+            FieldDescriptor::new("procedure_result_words", "procedure_result decoded to its ODrive.ProcedureResult name", "string"),
             FieldDescriptor::new("trajectory_done",    "Trajectory done flag",                       "bool"),
             FieldDescriptor::new("pos_estimate",       "Position estimate",    "f32").with_unit("rev"),
             FieldDescriptor::new("vel_estimate",       "Velocity estimate",    "f32").with_unit("rev/s"),
@@ -331,7 +334,9 @@ impl SensorDriver for OdriveNode {
             FieldDescriptor::new("bus_voltage",        "DC bus voltage",        "f32").with_unit("V"),
             FieldDescriptor::new("bus_current",        "DC bus current",        "f32").with_unit("A"),
             FieldDescriptor::new("active_errors",      "Active error flags (Get_Error)",   "u32"),
+            FieldDescriptor::new("active_errors_words", "active_errors decoded to ODrive.Error flag names", "string[]"),
             FieldDescriptor::new("disarm_reason",      "Disarm reason (Get_Error)",        "u32"),
+            FieldDescriptor::new("disarm_reason_words", "disarm_reason decoded to ODrive.Error flag names", "string[]"),
             FieldDescriptor::new("torque_target",      "Torque target (Get_Torques)",      "f32").with_unit("Nm"),
             FieldDescriptor::new("torque_estimate",    "Torque estimate (Get_Torques)",    "f32").with_unit("Nm"),
             FieldDescriptor::new("electrical_power",   "Electrical power (Get_Powers)",    "f32").with_unit("W"),
@@ -390,8 +395,10 @@ impl SensorDriver for OdriveNode {
         Ok(serde_json::json!({
             "node_id":           self.node_id,
             "axis_error":        s.axis_error,
+            "axis_error_words":  decode_odrive_errors(s.axis_error),
             "axis_state":        s.axis_state,
             "procedure_result":  s.procedure_result,
+            "procedure_result_words": procedure_result_name(s.procedure_result),
             "trajectory_done":   s.trajectory_done,
             "pos_estimate":      s.pos_estimate,
             "vel_estimate":      s.vel_estimate,
@@ -402,7 +409,9 @@ impl SensorDriver for OdriveNode {
             "bus_voltage":       s.bus_voltage,
             "bus_current":       s.bus_current,
             "active_errors":     s.active_errors,
+            "active_errors_words": decode_odrive_errors(s.active_errors),
             "disarm_reason":     s.disarm_reason,
+            "disarm_reason_words": decode_odrive_errors(s.disarm_reason),
             "torque_target":     s.torque_target,
             "torque_estimate":   s.torque_estimate,
             "electrical_power":  s.electrical_power,
@@ -729,8 +738,13 @@ impl SensorDriver for OdriveNode {
 
     /// Trigger a calibration sequence by setting the axis state.
     ///
-    /// Body: `{"type": "full" | "motor" | "encoder_index" | "encoder_offset"}`
-    /// Defaults to `"full"` if `type` is omitted.
+    /// Body: `{"type": "full" | "motor" | "encoder_index" | "encoder_offset"
+    /// | "harmonic" | "harmonic_commutation"}`. Defaults to `"full"` if `type`
+    /// is omitted.
+    ///
+    /// Harmonic calibration (axis states 15/16, fw≥0.6.11) measures and stores
+    /// the encoder harmonic-compensation coefficients. Run `save_config`
+    /// afterwards to persist the result.
     fn calibrate(&self, params: &Value) -> Result<Value, DriverError> {
         let cal_type = params
             .get("type")
@@ -738,13 +752,16 @@ impl SensorDriver for OdriveNode {
             .unwrap_or("full");
 
         let (axis_state, label) = match cal_type {
-            "full"           => (3u32, "FullCalibrationSequence"),
-            "motor"          => (4u32, "MotorCalibration"),
-            "encoder_index"  => (6u32, "EncoderIndexSearch"),
-            "encoder_offset" => (7u32, "EncoderOffsetCalibration"),
+            "full"                 => (3u32, "FullCalibrationSequence"),
+            "motor"                => (4u32, "MotorCalibration"),
+            "encoder_index"        => (6u32, "EncoderIndexSearch"),
+            "encoder_offset"       => (7u32, "EncoderOffsetCalibration"),
+            "harmonic"             => (15u32, "HarmonicCalibration"),
+            "harmonic_commutation" => (16u32, "HarmonicCalibrationCommutation"),
             other => {
                 return Err(DriverError::CommandFailed(format!(
-                    "unknown calibration type '{other}'; use: full | motor | encoder_index | encoder_offset"
+                    "unknown calibration type '{other}'; use: \
+                     full | motor | encoder_index | encoder_offset | harmonic | harmonic_commutation"
                 )));
             }
         };
@@ -768,6 +785,58 @@ impl SensorDriver for OdriveNode {
             "calibration": label,
             "axis_state": axis_state,
             "status":     "started",
+        }))
+    }
+
+    fn has_save_config(&self) -> bool {
+        true
+    }
+
+    /// Persist the current (calibrated) configuration to the ODrive's
+    /// non-volatile memory by invoking the `save_configuration` function
+    /// endpoint over CAN SDO.
+    ///
+    /// Requires the endpoint map (`flat_endpoints.json`) so the function's
+    /// endpoint id can be resolved — set `ODRIVE_HW_VERSION` + `ODRIVE_FW_VERSION`
+    /// or upload via `POST /odrive/endpoints`.
+    ///
+    /// The drive must be in **Idle** — ODrive refuses to save configuration
+    /// while armed (closed-loop). Writing flash makes the drive briefly
+    /// unresponsive and, on some firmware, resets the CAN interface — telemetry
+    /// may stall for a moment.
+    fn save_config(&self) -> Result<Value, DriverError> {
+        let ep_id = {
+            let map = self.endpoint_map.read().unwrap();
+            if map.is_empty() {
+                return Err(DriverError::CommandFailed(
+                    "endpoint map not loaded — set ODRIVE_HW_VERSION + ODRIVE_FW_VERSION \
+                     or upload flat_endpoints.json via POST /odrive/endpoints.".into(),
+                ));
+            }
+            map.get("save_configuration").map(|e| e.id).ok_or_else(|| {
+                DriverError::CommandFailed(
+                    "'save_configuration' function endpoint not found in map".into(),
+                )
+            })?
+        };
+
+        // Reset the watchdog timer so an idle frame doesn't interleave, then
+        // trigger the function endpoint (RxSdo write with no value payload).
+        self.command_notify.notify_one();
+        self.send_blocking(CMD_RXSDO, encode_sdo_call(ep_id).to_vec())?;
+
+        tracing::info!(
+            node_id = self.node_id,
+            endpoint_id = ep_id,
+            "ODrive save_configuration triggered"
+        );
+
+        Ok(serde_json::json!({
+            "node_id":             self.node_id,
+            "save_configuration":  "triggered",
+            "endpoint_id":         ep_id,
+            "status":              "started",
+            "note": "Configuration is being written to non-volatile memory. The drive may be briefly unresponsive.",
         }))
     }
 }

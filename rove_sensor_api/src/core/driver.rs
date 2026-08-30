@@ -126,9 +126,23 @@ pub trait SensorDriver: Send + Sync + 'static {
     }
 
     /// Trigger a calibration sequence.
-    /// `params` may include `{"type": "full"|"motor"|"encoder_index"|"encoder_offset"}`.
+    /// `params` may include `{"type": "full"|"motor"|"encoder_index"|"encoder_offset"
+    /// |"harmonic"|"harmonic_commutation"}`.
     fn calibrate(&self, params: &Value) -> Result<Value, DriverError> {
         Err(DriverError::CommandFailed("calibration not supported".into()))
+    }
+
+    /// Whether this driver supports persisting its configuration to the
+    /// device's non-volatile memory (e.g. ODrive `save_configuration`).
+    fn has_save_config(&self) -> bool {
+        false
+    }
+
+    /// Persist the current configuration (including any fresh calibration) to
+    /// the device's non-volatile memory. Only called if `has_save_config()`
+    /// returns true.
+    fn save_config(&self) -> Result<Value, DriverError> {
+        Err(DriverError::CommandFailed("save config not supported".into()))
     }
 
     /// Whether this driver supports writing individual endpoints by path.
