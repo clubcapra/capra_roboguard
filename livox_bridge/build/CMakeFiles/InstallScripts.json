@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/capra/data/capra_rove_stack/capra_roboguard/livox_bridge/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

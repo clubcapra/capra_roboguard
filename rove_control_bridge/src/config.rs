@@ -20,6 +20,82 @@ pub struct Config {
     pub mission: Mission,
     #[serde(default)]
     pub comms: Comms,
+    #[serde(default)]
+    pub gnss: Gnss,
+    #[serde(default)]
+    pub vn: Vn,
+}
+
+/// VectorNav mounting. The sim VN is upright (body-up = sensor Z); the real VN is
+/// mounted on its side (gravity on +Y) so body-up = sensor Y. This selects the
+/// axis used to derive body tilt + yaw rate from the VN accel/gyro.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Vn {
+    /// "x" | "y" | "z" — which VN sensor axis points up on the robot. Default "z".
+    #[serde(default = "default_vn_up_axis")]
+    pub up_axis: String,
+    /// Sign that maps the up-axis gyro to a CCW-positive heading rate, for the
+    /// IMU heading integrator. +1 or -1; tune so a CCW turn raises the heading.
+    #[serde(default = "default_gyro_yaw_sign")]
+    pub gyro_yaw_sign: f64,
+}
+
+impl Default for Vn {
+    fn default() -> Self {
+        Self { up_axis: default_vn_up_axis(), gyro_yaw_sign: default_gyro_yaw_sign() }
+    }
+}
+
+fn default_vn_up_axis() -> String {
+    "z".into()
+}
+fn default_gyro_yaw_sign() -> f64 {
+    1.0
+}
+
+/// GNSS source. In the sim the VectorNav frame carries a GNSS fix in-band
+/// (`source = "vectornav"`, the default). On the real robot the VN has a working
+/// IMU but NO GNSS, so the fix arrives as a UDP JSON broadcast from an external
+/// service (`source = "broadcast"`, e.g. `mpu5-gps-restream` → `:7010`); the VN
+/// frame is then used for ATTITUDE/IMU only. See `crate::gnss`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Gnss {
+    /// "vectornav" (fix in the VN telemetry) | "broadcast" (external UDP fix).
+    #[serde(default = "default_gnss_source")]
+    pub source: String,
+    /// UDP port the external GNSS service broadcasts JSON fixes on (broadcast mode).
+    #[serde(default = "default_gnss_port")]
+    pub port: u16,
+    /// A broadcast fix older than this is treated as no-fix (ms).
+    #[serde(default = "default_gnss_stale_ms")]
+    pub stale_ms: u64,
+}
+
+impl Default for Gnss {
+    fn default() -> Self {
+        Self {
+            source: default_gnss_source(),
+            port: default_gnss_port(),
+            stale_ms: default_gnss_stale_ms(),
+        }
+    }
+}
+
+impl Gnss {
+    /// True when position comes from the external UDP broadcast (real robot).
+    pub fn is_broadcast(&self) -> bool {
+        self.source.eq_ignore_ascii_case("broadcast")
+    }
+}
+
+fn default_gnss_source() -> String {
+    "vectornav".into()
+}
+fn default_gnss_port() -> u16 {
+    7010
+}
+fn default_gnss_stale_ms() -> u64 {
+    1500
 }
 
 /// Front-door ports (operator intent from the Steam Deck via udp_multiplexer).
@@ -35,6 +111,9 @@ pub struct Comms {
     pub telemetry_out_port: u16, // bridge republishes RoveTelemetry to subscribers here
     #[serde(default = "default_telemetry_out_hz")]
     pub telemetry_out_hz: f64,
+    /// REST API port — POST /api/v1/goto (missions over HTTP, the primary path).
+    #[serde(default = "default_mission_http_port")]
+    pub mission_http_port: u16,
     // --- rove_ik_engine (all control-proto motion: tracks + flippers + arm ovis) ---
     #[serde(default = "default_engine_host")]
     pub engine_host: String,
@@ -59,6 +138,7 @@ impl Default for Comms {
             estop_port: default_estop_port(),
             telemetry_out_port: default_telemetry_out_port(),
             telemetry_out_hz: default_telemetry_out_hz(),
+            mission_http_port: default_mission_http_port(),
             engine_host: default_engine_host(),
             engine_port: default_engine_port(),
             engine_drive_port: default_engine_drive_port(),
@@ -73,6 +153,9 @@ fn default_telemetry_out_port() -> u16 {
 }
 fn default_telemetry_out_hz() -> f64 {
     20.0
+}
+fn default_mission_http_port() -> u16 {
+    8088 // bridge REST API (clear of rove_sensor_api :8080 and the engine :9101)
 }
 
 fn default_engine_host() -> String {
@@ -162,12 +245,61 @@ pub struct Asserv {
 }
 
 /// Lidar forward-hazard reflex — stops the robot at obstacles / drop-offs.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Perception {
-    pub lidar_port: u16,         // bottom Livox (near sensing) data port
-    pub obstacle_stop_m: f64,    // hold if a solid object is within this, ahead
-    pub cliff_stop_m: f64,       // hold if the ground edge is within this, ahead
+    pub lidar_port: u16,         // sim LVX2 data port (source = "lvxsub")
+    pub obstacle_stop_m: f64,    // hold if a solid object is within this
+    pub cliff_stop_m: f64,       // hold if a ground edge/hole is within this
     pub min_ground_per_bin: u32, // ground-return floor per range bin (below => drop-off)
+    /// "lvxsub" (sim world-frame LVX2) | "lvxr" (real Mid-360 via the livox_bridge
+    /// sidecar — IMU-leveled proximity reflex). Default "lvxsub".
+    #[serde(default = "default_perception_source")]
+    pub source: String,
+    /// livox_bridge LVXR ports (source = "lvxr"): points + IMU.
+    #[serde(default = "default_lvxr_pts_port")]
+    pub lvxr_pts_port: u16,
+    #[serde(default = "default_lvxr_imu_port")]
+    pub lvxr_imu_port: u16,
+    /// Self-mask radius (m): ignore returns within this of the lidar (the robot's
+    /// own cage/chassis). Circular at the cage's max extent. lvxr mode only.
+    #[serde(default = "default_self_radius_m")]
+    pub self_radius_m: f64,
+    /// Forward arc for the reflex (lvxr mode): only stop for obstacles/edges whose
+    /// bearing is within `fwd_arc_deg` of `fwd_offset_deg` in the LIDAR leveled
+    /// frame. `fwd_arc_deg >= 180` = omnidirectional. `fwd_offset_deg` is the
+    /// lidar-frame bearing of the robot's drive-forward (TUNE on the robot).
+    #[serde(default = "default_fwd_offset_deg")]
+    pub fwd_offset_deg: f64,
+    #[serde(default = "default_fwd_arc_deg")]
+    pub fwd_arc_deg: f64,
+    /// If true (default, SAFE), autonomy holds when there's no fresh lidar (sidecar
+    /// down / lidar lost) — never drives blind. Set false to allow blind driving.
+    #[serde(default = "default_require_lidar")]
+    pub require_lidar: bool,
+}
+
+fn default_require_lidar() -> bool {
+    true
+}
+
+fn default_self_radius_m() -> f64 {
+    1.0
+}
+fn default_fwd_offset_deg() -> f64 {
+    0.0
+}
+fn default_fwd_arc_deg() -> f64 {
+    180.0 // omnidirectional until the forward offset is calibrated (safe default)
+}
+
+fn default_perception_source() -> String {
+    "lvxsub".into()
+}
+fn default_lvxr_pts_port() -> u16 {
+    7020
+}
+fn default_lvxr_imu_port() -> u16 {
+    7021
 }
 
 /// L0 reflex limits — hard safety bounds that gate all driving (`reflex`).
@@ -175,8 +307,16 @@ pub struct Perception {
 pub struct Reflex {
     pub geofence_radius_m: f64, // max distance from home before estop
     pub fall_floor_m: f64,      // estop if height drops this far below datum
-    pub max_roll_deg: f64,
-    pub max_pitch_deg: f64,
+    pub max_roll_deg: f64,      // (legacy/logging — raw VN roll is unreliable when mounted rotated)
+    pub max_pitch_deg: f64,     // (legacy/logging)
+    /// Body tilt from vertical (deg) that trips the attitude reflex. This is the
+    /// real check now — frame-honest, from the VN accel (see Pose::tilt_deg).
+    #[serde(default = "default_max_tilt_deg")]
+    pub max_tilt_deg: f64,
+}
+
+fn default_max_tilt_deg() -> f64 {
+    35.0
 }
 
 #[derive(Debug, Clone, Deserialize)]

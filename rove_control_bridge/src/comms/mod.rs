@@ -80,7 +80,7 @@ pub async fn run_estop_listener(
 /// compiled to waypoints by the control loop (pose steps are ignored there).
 pub async fn run_mission_listener(
     port: u16,
-    tx: watch::Sender<Option<proto::Mission>>,
+    tx: std::sync::Arc<watch::Sender<Option<proto::Mission>>>,
     ik: Option<std::sync::Arc<crate::ik::IkForwarder>>,
 ) -> anyhow::Result<()> {
     let sock = UdpSocket::bind(("0.0.0.0", port)).await?;

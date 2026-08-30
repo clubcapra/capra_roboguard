@@ -113,6 +113,7 @@ mod tests {
             yaw_ned_deg: yaw_ned,
             roll_deg: 0.0,
             pitch_deg: 0.0,
+            tilt_deg: 0.0,
             yaw_rate: 0.0,
             gnss_fix: true,
             position_confidence: 1.0,

@@ -13,7 +13,9 @@ mod calibrate;
 mod comms;
 mod config;
 mod control;
+mod gnss;
 mod gripper;
+mod http_api;
 mod ik;
 mod mission;
 mod perception;
@@ -32,7 +34,7 @@ use control::tracks::TracksController;
 use perception::costmap::CostMap;
 use perception::Hazard;
 use std::sync::Arc;
-use position::{Pose, PositionService};
+use position::{Pose, PositionService, UpAxis};
 use reflex::ReflexEngine;
 use router::{Action, Router};
 use std::path::PathBuf;
@@ -199,17 +201,55 @@ async fn main() -> Result<()> {
         }
     }
 
+    // --- external GNSS broadcast (real robot) -----------------------------
+    // The real VN has a working IMU but no GNSS, so position arrives as a UDP
+    // JSON broadcast (mpu5-gps-restream -> :7010). In the sim the VN frame carries
+    // the fix in-band, so this listener is skipped. See [gnss].source.
+    let gnss_rx = if cfg.gnss.is_broadcast() {
+        let (tx, rx) = watch::channel::<Option<gnss::GnssFix>>(None);
+        let port = cfg.gnss.port;
+        tracing::info!("GNSS source: broadcast :{port} (VN = attitude/IMU only)");
+        tokio::spawn(async move {
+            if let Err(e) = gnss::listen(port, tx).await {
+                tracing::warn!("gnss listener ended: {e:#}");
+            }
+        });
+        Some(rx)
+    } else {
+        tracing::info!("GNSS source: vectornav (fix in the VN telemetry)");
+        None
+    };
+
     // --- pose source ------------------------------------------------------
     let (pose_tx, pose_rx) = watch::channel::<Option<Pose>>(None);
     {
         let host = cfg.robot_host.clone();
         let interval_ms = cfg.telemetry.subscribe_ms;
-        let mut possvc = PositionService::new(cfg.datum, cfg.position.correction_gain);
+        let mut possvc = PositionService::new(
+            cfg.datum,
+            cfg.position.correction_gain,
+            UpAxis::parse(&cfg.vn.up_axis),
+            cfg.vn.gyro_yaw_sign,
+        );
         let agg = tele_agg.clone();
+        let gnss_rx = gnss_rx.clone();
+        let gnss_stale = Duration::from_millis(cfg.gnss.stale_ms);
         tokio::spawn(async move {
             let r = telemetry::subscribe(&host, vn_data_port, interval_ms, move |frame| {
                 telemetry_out::update_vn300(&agg, &frame);
-                if let Some(p) = possvc.update(&frame, std::time::Instant::now()) {
+                let now = std::time::Instant::now();
+                // broadcast mode: fuse VN attitude with the freshest external fix;
+                // vectornav mode: the VN frame carries position + GNSS itself.
+                let pose = match &gnss_rx {
+                    Some(rx) => {
+                        let fresh = rx
+                            .borrow()
+                            .filter(|g| g.received_at.elapsed() < gnss_stale);
+                        possvc.update_with_gnss(&frame, fresh.as_ref(), now)
+                    }
+                    None => possvc.update(&frame, now),
+                };
+                if let Some(p) = pose {
                     let _ = pose_tx.send(Some(p));
                 }
             })
@@ -232,17 +272,34 @@ async fn main() -> Result<()> {
     let (costmap_tx, costmap_rx) = watch::channel::<Option<Arc<CostMap>>>(None);
     {
         let host = cfg.robot_host.clone();
-        let p = cfg.perception;
+        let p = cfg.perception.clone();
         let off = cfg.goto.drive_offset_deg;
         let pose_rx = pose_rx.clone();
-        tokio::spawn(async move {
-            if let Err(e) = perception::run(
-                host, p.lidar_port, p.obstacle_stop_m, p.cliff_stop_m,
-                p.min_ground_per_bin, off, pose_rx, hazard_tx, costmap_tx,
-            ).await {
-                tracing::warn!("perception task ended: {e:#}");
-            }
-        });
+        if p.source.eq_ignore_ascii_case("lvxr") {
+            // Real Mid-360 via the livox_bridge sidecar: IMU-leveled proximity
+            // reflex (no cost map / planner yet — drives straight, stops on hazard).
+            let _ = costmap_tx; // planner off in lvxr mode
+            tokio::spawn(async move {
+                if let Err(e) = perception::lvxr::run(
+                    p.lvxr_pts_port, p.lvxr_imu_port, p.self_radius_m,
+                    p.fwd_offset_deg, p.fwd_arc_deg, p.obstacle_stop_m, p.cliff_stop_m,
+                    p.require_lidar, hazard_tx,
+                )
+                .await
+                {
+                    tracing::warn!("perception(lvxr) task ended: {e:#}");
+                }
+            });
+        } else {
+            tokio::spawn(async move {
+                if let Err(e) = perception::run(
+                    host, p.lidar_port, p.obstacle_stop_m, p.cliff_stop_m,
+                    p.min_ground_per_bin, off, pose_rx, hazard_tx, costmap_tx,
+                ).await {
+                    tracing::warn!("perception task ended: {e:#}");
+                }
+            });
+        }
     }
 
     // --- ground-truth validator (best-effort) -----------------------------
@@ -278,6 +335,8 @@ async fn main() -> Result<()> {
     // the front door up NOW, before any GNSS wait, so teleop is live immediately.
     let (teleop_tx, teleop_rx) = watch::channel::<Option<comms::TeleopIntent>>(None);
     let (mission_tx, mission_rx) = watch::channel::<Option<comms::proto::Mission>>(None);
+    // Shared so both the UDP listener and the REST API feed the one mission channel.
+    let mission_tx = std::sync::Arc::new(mission_tx);
     // IK engine forwarder: ALL control-proto motion (tracks + flippers + arm
     // ovis) routes through the engine, so this is the mandatory drive path —
     // always created. If the engine is unreachable at startup the forwarder is
@@ -315,9 +374,25 @@ async fn main() -> Result<()> {
     {
         let port = cfg.comms.mission_port;
         let ik_fwd = ik_fwd.clone();
+        let mission_tx = mission_tx.clone();
         tokio::spawn(async move {
             if let Err(e) = comms::run_mission_listener(port, mission_tx, ik_fwd).await {
                 tracing::warn!("mission listener ended: {e:#}");
+            }
+        });
+    }
+    // REST API — the primary way to post missions (POST /api/v1/goto), feeding the
+    // same Mission channel the control loop compiles. Matches the rest of the stack.
+    {
+        let state = http_api::ApiState {
+            mission_tx: mission_tx.clone(),
+            datum: cfg.datum,
+            pose_rx: pose_rx.clone(),
+        };
+        let port = cfg.comms.mission_http_port;
+        tokio::spawn(async move {
+            if let Err(e) = http_api::serve(port, state).await {
+                tracing::warn!("REST API ended: {e:#}");
             }
         });
     }
@@ -403,7 +478,9 @@ async fn wait_for_fix(pose_rx: &watch::Receiver<Option<Pose>>) -> Result<Pose> {
     let mut settled_ticks = 0u32;
     loop {
         if let Some(p) = *rx.borrow() {
-            let level = p.roll_deg.abs() < LEVEL_DEG && p.pitch_deg.abs() < LEVEL_DEG;
+            // Body tilt from the VN accel (frame-honest; raw roll/pitch read ~90°
+            // because the VN is mounted rotated). Settle on small tilt + still.
+            let level = p.tilt_deg < LEVEL_DEG;
             if p.gnss_fix && level && p.yaw_rate.abs() < STILL_RAD_S {
                 settled_ticks += 1;
                 if settled_ticks >= 25 {
@@ -574,7 +651,17 @@ async fn run_control_loop(
                 // drums for teleop (no double-command). Here we just hold off the mission.
                 if let Some(t) = *teleop_rx.borrow() {
                     if t.is_active() && t.stamp.elapsed() < Duration::from_millis(500) {
+                        // Operator intervention WINS: cancel the autonomous mission so
+                        // it does NOT resume the old goal after teleop, and yield the
+                        // drive to teleop (tracks/flippers/arm go via the IK engine).
+                        // Once cancelled the router holds (Idle) until a NEW GoTo is
+                        // posted — so when teleop ends, the robot stays stopped.
+                        let was_auto = router.mode() != router::Mode::Idle;
+                        router.cancel();
                         heading.reset();
+                        if was_auto {
+                            tracing::warn!("TELEOP TAKEOVER — autonomous mission CANCELLED; operator has control");
+                        }
                         if ticks % log_every == 0 {
                             tracing::info!(
                                 "TELEOP [via engine] — L{:+.2} R{:+.2} flippers {:?}{}",
@@ -628,12 +715,18 @@ async fn run_control_loop(
                         }
                         let hz = *hazard_rx.borrow();
                         let fresh = hz.stamp.elapsed() < Duration::from_millis(800);
-                        // A drop-off is ALWAYS a hard stop — never trust a steer over an edge.
-                        if fresh && hz.cliff_ahead {
+                        // HARD STOP on a near obstacle OR a ground edge/hole — never
+                        // drive into either. (Drop-off is always a stop; obstacle is a
+                        // stop now too — no cost-map routing until the heading is trusted.)
+                        if fresh && (hz.cliff_ahead || hz.obstacle_ahead) {
                             tracks.idle().await.ok();
                             heading.reset();
                             if ticks % (log_every / 2).max(1) == 0 {
-                                tracing::warn!("HAZARD HOLD — drop-off ahead ({:.1} m)", hz.cliff_dist);
+                                tracing::warn!(
+                                    "HAZARD HOLD — {} ({:.1} m)",
+                                    if hz.cliff_ahead { "ground edge/hole" } else { "obstacle" },
+                                    if hz.cliff_ahead { hz.cliff_dist } else { hz.obstacle_dist },
+                                );
                             }
                             continue;
                         }

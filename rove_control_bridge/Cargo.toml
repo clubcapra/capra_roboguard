@@ -18,6 +18,7 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 prost = "0.13"          # RoveControl / Mission / CameraSwitch front-door protos
+axum = "0.8"            # REST API (post GoTo missions over HTTP) — matches rove_sensor_api
 
 [build-dependencies]
 prost-build = "0.13"
