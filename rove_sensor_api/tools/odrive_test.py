@@ -3,9 +3,17 @@
 
 Auto-discovers every `odrive_*` sensor exposed by `rove_sensor_api`, then for
 each node opens a UDP command stream and a UDP telemetry subscription.
-Per-node sliders stream `input_vel` (rev/s) or `input_pos` (rev) over the
-node's command port. Buttons arm/disarm the axis (axis_state 8/1) and clear
-errors. Headless-friendly — open the browser from any machine.
+Per-node sliders stream `input_vel` (rev/s), `input_pos` (rev) or
+`input_torque` (Nm) over the node's command port. A per-node "custom field"
+box streams or one-shots any other driver command field (e.g. `control_mode`),
+so you're not limited to the predefined sliders. Buttons arm/disarm the axis
+(axis_state 8/1) and clear errors. Headless-friendly — open the browser from
+any machine.
+
+A second page at `/config` (linked from the header) proxies the drive API's
+HTTP config surface: upload `flat_endpoints.json`, read the drive config into
+an editable table, write changed values back, run a calibration sequence, and
+save the configuration to non-volatile memory.
 
 Wire format matches src/protocol/packet.rs and the ODrive command surface in
 src/drivers/odrive/node.rs (`input_vel`, `input_pos`, `axis_state`,
@@ -78,12 +86,18 @@ class NodeState:
         self.cmd_port = cmd_port
         self.display = display
         self.lock = threading.Lock()
-        # Control mode — only one of vel / pos is streamed at a time. "idle"
-        # means stop sending setpoints entirely; the driver watchdog keeps
+        # Control mode — only one of vel / pos / torque is streamed at a time.
+        # "idle" means stop sending setpoints entirely; the driver watchdog keeps
         # the last input_pos refreshed on its own.
-        self.mode = "idle"  # "idle" | "velocity" | "position"
-        self.vel = 0.0   # rev/s
-        self.pos = 0.0   # rev
+        self.mode = "idle"  # "idle" | "velocity" | "position" | "torque"
+        self.vel = 0.0    # rev/s
+        self.pos = 0.0    # rev
+        self.torque = 0.0  # Nm
+        # Custom fields streamed into EVERY outgoing command packet. Lets the
+        # operator stream arbitrary driver command fields continuously — e.g.
+        # hold an `input_torque`, or push any field the driver understands.
+        # field name -> JSON-typed value. See /node/<id>/custom.
+        self.custom: dict = {}
         # One-shot extras to merge into the next outgoing command (axis_state,
         # clear_errors, control_mode...). Cleared after being sent once.
         self.extra: dict | None = None
@@ -129,10 +143,15 @@ def stream_thread(host: str, rate_hz: float, n: NodeState, stop: threading.Event
     - **position**: only send `input_pos` when the target changes. Repeating
       the same position every tick can pile redundant entries onto an
       input-mode-2 trajectory queue if one's enabled.
+    - **torque**: stream `input_torque` while the slider is non-zero (same
+      pure-streaming model as velocity).
 
-    `extra` (one-shot fields like axis_state / clear_errors / control_mode)
-    is merged into the next packet and cleared. If the only field to send
-    is one-shot, the packet still goes out.
+    `custom` (persistent custom fields) is merged into EVERY packet — this is
+    what lets you stream arbitrary fields (hold an `input_torque`, push any
+    endpoint field) regardless of slider mode. `extra` (one-shot fields like
+    axis_state / clear_errors / control_mode) is merged into the next packet
+    and cleared. If the only field to send is one-shot or custom, the packet
+    still goes out.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setblocking(False)
@@ -148,6 +167,8 @@ def stream_thread(host: str, rate_hz: float, n: NodeState, stop: threading.Event
             mode = n.mode
             vel = n.vel
             pos = n.pos
+            torque = n.torque
+            custom = dict(n.custom)
             extra = n.extra
             n.extra = None
 
@@ -163,6 +184,14 @@ def stream_thread(host: str, rate_hz: float, n: NodeState, stop: threading.Event
             if pos != last_pos_sent:
                 payload["input_pos"] = pos
                 last_pos_sent = pos
+        elif mode == "torque":
+            if torque != 0.0:
+                payload["input_torque"] = torque
+        # Custom streamed fields are merged into every tick. This is what makes
+        # the tool versatile: stream `input_torque`, or push any other field
+        # (e.g. control_mode) continuously alongside / instead of the slider.
+        if custom:
+            payload.update(custom)
         if extra:
             payload.update(extra)
 
@@ -248,6 +277,8 @@ INDEX = r"""<!doctype html>
 *{box-sizing:border-box}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,sans-serif}
 h1{margin:0 0 12px;font-size:1.2em}
+a.navlink{font-size:.62em;font-weight:normal;margin-left:10px;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--accent);text-decoration:none;vertical-align:middle}
+a.navlink:hover{background:#2a2a2a}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 button{background:#2a2a2a;color:var(--fg);border:1px solid var(--border);padding:6px 12px;border-radius:4px;cursor:pointer;font:inherit;font-size:.9em}
@@ -279,9 +310,14 @@ table.t td:first-child{color:var(--muted);width:18ch}
 .pill.err{background:var(--danger);color:#fff}
 .pill.warn{background:#a60;color:#fff}
 .errlog{max-height:120px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:.75em;color:#f99;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;padding:6px;margin-top:6px}
+.custom-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.custom-row input[type=text]{background:#0c0c0c;color:var(--fg);border:1px solid var(--border);border-radius:3px;padding:3px 6px;font:inherit;font-size:.85em}
+.cf-active{font-family:ui-monospace,monospace;font-size:.78em;color:var(--muted)}
+.cf-chip{display:inline-block;background:#0a2a0a;border:1px solid var(--ok);border-radius:10px;padding:1px 8px;margin:2px}
+.cf-chip a{color:#f66;cursor:pointer;font-weight:bold;text-decoration:none;margin-left:2px}
 </style></head><body>
 
-<h1>ODrive multi-node test — {{target}}</h1>
+<h1>ODrive multi-node test — {{target}} <a href="/config" class="navlink">⚙ Config / calibrate →</a></h1>
 
 <div class="panel"><div class="row">
   <button onclick="zeroAll()">Zero all sliders</button>
@@ -298,21 +334,24 @@ const NODES = {{nodes_json | safe}};
 const HZ = {{rate_hz}};
 const DEFAULT_VEL_LIMIT = {{max_vel}};
 const DEFAULT_POS_LIMIT = {{max_pos}};
+const DEFAULT_TORQUE_LIMIT = {{max_torque}};
 
 // Per-node slider state mirror — used when constructing /cmd POSTs.
-const nodeMode = {};      // node_id -> "idle"|"velocity"|"position"
+const nodeMode = {};      // node_id -> "idle"|"velocity"|"position"|"torque"
 const nodeVel = {};       // node_id -> number (rev/s)
 const nodePos = {};       // node_id -> number (rev)
+const nodeTorque = {};    // node_id -> number (Nm)
 const nodeVelMax = {};    // node_id -> slider range
 const nodePosMax = {};    // node_id -> slider range
+const nodeTorqueMax = {}; // node_id -> slider range
 
 function el(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstChild;}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 function buildNode(n){
   const id=n.node_id;
-  nodeMode[id]='idle';nodeVel[id]=0;nodePos[id]=0;
-  nodeVelMax[id]=DEFAULT_VEL_LIMIT;nodePosMax[id]=DEFAULT_POS_LIMIT;
+  nodeMode[id]='idle';nodeVel[id]=0;nodePos[id]=0;nodeTorque[id]=0;
+  nodeVelMax[id]=DEFAULT_VEL_LIMIT;nodePosMax[id]=DEFAULT_POS_LIMIT;nodeTorqueMax[id]=DEFAULT_TORQUE_LIMIT;
   const card=el(`<div class="panel node-card" data-node="${id}">
     <div class="node-head">
       <span class="node-title">${escapeHtml(n.display)} (cmd:${n.cmd_port} data:${n.data_port})</span>
@@ -328,10 +367,13 @@ function buildNode(n){
       <label class="active" data-mode="idle"><input type="radio" name="mode-${id}" value="idle" checked>idle</label>
       <label data-mode="velocity"><input type="radio" name="mode-${id}" value="velocity">velocity (rev/s)</label>
       <label data-mode="position"><input type="radio" name="mode-${id}" value="position">position (rev)</label>
+      <label data-mode="torque"><input type="radio" name="mode-${id}" value="torque">torque (Nm)</label>
       <span style="margin-left:14px;color:var(--muted);font-size:.8em">vel ±</span>
       <input type="number" id="vmax-${id}" value="${DEFAULT_VEL_LIMIT}" step="0.5" min="0.1" style="width:60px">
       <span style="color:var(--muted);font-size:.8em">pos ±</span>
       <input type="number" id="pmax-${id}" value="${DEFAULT_POS_LIMIT}" step="0.5" min="0.1" style="width:60px">
+      <span style="color:var(--muted);font-size:.8em">tq ±</span>
+      <input type="number" id="tmax-${id}" value="${DEFAULT_TORQUE_LIMIT}" step="0.1" min="0.01" style="width:60px">
     </div>
     <div class="slider-row" id="vel-row-${id}" style="display:none">
       <label>input_vel</label>
@@ -348,6 +390,23 @@ function buildNode(n){
       <span style="color:var(--muted);font-size:.8em" id="pmax-lbl-${id}">+${DEFAULT_POS_LIMIT}</span>
       <span class="val" id="pos-val-${id}">0.00 rev</span>
       <button onclick="zeroPos(${id})">0</button>
+    </div>
+    <div class="slider-row" id="tq-row-${id}" style="display:none">
+      <label>input_torque</label>
+      <span style="text-align:right;color:var(--muted);font-size:.8em" id="tmin-lbl-${id}">−${DEFAULT_TORQUE_LIMIT}</span>
+      <input type="range" id="tq-${id}" min="${-DEFAULT_TORQUE_LIMIT}" max="${DEFAULT_TORQUE_LIMIT}" step="0.01" value="0">
+      <span style="color:var(--muted);font-size:.8em" id="tmax-lbl-${id}">+${DEFAULT_TORQUE_LIMIT}</span>
+      <span class="val" id="tq-val-${id}">0.00 Nm</span>
+      <button onclick="zeroTorque(${id})">0</button>
+    </div>
+    <div class="custom-row">
+      <span style="color:var(--muted);font-size:.85em">custom field:</span>
+      <input type="text" id="cf-name-${id}" placeholder="field (e.g. input_torque)" style="width:170px">
+      <input type="text" id="cf-val-${id}" placeholder="value (e.g. 0.5 or 15)" style="width:130px">
+      <button onclick="customSend(${id},false)" title="Merge into the next packet only">Send once</button>
+      <button onclick="customSend(${id},true)" class="arm" title="Stream in every packet until removed">Stream +</button>
+      <button onclick="customClear(${id})">Clear streamed</button>
+      <span class="cf-active" id="cf-active-${id}"></span>
     </div>
     <table class="t"><tbody id="telem-${id}"></tbody></table>
     <div class="status" id="status-${id}">connecting…</div>
@@ -369,6 +428,11 @@ function buildNode(n){
     document.getElementById(`pos-val-${id}`).textContent=nodePos[id].toFixed(2)+' rev';
     pushPos(id);
   });
+  document.getElementById(`tq-${id}`).addEventListener('input',e=>{
+    nodeTorque[id]=parseFloat(e.target.value);
+    document.getElementById(`tq-val-${id}`).textContent=nodeTorque[id].toFixed(2)+' Nm';
+    pushTorque(id);
+  });
   document.getElementById(`vmax-${id}`).addEventListener('change',e=>{
     const v=Math.max(0.1,parseFloat(e.target.value)||DEFAULT_VEL_LIMIT);
     nodeVelMax[id]=v;
@@ -385,6 +449,14 @@ function buildNode(n){
     document.getElementById(`pmin-lbl-${id}`).textContent=`−${v}`;
     document.getElementById(`pmax-lbl-${id}`).textContent=`+${v}`;
   });
+  document.getElementById(`tmax-${id}`).addEventListener('change',e=>{
+    const v=Math.max(0.01,parseFloat(e.target.value)||DEFAULT_TORQUE_LIMIT);
+    nodeTorqueMax[id]=v;
+    const s=document.getElementById(`tq-${id}`);
+    s.min=-v;s.max=v;
+    document.getElementById(`tmin-lbl-${id}`).textContent=`−${v}`;
+    document.getElementById(`tmax-lbl-${id}`).textContent=`+${v}`;
+  });
 }
 
 // Latest-wins POST per node so sliders can't queue up old values.
@@ -400,9 +472,50 @@ async function postCmd(id, body){
 
 function pushVel(id){postCmd(id,{vel:nodeVel[id]});}
 function pushPos(id){postCmd(id,{pos:nodePos[id]});}
+function pushTorque(id){postCmd(id,{torque:nodeTorque[id]});}
 function postAction(id, extra){
   return fetch(`/node/${id}/action`,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify(extra)});
+}
+
+// Parse a free-text custom value into a JSON-typed value: bool, number, else string.
+function parseCustomVal(s){
+  s=String(s).trim();
+  if(s==='true')return true;
+  if(s==='false')return false;
+  if(s!==''){const n=Number(s);if(!isNaN(n))return n;}
+  return s;
+}
+function customSend(id, stream){
+  const field=document.getElementById(`cf-name-${id}`).value.trim();
+  if(!field){alert('Enter a field name (e.g. input_torque or control_mode)');return;}
+  const value=parseCustomVal(document.getElementById(`cf-val-${id}`).value);
+  fetch(`/node/${id}/custom`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'add',field,value,stream})})
+    .then(r=>r.json()).then(j=>renderCustom(id,j.custom||{})).catch(e=>{});
+}
+function customClear(id){
+  fetch(`/node/${id}/custom`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'clear'})})
+    .then(r=>r.json()).then(j=>renderCustom(id,j.custom||{})).catch(e=>{});
+}
+function customRemove(id, field){
+  fetch(`/node/${id}/custom`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'remove',field})})
+    .then(r=>r.json()).then(j=>renderCustom(id,j.custom||{})).catch(e=>{});
+}
+const customShown={};  // node_id -> JSON string of last-rendered custom, to avoid needless DOM churn
+function renderCustom(id, custom){
+  const sig=JSON.stringify(custom);
+  if(customShown[id]===sig)return;
+  customShown[id]=sig;
+  const elc=document.getElementById(`cf-active-${id}`);
+  if(!elc)return;
+  const keys=Object.keys(custom);
+  if(!keys.length){elc.innerHTML='';return;}
+  elc.innerHTML='streaming: '+keys.map(k=>
+    `<span class="cf-chip">${escapeHtml(k)}=${escapeHtml(String(custom[k]))}`
+    +` <a onclick="customRemove(${id},'${escapeHtml(k)}')">×</a></span>`).join(' ');
 }
 
 async function setMode(id, newMode){
@@ -415,6 +528,14 @@ async function setMode(id, newMode){
   });
   document.getElementById(`vel-row-${id}`).style.display = (newMode==='velocity'?'grid':'none');
   document.getElementById(`pos-row-${id}`).style.display = (newMode==='position'?'grid':'none');
+  document.getElementById(`tq-row-${id}`).style.display = (newMode==='torque'?'grid':'none');
+
+  // Always reset the velocity & torque sliders to zero when (re)entering any
+  // mode — never start streaming a stale non-zero setpoint.
+  document.getElementById(`vel-${id}`).value=0;nodeVel[id]=0;
+  document.getElementById(`vel-val-${id}`).textContent='0.00 rev/s';
+  document.getElementById(`tq-${id}`).value=0;nodeTorque[id]=0;
+  document.getElementById(`tq-val-${id}`).textContent='0.00 Nm';
 
   if(newMode==='position'){
     // Seed slider from telemetry pos_estimate so the axis doesn't lurch.
@@ -436,10 +557,6 @@ async function setMode(id, newMode){
     }
     s.value=seed;
     document.getElementById(`pos-val-${id}`).textContent=seed.toFixed(2)+' rev';
-  }else{
-    document.getElementById(`vel-${id}`).value=0;
-    nodeVel[id]=0;
-    document.getElementById(`vel-val-${id}`).textContent='0.00 rev/s';
   }
   nodeMode[id]=newMode;
   await fetch(`/node/${id}/mode`,{method:'POST',headers:{'Content-Type':'application/json'},
@@ -454,9 +571,19 @@ function zeroPos(id){
   document.getElementById(`pos-${id}`).value=0;nodePos[id]=0;
   document.getElementById(`pos-val-${id}`).textContent='0.00 rev';pushPos(id);
 }
-function zeroAll(){NODES.forEach(n=>{zeroVel(n.node_id);zeroPos(n.node_id);});}
+function zeroTorque(id){
+  document.getElementById(`tq-${id}`).value=0;nodeTorque[id]=0;
+  document.getElementById(`tq-val-${id}`).textContent='0.00 Nm';pushTorque(id);
+}
+function zeroAll(){NODES.forEach(n=>{zeroVel(n.node_id);zeroPos(n.node_id);zeroTorque(n.node_id);});}
 
-function armOne(id){postAction(id,{axis_state:8,control_mode:nodeMode[id]==='position'?3:2,input_mode:1});}
+// Arm with the control_mode that matches the active slider mode:
+// torque→1 (TORQUE_CONTROL), position→3 (POSITION_CONTROL), else→2 (VELOCITY_CONTROL).
+function armOne(id){
+  const m=nodeMode[id];
+  const cm=m==='torque'?1:m==='position'?3:2;
+  postAction(id,{axis_state:8,control_mode:cm,input_mode:1});
+}
 function idleOne(id){postAction(id,{axis_state:1});}
 function clearErrorsOne(id){postAction(id,{clear_errors:true});}
 async function estopOne(id){
@@ -470,6 +597,12 @@ function clearErrorsAll(){NODES.forEach(n=>clearErrorsOne(n.node_id));}
 function estopAll(){if(confirm('Send ESTOP to ALL ODrive nodes?'))NODES.forEach(n=>estopOne(n.node_id));}
 
 function fmt(v,unit){return (typeof v==='number'?v.toFixed(3):'—')+(unit?' '+unit:'');}
+// Render an error bitfield together with the decoded flag names the API now
+// returns in the matching *_words field.
+function errCell(bits, words){
+  const hex='0x'+((bits>>>0)||0).toString(16);
+  return (words&&words.length)?hex+'  '+escapeHtml(words.join(', ')):hex;
+}
 async function poll(){
   let j;try{j=await(await fetch('/state')).json();}catch(e){return;}
   for(const n of NODES){
@@ -478,8 +611,8 @@ async function poll(){
     const t=ns.telem||{};
     const rows=[
       ['axis_state',     `${t.axis_state??'—'} ${axisName(t.axis_state)}`],
-      ['axis_error',     `0x${(t.axis_error??0).toString(16)}`],
-      ['active_errors',  `0x${(t.active_errors??0).toString(16)}`],
+      ['axis_error',     errCell(t.axis_error, t.axis_error_words)],
+      ['active_errors',  errCell(t.active_errors, t.active_errors_words)],
       ['pos_estimate',   fmt(t.pos_estimate,'rev')],
       ['vel_estimate',   fmt(t.vel_estimate,'rev/s')],
       ['iq_measured',    fmt(t.iq_measured,'A')],
@@ -504,6 +637,8 @@ async function poll(){
     let s=`mode=${nodeMode[id]} | sent=${ns.sent} errors=${ns.errors}`;
     if(ns.last_error)s+=`  |  last: ${ns.last_error}`;
     status.textContent=s;status.className='status '+(ns.last_error?'err':'ok');
+
+    renderCustom(id, ns.custom||{});
 
     const errs=ns.recent_errors||[];
     const log=document.getElementById(`errlog-${id}`);
@@ -530,7 +665,264 @@ poll();
 </script></body></html>"""
 
 
-def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, max_pos: float):
+CONFIG = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ODrive config — {{target}}</title>
+<style>
+:root{--bg:#111;--fg:#eee;--muted:#888;--accent:#4af;--danger:#cc1e25;--panel:#1c1c1c;--border:#2a2a2a;--ok:#1a4}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,sans-serif}
+h1{margin:0 0 12px;font-size:1.2em}
+h2{font-size:1em;margin:0 0 8px}
+a.navlink{font-size:.62em;font-weight:normal;margin-left:10px;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--accent);text-decoration:none;vertical-align:middle}
+a.navlink:hover{background:#2a2a2a}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{background:#2a2a2a;color:var(--fg);border:1px solid var(--border);padding:6px 12px;border-radius:4px;cursor:pointer;font:inherit;font-size:.9em}
+button:hover{background:#333}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--ok);border-color:var(--ok);color:#fff}
+button.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+select,input[type=text],input[type=file],textarea{background:#0c0c0c;color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:5px 8px;font:inherit;font-size:.88em}
+textarea{width:100%;min-height:80px;font-family:ui-monospace,monospace}
+.muted{color:var(--muted);font-size:.82em}
+.status{font-family:ui-monospace,monospace;font-size:.82em;margin-top:6px;word-break:break-word}
+.status.ok{color:#6c6}.status.err{color:#f66}.status.busy{color:var(--accent)}
+.cfgtable{max-height:460px;overflow-y:auto;margin-top:8px;border:1px solid var(--border);border-radius:4px}
+table.cfg{width:100%;border-collapse:collapse;font-family:ui-monospace,monospace;font-size:.8em}
+table.cfg td{padding:2px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+table.cfg td.k{color:var(--muted);width:62%;word-break:break-word}
+table.cfg input{width:100%;background:#0c0c0c;color:var(--accent);border:1px solid var(--border);border-radius:3px;padding:2px 4px;font:inherit;font-size:.95em}
+table.cfg input.dirty{border-color:var(--ok);color:#9f9}
+.cfgerr{color:#f66}
+.sep{flex:1}
+</style></head><body>
+
+<h1>ODrive config / calibrate — {{target}} <a href="/" class="navlink">← control</a></h1>
+
+<div class="panel">
+  <h2>1 · Upload endpoint map (flat_endpoints.json)</h2>
+  <div class="muted">Required before read / write / save can work. Loads the endpoint id↔path map into the drive API
+    (applies to <b>all</b> nodes). Download the file matching your hw + fw from docs.odriverobotics.com, or run with
+    <code>ODRIVE_HW_VERSION</code>+<code>ODRIVE_FW_VERSION</code> on the API and skip this.</div>
+  <div class="row" style="margin-top:8px">
+    <input type="file" id="epfile" accept=".json,application/json">
+    <button id="epupload" onclick="uploadEndpoints()">Upload to drive API</button>
+  </div>
+  <div class="status" id="ep-status"></div>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <h2 style="margin:0">Node</h2>
+    <select id="node"></select>
+    <span class="muted">all actions below target the selected node</span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>2 · Read / write drive config</h2>
+  <div class="row">
+    <button id="readbtn" onclick="readConfig()">Read config from drive</button>
+    <input type="text" id="filter" placeholder="filter paths…" oninput="applyFilter()" style="width:220px">
+    <span class="sep"></span>
+    <button class="primary" id="writebtn" onclick="writeChanged()" disabled>Write changed values</button>
+  </div>
+  <div class="status" id="cfg-status"></div>
+  <div class="cfgtable"><table class="cfg"><tbody id="cfg-body"></tbody></table></div>
+  <details style="margin-top:10px">
+    <summary class="muted" style="cursor:pointer">Advanced: write raw JSON (full flat-endpoint paths)</summary>
+    <textarea id="rawjson" placeholder='{"axis0.controller.config.vel_limit": 20.0, "axis0.config.motor.pole_pairs": 7}'></textarea>
+    <div class="row"><button onclick="writeRaw()">Write raw JSON</button></div>
+    <div class="status" id="raw-status"></div>
+  </details>
+</div>
+
+<div class="panel">
+  <h2>3 · Calibrate</h2>
+  <div class="muted">Drive must be in <b>Idle</b>. Runs asynchronously — watch <code>axis_state</code> return to 1 on the control page.</div>
+  <div class="row" style="margin-top:8px">
+    <select id="caltype">
+      <option value="full">full — FullCalibrationSequence (3)</option>
+      <option value="motor">motor — MotorCalibration (4)</option>
+      <option value="encoder_index">encoder_index — EncoderIndexSearch (6)</option>
+      <option value="encoder_offset">encoder_offset — EncoderOffsetCalibration (7)</option>
+      <option value="harmonic">harmonic — HarmonicCalibration (15)</option>
+      <option value="harmonic_commutation">harmonic_commutation — HarmonicCalibrationCommutation (16)</option>
+    </select>
+    <button onclick="calibrate()">Start calibration</button>
+  </div>
+  <div class="status" id="cal-status"></div>
+</div>
+
+<div class="panel">
+  <h2>4 · Save configuration to drive</h2>
+  <div class="muted">Persists the current config + calibration to non-volatile memory (ODrive <code>save_configuration()</code>).
+    Drive must be <b>Idle</b>; it may briefly drop off CAN while writing flash.</div>
+  <div class="row" style="margin-top:8px">
+    <button class="primary" onclick="saveConfig()">Save config to drive</button>
+  </div>
+  <div class="status" id="save-status"></div>
+</div>
+
+<script>
+const NODES = {{nodes_json | safe}};
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function nodeId(){return parseInt(document.getElementById('node').value,10);}
+function setStatus(id, msg, cls){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(cls||'');}
+// Parse a value-input string into a JSON-typed value (bool / number / string).
+function parseVal(s){
+  s=String(s).trim();
+  if(s==='true')return true; if(s==='false')return false;
+  if(s!==''&&!isNaN(Number(s)))return Number(s);
+  return s;  // includes "inf"/"-inf"/"nan" — left as-is (drive will reject if non-numeric for that type)
+}
+
+// Populate node dropdown.
+(function(){
+  const sel=document.getElementById('node');
+  for(const n of NODES){
+    const o=document.createElement('option');
+    o.value=n.node_id; o.textContent=`${n.display} (node ${n.node_id})`;
+    sel.appendChild(o);
+  }
+  if(!NODES.length){sel.innerHTML='<option>no odrive nodes discovered</option>';sel.disabled=true;}
+})();
+
+async function uploadEndpoints(){
+  const f=document.getElementById('epfile').files[0];
+  if(!f){setStatus('ep-status','choose a flat_endpoints.json file first','err');return;}
+  setStatus('ep-status',`uploading ${f.name}…`,'busy');
+  const text=await f.text();
+  try{
+    const r=await fetch('/upload_endpoints',{method:'POST',headers:{'Content-Type':'application/json'},body:text});
+    const j=await r.json();
+    if(r.ok)setStatus('ep-status',`loaded ${j.loaded ?? '?'} endpoints — ${j.status ?? 'ok'}`,'ok');
+    else setStatus('ep-status',`error: ${j.error ?? JSON.stringify(j)}`,'err');
+  }catch(e){setStatus('ep-status',`upload failed: ${e}`,'err');}
+}
+
+let cfgRows=[];  // {path, input?, errCell?}
+async function readConfig(){
+  const id=nodeId(); if(isNaN(id))return;
+  const btn=document.getElementById('readbtn'); btn.disabled=true;
+  setStatus('cfg-status','reading config from drive (this can take 10–30 s)…','busy');
+  document.getElementById('cfg-body').innerHTML='';
+  try{
+    const r=await fetch(`/node/${id}/config`);
+    const j=await r.json();
+    if(!r.ok){setStatus('cfg-status',`error: ${j.error ?? JSON.stringify(j)}`,'err');return;}
+    renderConfig(j);
+  }catch(e){setStatus('cfg-status',`read failed: ${e}`,'err');}
+  finally{btn.disabled=false;}
+}
+
+function renderConfig(obj){
+  const body=document.getElementById('cfg-body'); body.innerHTML=''; cfgRows=[];
+  let ok=0, errs=0;
+  const keys=Object.keys(obj).filter(k=>k!=='node_id').sort();
+  for(const path of keys){
+    const v=obj[path];
+    const tr=document.createElement('tr');
+    const tdK=document.createElement('td'); tdK.className='k'; tdK.textContent=path;
+    const tdV=document.createElement('td');
+    if(v&&typeof v==='object'&&'error' in v){
+      tdV.innerHTML=`<span class="cfgerr">err: ${escapeHtml(v.error)}</span>`;
+      errs++;
+      cfgRows.push({path, errCell:true});
+    }else{
+      const inp=document.createElement('input');
+      inp.type='text';
+      inp.value=(typeof v==='boolean')?String(v):String(v);
+      inp.dataset.path=path; inp.dataset.orig=inp.value;
+      inp.addEventListener('input',()=>{inp.classList.toggle('dirty',inp.value!==inp.dataset.orig);});
+      tdV.appendChild(inp);
+      cfgRows.push({path, input:inp});
+      ok++;
+    }
+    tr.appendChild(tdK); tr.appendChild(tdV); body.appendChild(tr);
+  }
+  document.getElementById('writebtn').disabled = ok===0;
+  setStatus('cfg-status',`read ${ok} values${errs?`, ${errs} unreadable`:''}. Edit fields then “Write changed values”.`,'ok');
+  applyFilter();
+}
+
+function applyFilter(){
+  const q=document.getElementById('filter').value.toLowerCase();
+  for(const tr of document.getElementById('cfg-body').children){
+    const k=tr.firstChild.textContent.toLowerCase();
+    tr.style.display = (!q||k.includes(q))?'':'none';
+  }
+}
+
+async function writeChanged(){
+  const id=nodeId(); if(isNaN(id))return;
+  const changes={};
+  for(const r of cfgRows){
+    if(r.input && r.input.value!==r.input.dataset.orig){
+      changes[r.path]=parseVal(r.input.value);
+    }
+  }
+  if(!Object.keys(changes).length){setStatus('cfg-status','no changed values to write','err');return;}
+  setStatus('cfg-status',`writing ${Object.keys(changes).length} value(s)…`,'busy');
+  try{
+    const r=await fetch(`/node/${id}/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(changes)});
+    const j=await r.json();
+    if(!r.ok){setStatus('cfg-status',`error: ${j.error ?? JSON.stringify(j)}`,'err');return;}
+    const res=j.result||j;
+    const wrote=(res.written||[]).length;
+    const errc=Object.keys(res.errors||{}).length;
+    // Mark written rows clean.
+    for(const r2 of cfgRows){
+      if(r2.input && (res.written||[]).includes(r2.path)){
+        r2.input.dataset.orig=r2.input.value; r2.input.classList.remove('dirty');
+      }
+    }
+    setStatus('cfg-status',`wrote ${wrote} value(s)${errc?`, ${errc} error(s): `+escapeHtml(JSON.stringify(res.errors)):''}`, errc?'err':'ok');
+  }catch(e){setStatus('cfg-status',`write failed: ${e}`,'err');}
+}
+
+async function writeRaw(){
+  const id=nodeId(); if(isNaN(id))return;
+  let payload;
+  try{payload=JSON.parse(document.getElementById('rawjson').value);}
+  catch(e){setStatus('raw-status',`invalid JSON: ${e}`,'err');return;}
+  setStatus('raw-status','writing…','busy');
+  try{
+    const r=await fetch(`/node/${id}/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json();
+    setStatus('raw-status', r.ok?`done: ${JSON.stringify(j.result||j)}`:`error: ${j.error??JSON.stringify(j)}`, r.ok?'ok':'err');
+  }catch(e){setStatus('raw-status',`write failed: ${e}`,'err');}
+}
+
+async function calibrate(){
+  const id=nodeId(); if(isNaN(id))return;
+  const type=document.getElementById('caltype').value;
+  if(!confirm(`Start "${type}" calibration on node ${id}? The motor may move. Drive must be Idle.`))return;
+  setStatus('cal-status',`starting ${type} calibration…`,'busy');
+  try{
+    const r=await fetch(`/node/${id}/calibrate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type})});
+    const j=await r.json();
+    setStatus('cal-status', r.ok?`${type}: ${JSON.stringify(j.result||j)}`:`error: ${j.error??JSON.stringify(j)}`, r.ok?'ok':'err');
+  }catch(e){setStatus('cal-status',`calibrate failed: ${e}`,'err');}
+}
+
+async function saveConfig(){
+  const id=nodeId(); if(isNaN(id))return;
+  if(!confirm(`Save configuration to non-volatile memory on node ${id}? Drive must be Idle and may briefly drop off CAN.`))return;
+  setStatus('save-status','saving configuration…','busy');
+  try{
+    const r=await fetch(`/node/${id}/save_config`,{method:'POST'});
+    const j=await r.json();
+    setStatus('save-status', r.ok?`saved: ${JSON.stringify(j.result||j)}`:`error: ${j.error??JSON.stringify(j)}`, r.ok?'ok':'err');
+  }catch(e){setStatus('save-status',`save failed: ${e}`,'err');}
+}
+</script></body></html>"""
+
+
+def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, max_pos: float,
+             max_torque: float):
     app = Flask(__name__)
     by_id = {n.node_id: n for n in nodes}
 
@@ -547,8 +939,71 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
         target = f"{host} ({len(nodes)} node{'s' if len(nodes) != 1 else ''})"
         return render_template_string(
             INDEX, target=target, nodes_json=nodes_json,
-            rate_hz=rate_hz, max_vel=max_vel, max_pos=max_pos,
+            rate_hz=rate_hz, max_vel=max_vel, max_pos=max_pos, max_torque=max_torque,
         )
+
+    # ── Config / calibrate page (proxies to the rove_sensor_api HTTP API) ──────
+
+    def _api(path: str) -> str:
+        return f"http://{host}:{api_http_port}{path}"
+
+    def _proxy_json(method: str, path: str, **kw):
+        """Forward a request to the rove_sensor_api and relay its JSON + status."""
+        try:
+            r = requests.request(method, _api(path), **kw)
+        except Exception as e:
+            return jsonify({"error": f"cannot reach drive API at {host}:{api_http_port}: {e}"}), 502
+        try:
+            body = r.json()
+        except ValueError:
+            body = {"raw": r.text}
+        return jsonify(body), r.status_code
+
+    @app.get("/config")
+    def config_page():
+        nodes_json = json.dumps([
+            {"node_id": n.node_id, "display": n.display,
+             "data_port": n.data_port, "cmd_port": n.cmd_port}
+            for n in nodes
+        ])
+        target = f"{host} ({len(nodes)} node{'s' if len(nodes) != 1 else ''})"
+        return render_template_string(CONFIG, target=target, nodes_json=nodes_json)
+
+    @app.post("/upload_endpoints")
+    def upload_endpoints():
+        """Upload flat_endpoints.json to the drive API (global, all nodes)."""
+        data = request.get_data()  # raw file bytes
+        if not data:
+            return jsonify({"error": "empty body — choose a flat_endpoints.json file"}), 400
+        return _proxy_json("POST", "/odrive/endpoints", data=data,
+                           headers={"Content-Type": "application/json"}, timeout=20)
+
+    @app.get("/node/<int:nid>/config")
+    def node_read_config(nid):
+        if find(nid) is None:
+            return jsonify({"error": "unknown node"}), 404
+        # Reading every config endpoint over SDO is sequential and can be slow.
+        return _proxy_json("GET", f"/odrive_{nid}/config", timeout=90)
+
+    @app.post("/node/<int:nid>/config")
+    def node_write_config(nid):
+        if find(nid) is None:
+            return jsonify({"error": "unknown node"}), 404
+        payload = request.get_json(force=True, silent=True) or {}
+        return _proxy_json("POST", f"/odrive_{nid}/config", json=payload, timeout=30)
+
+    @app.post("/node/<int:nid>/calibrate")
+    def node_calibrate(nid):
+        if find(nid) is None:
+            return jsonify({"error": "unknown node"}), 404
+        payload = request.get_json(force=True, silent=True) or {}
+        return _proxy_json("POST", f"/odrive_{nid}/calibrate", json=payload, timeout=15)
+
+    @app.post("/node/<int:nid>/save_config")
+    def node_save_config(nid):
+        if find(nid) is None:
+            return jsonify({"error": "unknown node"}), 404
+        return _proxy_json("POST", f"/odrive_{nid}/save_config", timeout=20)
 
     @app.post("/node/<int:nid>/cmd")
     def post_cmd(nid):
@@ -561,6 +1016,8 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
                 n.vel = float(body["vel"])
             if "pos" in body:
                 n.pos = float(body["pos"])
+            if "torque" in body:
+                n.torque = float(body["torque"])
         return jsonify({"ok": True})
 
     @app.post("/node/<int:nid>/mode")
@@ -570,12 +1027,14 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
             return jsonify({"error": "unknown node"}), 404
         body = request.get_json(force=True, silent=True) or {}
         new_mode = body.get("mode")
-        if new_mode not in ("idle", "velocity", "position"):
-            return jsonify({"error": "mode must be idle|velocity|position"}), 400
+        if new_mode not in ("idle", "velocity", "position", "torque"):
+            return jsonify({"error": "mode must be idle|velocity|position|torque"}), 400
         with n.lock:
             n.mode = new_mode
             if new_mode == "velocity":
                 n.vel = 0.0
+            elif new_mode == "torque":
+                n.torque = 0.0
             elif new_mode == "position":
                 # Seed pos to where the slider thinks it is so the first
                 # tick after entering position mode doesn't snap to 0.
@@ -602,6 +1061,58 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
         with n.lock:
             n.extra = (n.extra or {}) | dict(body)
         return jsonify({"queued": body})
+
+    @app.post("/node/<int:nid>/custom")
+    def post_custom(nid):
+        """Manage custom streamed command fields for a node.
+
+        Body:
+          - `{"action":"add", "field":"input_torque", "value":0.5, "stream":true}`
+            Stream `field=value` in every outgoing packet until removed. With
+            `stream:false` (or omitted) it's merged into the next packet only
+            (one-shot), same as /action.
+          - `{"action":"remove", "field":"input_torque"}` — stop streaming one.
+          - `{"action":"clear"}` — stop streaming all custom fields.
+
+        `value` should already be JSON-typed (number/bool/string). This is how
+        you "control in torque" (stream `input_torque`) or "send 15 to
+        control_mode" (one-shot `control_mode=15`).
+        """
+        n = find(nid)
+        if n is None:
+            return jsonify({"error": "unknown node"}), 404
+        body = request.get_json(force=True, silent=True) or {}
+        action = body.get("action", "add")
+
+        if action == "clear":
+            with n.lock:
+                n.custom = {}
+            return jsonify({"custom": {}})
+
+        field = body.get("field")
+        if not field or not isinstance(field, str):
+            return jsonify({"error": "field must be a non-empty string"}), 400
+
+        if action == "remove":
+            with n.lock:
+                n.custom.pop(field, None)
+                custom = dict(n.custom)
+            return jsonify({"custom": custom})
+
+        if action == "add":
+            value = body.get("value")
+            if bool(body.get("stream", False)):
+                with n.lock:
+                    n.custom[field] = value
+                    custom = dict(n.custom)
+                return jsonify({"streamed": {field: value}, "custom": custom})
+            # one-shot
+            with n.lock:
+                n.extra = (n.extra or {}) | {field: value}
+                custom = dict(n.custom)
+            return jsonify({"queued": {field: value}, "custom": custom})
+
+        return jsonify({"error": f"unknown action '{action}'"}), 400
 
     @app.post("/node/<int:nid>/estop")
     def post_estop(nid):
@@ -639,6 +1150,7 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
                 errors = n.errors
                 last_error = n.last_error
                 recent_errors = list(n.recent_errors)
+                custom = dict(n.custom)
             send_hz = sum(1 for t in send_times if now - t <= window) / window
             telem_hz = sum(1 for t in telem_times if now - t <= window) / window
             last_age = (now - telem_times[-1]) * 1000.0 if telem_times else None
@@ -651,6 +1163,7 @@ def make_app(host: str, nodes: list[NodeState], rate_hz: float, max_vel: float, 
                 "telem_hz": telem_hz,
                 "last_telem_age_ms": last_age,
                 "recent_errors": recent_errors,
+                "custom": custom,
             }
         return jsonify({"nodes": out})
 
@@ -674,6 +1187,8 @@ def main():
                    help="default velocity slider range ±rev/s")
     p.add_argument("--max-pos", type=float, default=5.0,
                    help="default position slider range ±rev")
+    p.add_argument("--max-torque", type=float, default=1.0,
+                   help="default torque slider range ±Nm")
     p.add_argument("--rate", type=float, default=50.0,
                    help="UDP stream rate Hz to each ODrive command port")
     p.add_argument("--telem-interval-ms", type=int, default=50,
@@ -708,7 +1223,7 @@ def main():
             daemon=True, name=f"odrive-telem-{n.node_id}",
         ).start()
 
-    app = make_app(args.target, nodes, args.rate, args.max_vel, args.max_pos)
+    app = make_app(args.target, nodes, args.rate, args.max_vel, args.max_pos, args.max_torque)
     print(f"ODrive test UI: http://{args.ui_host}:{args.ui_port}/", file=sys.stderr)
     try:
         app.run(host=args.ui_host, port=args.ui_port,
