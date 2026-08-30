@@ -9,8 +9,12 @@ Setup:
     pip install flask           # only dep
 
 Run:
-    ./kinova_test.py                                       # localhost
-    ./kinova_test.py --target 192.168.2.37 --ui-host 0.0.0.0 --ui-port 8090
+    ./kinova_test.py                                       # localhost, ports auto-discovered
+    ./kinova_test.py --target 192.168.2.2 --ui-host 0.0.0.0 --ui-port 8090
+
+UDP ports are auto-resolved via GET /discover on the HTTP API (--api-port,
+default 8080) because the registry assigns them by registration order and they
+drift when the driver list changes. Pass --cmd-port / --data-port to override.
 
 Wire format matches src/protocol/packet.rs.
 """
@@ -23,6 +27,8 @@ import struct
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 
 try:
     from flask import Flask, jsonify, render_template_string, request
@@ -529,6 +535,34 @@ poll();
 </script></body></html>"""
 
 
+def discover_ports(host, api_port, sensor_id):
+    """Resolve a sensor's UDP (data_port, cmd_port) from the HTTP API.
+
+    The rove_sensor_api registry assigns UDP ports by *registration order*
+    (`base + idx*2` data, `+1` cmd), so they drift whenever the driver list in
+    main.rs changes. Hardcoding 5002/5003 is what made this tool talk to the
+    wrong driver and get back "no recognised command fields in payload".
+    Resolving at startup via GET /discover keeps us pinned to the real arm.
+
+    Read-only: a single GET, no commands are issued.
+    """
+    url = f"http://{host}:{api_port}/discover"
+    try:
+        with urllib.request.urlopen(url, timeout=3.0) as resp:
+            doc = json.loads(resp.read().decode())
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        sys.exit(
+            f"discovery failed ({url}): {e}\n"
+            f"Pass --cmd-port / --data-port explicitly to skip discovery."
+        )
+    sensors = doc.get("sensors", [])
+    for s in sensors:
+        if s.get("id") == sensor_id:
+            return s["data_port"], s["command_port"]
+    avail = ", ".join(s.get("id", "?") for s in sensors) or "(none)"
+    sys.exit(f"sensor id {sensor_id!r} not found at {url}. Available: {avail}")
+
+
 def make_app(
     state: State, target_label: str, max_vel: float, max_pos: float, rate_hz: float
 ):
@@ -652,8 +686,29 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     p.add_argument("--target", default="127.0.0.1", help="rove_sensor_api host")
-    p.add_argument("--cmd-port", type=int, default=5003)
-    p.add_argument("--data-port", type=int, default=5002)
+    p.add_argument(
+        "--cmd-port",
+        type=int,
+        default=None,
+        help="UDP command port (default: auto-discover via GET /discover)",
+    )
+    p.add_argument(
+        "--data-port",
+        type=int,
+        default=None,
+        help="UDP data/telemetry port (default: auto-discover via GET /discover)",
+    )
+    p.add_argument(
+        "--api-port",
+        type=int,
+        default=8080,
+        help="rove_sensor_api HTTP port used for /discover port lookup",
+    )
+    p.add_argument(
+        "--sensor-id",
+        default="kinova_arm",
+        help="sensor id to resolve ports for via /discover",
+    )
     p.add_argument("--ui-host", default="0.0.0.0")
     p.add_argument("--ui-port", type=int, default=8090)
     p.add_argument(
@@ -676,27 +731,40 @@ def main():
     )
     args = p.parse_args()
 
+    # Resolve UDP ports. If either is omitted, look both up via GET /discover so
+    # we always track the arm's *current* ports (the registry assigns them by
+    # registration order, so they drift when main.rs's driver list changes).
+    cmd_port, data_port = args.cmd_port, args.data_port
+    if cmd_port is None or data_port is None:
+        d_data, d_cmd = discover_ports(args.target, args.api_port, args.sensor_id)
+        data_port = data_port if data_port is not None else d_data
+        cmd_port = cmd_port if cmd_port is not None else d_cmd
+        print(
+            f"Discovered {args.sensor_id!r}: data_port={d_data} cmd_port={d_cmd}",
+            file=sys.stderr,
+        )
+
     state = State()
     stop = threading.Event()
 
     threading.Thread(
-        target=stream_thread, args=(args.target, args.cmd_port, args.rate, state, stop),
+        target=stream_thread, args=(args.target, cmd_port, args.rate, state, stop),
         daemon=True, name="kinova-stream",
     ).start()
     threading.Thread(
-        target=telem_thread, args=(args.target, args.data_port, 100, state, stop),
+        target=telem_thread, args=(args.target, data_port, 100, state, stop),
         daemon=True, name="kinova-telem",
     ).start()
 
     app = make_app(
         state,
-        f"{args.target}:{args.cmd_port}",
+        f"{args.target}:{cmd_port}",
         args.max_vel,
         args.max_pos,
         args.rate,
     )
     print(f"Kinova test UI: http://{args.ui_host}:{args.ui_port}/", file=sys.stderr)
-    print(f"Streaming → {args.target}:{args.cmd_port}  /  reading ← {args.target}:{args.data_port}", file=sys.stderr)
+    print(f"Streaming → {args.target}:{cmd_port}  /  reading ← {args.target}:{data_port}", file=sys.stderr)
     try:
         # Disable Flask reloader (would re-run threads in a child process).
         app.run(host=args.ui_host, port=args.ui_port, debug=False, use_reloader=False, threaded=True)
