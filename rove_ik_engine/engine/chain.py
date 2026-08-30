@@ -29,6 +29,33 @@ def find_ik_base(project: Project, tip_id: str) -> str:
     return result
 
 
+def first_movable_joint_at_or_above(
+    project: Project, entity_id: str, max_hops: int = 16
+) -> str | None:
+    """The nearest movable (non-fixed) joint at `entity_id` or above it in the
+    parent chain.
+
+    Resolves a human-named link (e.g. "FlipperFL") to the joint that actuates
+    it, transparently skipping the fixed `_offset` joint + `_pivot` link that the
+    forgebot URDF export inserts between a link and its real revolute joint. The
+    native `.forgebot` scene has no such indirection (the link's parent IS the
+    movable joint), so this returns the same answer there. Returns None if no
+    movable joint is found within `max_hops` (e.g. a fixed sensor/cage link)."""
+    scene = project.scene
+    cur: str | None = entity_id
+    for _ in range(max_hops):
+        if cur is None:
+            return None
+        ent = scene.entities.get(cur)
+        if ent is None:
+            return None
+        joint = ent.get("joint")
+        if joint is not None and joint.type != "fixed":
+            return cur
+        cur = ent.parent
+    return None
+
+
 def count_movable_joints(project: Project, tip_id: str) -> int:
     """Movable joints between `tip_id` and its IK base."""
     base_id = find_ik_base(project, tip_id)

@@ -31,6 +31,17 @@ from .state import EngineState
 DEFAULT_SPEED_DEG_S = 30.0
 _MIN_DURATION_S = 0.15
 
+# Arrival tolerance + approach-velocity floor — the "stops at 90%, second go
+# finishes it" fix. The arm is OPEN-LOOP velocity-commanded, and a pure smoothstep
+# ease-out decays the commanded velocity toward zero at s=1; it drops below the
+# kinova sender's min_vel before the real arm arrives, so the arm stalls short
+# while the model snaps to 100%. We hold the commanded velocity at a floor (so it
+# stays well above min_vel and the arm keeps moving) until each joint is within
+# the arrival tolerance, then let it settle. Flippers are unaffected — their servo
+# tracks the model POSITION, not this velocity. (User's "bigger acceptable offset".)
+_ARRIVE_TOL_RAD = math.radians(0.5)
+_MIN_APPROACH_VEL_RAD_S = math.radians(3.0)
+
 
 @dataclass
 class Motion:
@@ -64,10 +75,12 @@ def plan_to_pose(state: EngineState, name: str, *,
     targets: dict[str, float] = {}
     eids: list[str] = []
     for eid, target in pose.items():
-        # Drums + flippers are VELOCITY-driven (drive bank); a pose-move must
-        # never ramp them as joint-space positions — that would spin the drums
-        # and fight the flipper servo. Poses are arm-only.
-        if eid in state.flipper_joint_to_node:
+        # Drums are continuous VELOCITY-driven wheels — never ramp them as a
+        # joint-space position (that would just spin them). Flippers ARE included:
+        # the move owns the joint, ramps its model angle, and the flipper servo
+        # (_send_position, pose-owned path) drives the real flipper to it — so
+        # "goto home" actually moves the flippers on the caged rover.
+        if eid in state.drive_velocity_joints:
             continue
         ent = scene.entities.get(eid)
         joint = ent.get("joint") if ent else None
@@ -88,6 +101,17 @@ def plan_to_pose(state: EngineState, name: str, *,
         state.active_motion = None
         return {"ok": True, "name": name, "duration_s": 0.0, "joints": len(eids), "note": "already at pose"}
 
+    # Collision-check the PATH (not just the endpoints): refuse a move that would
+    # drive a link into another (a flipper through the cage/chassis). Honours the
+    # runtime collision_aware flag; no-op when it's off or FCL is unavailable.
+    block = _path_collision_block(state, starts, targets, eids)
+    if block is not None:
+        frac, pairs = block
+        return {
+            "ok": False, "error": "path would self-collide — move refused",
+            "blocked_at": round(frac, 2), "collisions": pairs,
+        }
+
     speed_rad_s = max(1e-3, math.radians(speed_deg_s))
     duration = max(_MIN_DURATION_S, max_delta / speed_rad_s)
     state.active_motion = Motion(
@@ -98,6 +122,55 @@ def plan_to_pose(state: EngineState, name: str, *,
         "ok": True, "name": name, "duration_s": round(duration, 2), "joints": len(eids),
         "deltas_deg": {e[-8:]: round(math.degrees(targets[e] - starts[e]), 1) for e in eids},
     }
+
+
+def _path_collision_block(
+    state: EngineState,
+    starts: dict[str, float],
+    targets: dict[str, float],
+    eids: list[str],
+    samples: int = 16,
+) -> "tuple[float, list[str]] | None":
+    """Sample the planned trajectory and return the first waypoint that
+    introduces a NEW self-collision pair — one not already present at the start
+    pose — as (path_fraction, [pair names]). Returns None when the path is clear.
+
+    Pre-existing overlaps at the start pose (resting mesh contacts the model
+    always reports) are the baseline and are ignored; only pairs the motion would
+    CREATE block it. No-op (None) when collision_aware is off or FCL is missing
+    (check_collisions returns []), so the planner degrades to no checking rather
+    than refusing everything."""
+    if not state.collision_aware:
+        return None
+    try:
+        from forgebot.core.validation.collision import check_collisions
+    except Exception:  # noqa: BLE001
+        return None
+    baseline = {
+        (p.a, p.b)
+        for p in check_collisions(state.project, joint_values=dict(state.joint_values))
+    }
+    scene = state.project.scene
+    for i in range(1, samples + 1):
+        f = i / samples
+        wp = dict(state.joint_values)
+        for eid in eids:
+            wp[eid] = starts[eid] + (targets[eid] - starts[eid]) * f
+        new = [
+            p for p in check_collisions(state.project, joint_values=wp)
+            if (p.a, p.b) not in baseline
+        ]
+        if new:
+            names = [
+                f"{(scene.entities[p.a].name if p.a in scene.entities else p.a) or p.a}"
+                f"<->{(scene.entities[p.b].name if p.b in scene.entities else p.b) or p.b}"
+                for p in new
+            ]
+            # De-dup while preserving order.
+            seen: set[str] = set()
+            names = [n for n in names if not (n in seen or seen.add(n))]
+            return f, names
+    return None
 
 
 def advance_motion(state: EngineState) -> bool:
@@ -116,8 +189,15 @@ def advance_motion(state: EngineState) -> bool:
     dss_dt = (6.0 * sc * (1.0 - sc)) / m.duration if m.duration > 0 else 0.0
     for eid in m.eids:
         a, b = m.starts[eid], m.targets[eid]
-        state.joint_values[eid] = a + (b - a) * ss
-        state.joint_velocities[eid] = (b - a) * dss_dt
+        pos = a + (b - a) * ss
+        state.joint_values[eid] = pos
+        vel = (b - a) * dss_dt
+        # Hold a minimum approach velocity (in the move direction) until the joint
+        # is within the arrival tolerance, so the open-loop velocity-commanded arm
+        # doesn't asymptote below the sender's min_vel and stall short of target.
+        if abs(b - pos) > _ARRIVE_TOL_RAD and abs(vel) < _MIN_APPROACH_VEL_RAD_S:
+            vel = math.copysign(_MIN_APPROACH_VEL_RAD_S, b - a)
+        state.joint_velocities[eid] = vel
     if s >= 1.0:
         for eid in m.eids:                 # land exactly on target
             state.joint_values[eid] = m.targets[eid]

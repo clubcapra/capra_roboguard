@@ -1,0 +1,12 @@
+{
+  "reference": "bottom_40",
+  "top_41": {
+    "yaw_deg": 63.0,
+    "pitch_deg": 0.0,
+    "roll_deg": 0.0,
+    "dx": 0.0,
+    "dy": 0.0,
+    "dz": 0.12
+  },
+  "note": "top(.41) transform relative to the IMU-leveled bottom(.40) body frame"
+}

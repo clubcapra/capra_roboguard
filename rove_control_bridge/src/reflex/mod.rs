@@ -22,10 +22,17 @@ pub struct Trip {
     pub reason: String,
 }
 
+/// Consecutive ticks below the fall floor before the fall reflex trips. GNSS
+/// altitude is very noisy (z swings ±10 m), so a single low sample is NOT a fall;
+/// require it sustained (~1 s @ 50 Hz). The real edge protection is the lidar
+/// cliff reflex — this is a coarse "drove right off the map" backstop.
+const FALL_DEBOUNCE_TICKS: u32 = 50;
+
 pub struct ReflexEngine {
     cfg: ReflexCfg,
     home: (f64, f64),
     tripped: Option<Trip>,
+    fall_ticks: u32,
 }
 
 impl ReflexEngine {
@@ -34,6 +41,7 @@ impl ReflexEngine {
             cfg,
             home,
             tripped: None,
+            fall_ticks: 0,
         }
     }
 
@@ -49,6 +57,12 @@ impl ReflexEngine {
         if self.tripped.is_some() {
             return self.tripped.as_ref();
         }
+        // debounce the fall check against noisy GNSS altitude
+        if pose.z < -self.cfg.fall_floor_m {
+            self.fall_ticks += 1;
+        } else {
+            self.fall_ticks = 0;
+        }
         if let Some(reason) = self.evaluate(pose) {
             tracing::error!("REFLEX TRIP — {reason} — estop");
             self.tripped = Some(Trip { reason });
@@ -57,8 +71,11 @@ impl ReflexEngine {
     }
 
     fn evaluate(&self, pose: &Pose) -> Option<String> {
-        if pose.z < -self.cfg.fall_floor_m {
-            return Some(format!("fall: height {:.1} m below datum", pose.z));
+        if self.fall_ticks >= FALL_DEBOUNCE_TICKS {
+            return Some(format!(
+                "fall: height {:.1} m below datum (sustained {} ticks)",
+                pose.z, self.fall_ticks
+            ));
         }
         let d = (pose.x - self.home.0).hypot(pose.y - self.home.1);
         if d > self.cfg.geofence_radius_m {
@@ -67,11 +84,13 @@ impl ReflexEngine {
                 d, self.cfg.geofence_radius_m
             ));
         }
-        if pose.roll_deg.abs() > self.cfg.max_roll_deg {
-            return Some(format!("attitude: roll {:.0} deg", pose.roll_deg));
-        }
-        if pose.pitch_deg.abs() > self.cfg.max_pitch_deg {
-            return Some(format!("attitude: pitch {:.0} deg", pose.pitch_deg));
+        // Body tilt from vertical (from the VN accel) — frame-honest, unlike the
+        // raw VN roll/pitch which read ~90° because the VN is mounted rotated.
+        if pose.tilt_deg > self.cfg.max_tilt_deg {
+            return Some(format!(
+                "attitude: tilt {:.0} deg (limit {:.0})",
+                pose.tilt_deg, self.cfg.max_tilt_deg
+            ));
         }
         None
     }
@@ -88,17 +107,19 @@ mod tests {
             fall_floor_m: 5.0,
             max_roll_deg: 45.0,
             max_pitch_deg: 45.0,
+            max_tilt_deg: 45.0,
         }
     }
 
-    fn pose_at(x: f64, y: f64, z: f64, roll: f64, pitch: f64) -> Pose {
+    fn pose_at(x: f64, y: f64, z: f64, tilt: f64) -> Pose {
         Pose {
             x,
             y,
             z,
             yaw_ned_deg: 0.0,
-            roll_deg: roll,
-            pitch_deg: pitch,
+            roll_deg: 0.0,
+            pitch_deg: 0.0,
+            tilt_deg: tilt,
             yaw_rate: 0.0,
             gnss_fix: true,
             position_confidence: 1.0,
@@ -110,26 +131,32 @@ mod tests {
     #[test]
     fn nominal_pose_is_ok() {
         let mut r = ReflexEngine::new(cfg(), (0.0, 0.0));
-        assert!(r.check(&pose_at(3.0, 4.0, 0.0, 2.0, 3.0)).is_none());
+        assert!(r.check(&pose_at(3.0, 4.0, 0.0, 3.0)).is_none());
     }
 
     #[test]
     fn geofence_trips_and_latches() {
         let mut r = ReflexEngine::new(cfg(), (0.0, 0.0));
-        assert!(r.check(&pose_at(20.0, 0.0, 0.0, 0.0, 0.0)).is_some());
+        assert!(r.check(&pose_at(20.0, 0.0, 0.0, 0.0)).is_some());
         // Latches even after returning inside the fence.
-        assert!(r.check(&pose_at(0.0, 0.0, 0.0, 0.0, 0.0)).is_some());
+        assert!(r.check(&pose_at(0.0, 0.0, 0.0, 0.0)).is_some());
     }
 
     #[test]
-    fn fall_trips() {
+    fn fall_trips_only_when_sustained() {
         let mut r = ReflexEngine::new(cfg(), (0.0, 0.0));
-        assert!(r.check(&pose_at(0.0, 0.0, -50.0, 0.0, 0.0)).is_some());
+        // a single low-z sample is NOT a fall (GNSS-altitude noise)
+        assert!(r.check(&pose_at(0.0, 0.0, -50.0, 0.0)).is_none());
+        // sustained low z does trip
+        for _ in 0..super::FALL_DEBOUNCE_TICKS + 1 {
+            r.check(&pose_at(0.0, 0.0, -50.0, 0.0));
+        }
+        assert!(r.check(&pose_at(0.0, 0.0, -50.0, 0.0)).is_some());
     }
 
     #[test]
-    fn rollover_trips() {
+    fn tilt_trips() {
         let mut r = ReflexEngine::new(cfg(), (0.0, 0.0));
-        assert!(r.check(&pose_at(0.0, 0.0, 0.0, 60.0, 0.0)).is_some());
+        assert!(r.check(&pose_at(0.0, 0.0, 0.0, 60.0)).is_some());
     }
 }

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from aiohttp import WSCloseCode, WSMsgType, web
 from aiohttp.web_runner import AppRunner, TCPSite
@@ -55,6 +55,7 @@ class HttpWsServer:
         hardware: HardwareConfig | None = None,
         flippers: "FlippersConfig | None" = None,
         offsets_path: Path | None = None,
+        reheal: "Callable[[], Awaitable[dict]] | None" = None,
     ) -> None:
         self.state = state
         self.bus = bus
@@ -68,6 +69,7 @@ class HttpWsServer:
         self.hardware = hardware
         self.flippers = flippers
         self.offsets_path = offsets_path
+        self.reheal = reheal
         self._state_subs: set[web.WebSocketResponse] = set()
         self._ovis_subs: set[web.WebSocketResponse] = set()
         self._runner: AppRunner | None = None
@@ -99,6 +101,12 @@ class HttpWsServer:
         # Snap model joints to the latest kinova state (debug button).
         app.router.add_post("/api/v1/sync", self._http_sync)
         app.router.add_get("/api/v1/sync/status", self._http_sync_status)
+
+        # Recover from a rove_sensor_api reload / e-stop recovery without a
+        # restart: re-discover ports + re-anchor synced flippers. The e-stop
+        # watchdog POSTs this on arm-recovery (alongside sensor_api's /reload).
+        app.router.add_post("/api/v1/reload", self._http_reload)
+        app.router.add_post("/reload", self._http_reload)
 
         # Flippers: capture the model<->ODrive offset (sync), manually rotate a
         # flipper joint in the model (jog, for pre-sync alignment), and inspect
@@ -321,6 +329,28 @@ class HttpWsServer:
                 "offsets_deg": offsets_deg,   # degrees, for the UI display
             }
         )
+
+    async def _http_reload(self, _request: web.Request) -> web.Response:
+        """Recover from a rove_sensor_api reload / e-stop recovery without
+        restarting: re-discover served ports and re-anchor synced flippers to
+        their live angle (the worm gear means a power-cycled flipper didn't move,
+        so we keep its position and re-derive the offset). The e-stop watchdog
+        calls this on arm-recovery so the engine self-heals instead of needing a
+        reinstall."""
+        if self.reheal is None:
+            return web.json_response(
+                {"ok": False, "error": "reheal not available (no drive bank configured)"},
+                status=409,
+            )
+        try:
+            result = await self.reheal()
+        except Exception as exc:  # noqa: BLE001
+            _log.exception("reload/reheal failed: %s", exc)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+        # Persist the (now re-anchored) state so a later restart resumes from it.
+        if result.get("reanchored"):
+            self._persist_offsets()
+        return web.json_response({"ok": True, **result})
 
     async def _http_ik_collision_get(self, _request: web.Request) -> web.Response:
         return web.json_response({"enabled": bool(self.state.collision_aware)})
