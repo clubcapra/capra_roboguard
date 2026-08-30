@@ -76,6 +76,14 @@ impl Router {
         self.mode = Mode::Estop;
     }
 
+    /// Cancel the current mission — go Idle (Hold) and stay there until a NEW
+    /// mission is loaded. Used when the teleoperator takes control: autonomy
+    /// stops and does NOT resume the old goal after teleop ends.
+    pub fn cancel(&mut self) {
+        self.mode = Mode::Idle;
+        self.idx = self.waypoints.len();
+    }
+
     /// Current target waypoint, if any (for logging).
     #[allow(dead_code)]
     pub fn current_waypoint(&self) -> Option<Waypoint> {

@@ -10,6 +10,7 @@
 
 pub mod cloud;
 pub mod costmap;
+pub mod lvxr;
 
 use crate::position::Pose;
 use costmap::CostMap;

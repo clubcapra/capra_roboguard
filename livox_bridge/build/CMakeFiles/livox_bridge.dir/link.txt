@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/livox_bridge.dir/link.d CMakeFiles/livox_bridge.dir/src/livox_bridge.cpp.o -o livox_bridge  /home/capra/Livox-SDK2/build/sdk_core/liblivox_lidar_sdk_static.a -lpthread
