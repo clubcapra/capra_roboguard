@@ -21,6 +21,9 @@ pub struct SensorInfo {
     pub has_config: bool,
     /// Whether this sensor supports triggering a calibration sequence.
     pub has_calibrate: bool,
+    /// Whether this sensor supports persisting its configuration to
+    /// non-volatile memory (e.g. ODrive `save_configuration`).
+    pub has_save_config: bool,
     /// Whether this sensor supports *writing* individual endpoints by path.
     /// Reads (`list_endpoints`, `read_endpoint`) are available on every driver
     /// via the default trait impl, so they don't need a flag.
@@ -100,6 +103,7 @@ impl SensorRegistry {
                     has_estop: driver.has_estop(),
                     has_config: driver.has_config(),
                     has_calibrate: driver.has_calibrate(),
+                    has_save_config: driver.has_save_config(),
                     has_endpoint_write: driver.has_endpoint_write(),
                 }
             })

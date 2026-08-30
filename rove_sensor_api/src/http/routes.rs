@@ -46,6 +46,8 @@ pub struct SensorEndpoints {
     pub config: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub calibrate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub save_config: Option<String>,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
@@ -224,6 +226,7 @@ async fn discover(State(reg): State<Arc<SensorRegistry>>) -> Json<DiscoverRespon
                 estop: s.has_estop.then(|| format!("/{}/estop", s.id)),
                 config: s.has_config.then(|| format!("/{}/config", s.id)),
                 calibrate: s.has_calibrate.then(|| format!("/{}/calibrate", s.id)),
+                save_config: s.has_save_config.then(|| format!("/{}/save_config", s.id)),
             };
             SensorSummary {
                 id: s.id,
@@ -392,6 +395,20 @@ async fn sensor_calibrate(
 ) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
     let outcome = state.driver.calibrate(&payload);
     log_outcome(&state, addr, &headers, "calibrate", &payload, &outcome);
+    let result = outcome.map_err(internal_err)?;
+    Ok(Json(CommandResult {
+        status: "ok".to_string(),
+        result,
+    }))
+}
+
+async fn sensor_save_config(
+    State(state): State<SensorState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> Result<Json<CommandResult>, (StatusCode, Json<ErrorResponse>)> {
+    let outcome = state.driver.save_config();
+    log_outcome(&state, addr, &headers, "save_config", &Value::Null, &outcome);
     let result = outcome.map_err(internal_err)?;
     Ok(Json(CommandResult {
         status: "ok".to_string(),
@@ -685,6 +702,9 @@ pub fn build_router(
         }
         if sensor.has_calibrate {
             sensor_router = sensor_router.route("/calibrate", post(sensor_calibrate));
+        }
+        if sensor.has_save_config {
+            sensor_router = sensor_router.route("/save_config", post(sensor_save_config));
         }
 
         let sensor_router = sensor_router.with_state(state);
@@ -1247,8 +1267,8 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
                 .tag(tag)
                 .summary(Some(format!("{} - Calibrate", sensor.display_name)))
                 .description(Some(format!(
-                    "Start a calibration sequence on **{}**.\n\n**Body**: `{{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\"}}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1).",
-                    sensor.display_name
+                    "Start a calibration sequence on **{}**.\n\n**Body**: `{{\"type\": \"full\" | \"motor\" | \"encoder_index\" | \"encoder_offset\" | \"harmonic\" | \"harmonic_commutation\"}}`\n\n| type | Axis State | Description |\n|---|---|---|\n| `full` | 3 | Full calibration (motor + encoder) |\n| `motor` | 4 | Motor calibration only |\n| `encoder_index` | 6 | Encoder index search |\n| `encoder_offset` | 7 | Encoder offset calibration |\n| `harmonic` | 15 | Harmonic (encoder error) calibration |\n| `harmonic_commutation` | 16 | Harmonic calibration (commutation) |\n\nThe drive must be in **Idle** state before calibrating. The sequence runs asynchronously — poll `/data` to watch `axis_state` return to Idle (1). Run **Save Configuration** (`POST /{}/save_config`) afterwards to persist the result.",
+                    sensor.display_name, sensor.id
                 )))
                 .request_body(Some(
                     RequestBodyBuilder::new()
@@ -1281,6 +1301,38 @@ fn build_openapi(registry: &SensorRegistry) -> utoipa::openapi::OpenApi {
                 format!("{}/calibrate", base),
                 PathItemBuilder::new()
                     .operation(HttpMethod::Post, cal_op)
+                    .build(),
+            );
+        }
+
+        if sensor.has_save_config {
+            let save_op = OperationBuilder::new()
+                .tag(tag)
+                .summary(Some(format!("{} - Save Configuration", sensor.display_name)))
+                .description(Some(format!(
+    "Persist the current configuration of **{}** to non-volatile memory.\n\nInvokes the ODrive `save_configuration()` function endpoint over CAN SDO — call this **after** a calibration (`/{}/calibrate`) or config write (`/{}/config`) to make the changes survive a reboot. No payload required.\n\nThe drive **must be in Idle** (axis_state 1) — ODrive refuses to save while armed. Requires the endpoint map (`flat_endpoints.json`) so the function id can be resolved. Writing flash makes the drive briefly unresponsive and may reset CAN, so telemetry can stall momentarily.",
+                    sensor.display_name, sensor.id, sensor.id
+                )))
+                .response(
+                    "200",
+                    ResponseBuilder::new()
+                        .description("Save triggered")
+                        .content(
+                            "application/json",
+                            ContentBuilder::new()
+                                .schema(Some(RefOr::Ref(utoipa::openapi::Ref::from_schema_name(
+                                    "CommandResult",
+                                ))))
+                                .build(),
+                        )
+                        .build(),
+                )
+                .build();
+
+            paths = paths.path(
+                format!("{}/save_config", base),
+                PathItemBuilder::new()
+                    .operation(HttpMethod::Post, save_op)
                     .build(),
             );
         }

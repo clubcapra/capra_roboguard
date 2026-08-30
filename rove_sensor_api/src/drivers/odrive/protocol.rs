@@ -92,6 +92,9 @@ pub enum AxisState {
     Homing = 11,
     EncoderHallPolarityCalibration = 12,
     EncoderHallPhaseCalibration = 13,
+    AnticoggingCalibration = 14,
+    HarmonicCalibration = 15,
+    HarmonicCalibrationCommutation = 16,
 }
 
 impl AxisState {
@@ -110,6 +113,9 @@ impl AxisState {
             11 => Some(Self::Homing),
             12 => Some(Self::EncoderHallPolarityCalibration),
             13 => Some(Self::EncoderHallPhaseCalibration),
+            14 => Some(Self::AnticoggingCalibration),
+            15 => Some(Self::HarmonicCalibration),
+            16 => Some(Self::HarmonicCalibrationCommutation),
             _ => None,
         }
     }
@@ -386,6 +392,16 @@ pub fn encode_sdo_read(endpoint_id: u16) -> [u8; 4] {
     [SDO_OPCODE_READ, endpoint_id as u8, (endpoint_id >> 8) as u8, 0x00]
 }
 
+/// RxSdo function-call request (send with CMD_RXSDO): [opcode=0x01, ep_lo, ep_hi, 0x00].
+///
+/// Triggers a no-argument function endpoint (e.g. `save_configuration`,
+/// `reboot`) by writing to its endpoint id with no value payload. Per the
+/// ODrive 0.6.11 CAN guide "Function call" example, the raw frame for
+/// `save_configuration` (id 0x0253) is `0x004 01 53 02 00`.
+pub fn encode_sdo_call(endpoint_id: u16) -> [u8; 4] {
+    [SDO_OPCODE_WRITE, endpoint_id as u8, (endpoint_id >> 8) as u8, 0x00]
+}
+
 /// RxSdo write request for f32 (send with CMD_RXSDO): [0x01, ep_lo, ep_hi, 0x00, b0..b3]
 pub fn encode_sdo_write_f32(endpoint_id: u16, val: f32) -> [u8; 8] {
     let mut buf = [0u8; 8];
@@ -430,4 +446,88 @@ pub fn decode_sdo_response(data: &[u8]) -> Option<(u16, [u8; 4])> {
     let value_len = (data.len() - 4).min(4);
     value_bytes[..value_len].copy_from_slice(&data[4..4 + value_len]);
     Some((endpoint_id, value_bytes))
+}
+
+// ── Error / status word decoding (fw ≥ 0.6.11) ───────────────────────────────
+//
+// The heartbeat `axis_error` and the Get_Error `active_errors` / `disarm_reason`
+// fields are all `ODrive.Error` bitfields. The values below are taken verbatim
+// from the ODrive 0.6.11 API reference (com_odriverobotics_ODrive.html →
+// ODrive.Error). They are exposed alongside the raw numbers so operators get
+// human-readable error names without an offline lookup table.
+
+/// `ODrive.Error` bitfield flags as `(bit value, name)` pairs (fw 0.6.11).
+pub const ODRIVE_ERRORS: &[(u32, &str)] = &[
+    (0x0000_0001, "INITIALIZING"),
+    (0x0000_0002, "SYSTEM_LEVEL"),
+    (0x0000_0004, "TIMING_ERROR"),
+    (0x0000_0008, "MISSING_ESTIMATE"),
+    (0x0000_0010, "BAD_CONFIG"),
+    (0x0000_0020, "DRV_FAULT"),
+    (0x0000_0040, "MISSING_INPUT"),
+    (0x0000_0100, "DC_BUS_OVER_VOLTAGE"),
+    (0x0000_0200, "DC_BUS_UNDER_VOLTAGE"),
+    (0x0000_0400, "DC_BUS_OVER_CURRENT"),
+    (0x0000_0800, "DC_BUS_OVER_REGEN_CURRENT"),
+    (0x0000_1000, "CURRENT_LIMIT_VIOLATION"),
+    (0x0000_2000, "MOTOR_OVER_TEMP"),
+    (0x0000_4000, "INVERTER_OVER_TEMP"),
+    (0x0000_8000, "VELOCITY_LIMIT_VIOLATION"),
+    (0x0001_0000, "POSITION_LIMIT_VIOLATION"),
+    (0x0100_0000, "WATCHDOG_TIMER_EXPIRED"),
+    (0x0200_0000, "ESTOP_REQUESTED"),
+    (0x0400_0000, "SPINOUT_DETECTED"),
+    (0x0800_0000, "BRAKE_RESISTOR_DISARMED"),
+    (0x1000_0000, "THERMISTOR_DISCONNECTED"),
+    (0x4000_0000, "CALIBRATION_ERROR"),
+];
+
+/// Decode an `ODrive.Error` bitfield into the list of set flag names.
+///
+/// Returns an empty vec when no bits are set (no error). Any bits not covered
+/// by [`ODRIVE_ERRORS`] are reported as `UNKNOWN(0x..)` so unrecognised flags
+/// from a newer firmware are never silently dropped.
+pub fn decode_odrive_errors(bits: u32) -> Vec<String> {
+    if bits == 0 {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let mut matched = 0u32;
+    for (mask, name) in ODRIVE_ERRORS {
+        if bits & mask != 0 {
+            out.push((*name).to_string());
+            matched |= mask;
+        }
+    }
+    let leftover = bits & !matched;
+    if leftover != 0 {
+        out.push(format!("UNKNOWN(0x{leftover:08x})"));
+    }
+    out
+}
+
+/// Name for an `ODrive.ProcedureResult` value (fw 0.6.11 heartbeat byte 5).
+///
+/// `CALIBRATION_ERROR` in the error bitfield points here for the specific
+/// reason a calibration / procedure failed.
+pub fn procedure_result_name(v: u8) -> &'static str {
+    match v {
+        0 => "SUCCESS",
+        1 => "BUSY",
+        2 => "CANCELLED",
+        3 => "DISARMED",
+        4 => "NO_RESPONSE",
+        5 => "POLE_PAIR_CPR_MISMATCH",
+        6 => "PHASE_RESISTANCE_OUT_OF_RANGE",
+        7 => "PHASE_INDUCTANCE_OUT_OF_RANGE",
+        8 => "UNBALANCED_PHASES",
+        9 => "INVALID_MOTOR_TYPE",
+        10 => "ILLEGAL_HALL_STATE",
+        11 => "TIMEOUT",
+        12 => "HOMING_WITHOUT_ENDSTOP",
+        13 => "INVALID_STATE",
+        14 => "NOT_CALIBRATED",
+        15 => "NOT_CONVERGING",
+        _ => "UNKNOWN",
+    }
 }
