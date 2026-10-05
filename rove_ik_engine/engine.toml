@@ -91,7 +91,7 @@ step_rate_deg_s = 20.0
 [[drives.node]]
 node_id = 31
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumFL"
 data_port = 0
 sign = 1.0
@@ -101,7 +101,7 @@ cmd_port = 0
 [[drives.node]]
 node_id = 34
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumBL"
 data_port = 0
 sign = 1.0
@@ -111,7 +111,7 @@ cmd_port = 0
 [[drives.node]]
 node_id = 32
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumFR"
 data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
@@ -121,7 +121,7 @@ cmd_port = 0
 [[drives.node]]
 node_id = 33
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumBR"
 data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
@@ -138,9 +138,9 @@ data_port = 0
 sign = -1.0
 output = true
 cmd_port = 0
-max_vel_rev_s = 20.0  # cap on the servo's velocity command (motor rev/s)
-min_deg = -90.0    # soft travel limits (clamp the target)
-max_deg = 90.0
+max_vel_rev_s = 25.0  # cap on the servo's velocity command (motor rev/s)
+min_deg = -360.0    # soft travel limits (clamp the target)
+max_deg = 360.0
 
 [[drives.node]]
 node_id = 42
@@ -150,6 +150,6 @@ data_port = 0
 sign = 1.0
 output = true
 cmd_port = 0
-max_vel_rev_s = 20.0
-min_deg = -90.0
-max_deg = 90.0
+max_vel_rev_s = 25.0
+min_deg = -360.0
+max_deg = 360.0

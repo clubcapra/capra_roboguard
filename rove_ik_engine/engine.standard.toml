@@ -120,52 +120,54 @@ step_rate_deg_s = 20.0
 # by the control bridge; position-commanding them is mainly meaningful for
 # flippers, but the capability is wired for all per request.
 
-# Data ports are the REAL robot's served ports (curl
-# http://192.168.2.2:8080/discover; the sim uses different ports).
+# PORTS ARE NOT CONFIGURED HERE. Every node's data/cmd port is resolved from the
+# robot's GET /discover at startup (data_port/cmd_port left 0 = "ask /discover").
+# There are NO fallback ports on purpose: sensor_api assigns ports dynamically,
+# so a stale/guessed port can map to a DIFFERENT motor (a drum's old fallback
+# port became a flipper's cmd port after a sensor_api restart — track commands
+# drove a flipper). The engine WAITS for /discover before commanding, and a node
+# /discover doesn't list is left disabled — never read, never commanded.
 #
-# DRUMS: 31/34 = LEFT side, 32/33 = RIGHT side (the sim only maps them L/R, not
-# to a specific corner). The node->corner pairing below is a best guess; swap
-# the `joint` names if a wheel mirrors to the wrong corner. Drums are continuous
-# wheels, so a mirrored position mostly shows the wheel spinning to match.
+# DRUMS: 31/34 = LEFT side, 32/33 = RIGHT side.
 [[drives.node]]
 node_id = 31
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumFL"
-data_port = 5006
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5007
+cmd_port = 0
 
 [[drives.node]]
 node_id = 34
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumBL"
-data_port = 5014
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5015
+cmd_port = 0
 
 [[drives.node]]
 node_id = 32
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumFR"
-data_port = 5012
+data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
 output = true
-cmd_port = 5013
+cmd_port = 0
 
 [[drives.node]]
 node_id = 33
 mode = "velocity"
-max_vel_rev_s = 10.0
+max_vel_rev_s = 30.0
 joint = "DrumBR"
-data_port = 5016
+data_port = 0
 sign = -1.0        # RIGHT track inverted (right ODrives are mirror-mounted)
 output = true
-cmd_port = 5017
+cmd_port = 0
 
 # FLIPPERS: only 41/42 are wired (43/44 are fried — absent from /discover).
 # mode="position" now means "velocity-servo to a position target": the engine
@@ -175,22 +177,22 @@ cmd_port = 5017
 node_id = 41
 mode = "position"
 joint = "FlipperFL"
-data_port = 5012   # fallback only — overridden by /discover at startup
+data_port = 0
 sign = -1.0        # FL mirror-flipped to match FR (was 1.0: FL drove in sync w/ FR; should mirror)
 output = true
-cmd_port = 5013
-max_vel_rev_s = 20.0  # cap on the servo's velocity command (motor rev/s)
-min_deg = -90.0    # soft travel limits (clamp the target)
-max_deg = 90.0
+cmd_port = 0
+max_vel_rev_s = 25.0  # cap on the servo's velocity command (motor rev/s)
+min_deg = -360.0    # soft travel limits (clamp the target)
+max_deg = 360.0
 
 [[drives.node]]
 node_id = 42
 mode = "position"
 joint = "FlipperFR"
-data_port = 5016   # fallback only — overridden by /discover at startup
+data_port = 0
 sign = 1.0
 output = true
-cmd_port = 5017
-max_vel_rev_s = 20.0
-min_deg = -90.0
-max_deg = 90.0
+cmd_port = 0
+max_vel_rev_s = 25.0
+min_deg = -360.0
+max_deg = 360.0

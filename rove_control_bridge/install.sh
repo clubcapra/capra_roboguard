@@ -71,6 +71,12 @@ Description=Capra Roboguard control bridge / orchestrator (rove_control_bridge)
 Documentation=file://${PROJECT_DIR}/README.md
 After=network-online.target rove-sensor-api.service rove-ik-engine.service
 Wants=network-online.target
+# The bridge resolves telemetry + gripper ports from /discover at startup, and
+# sensor_api assigns them DYNAMICALLY — a sensor_api restart shuffles the map
+# and leaves the bridge subscribed to the wrong devices. PartOf propagates
+# sensor_api restarts here so the bridge always re-discovers. No-op if
+# sensor_api isn't a service on this host.
+PartOf=rove-sensor-api.service
 # Always retry: the bridge exits if /discover is down at startup, and it is an
 # always-on teleop front door (so even a clean mission-complete exit should come
 # back). The default start-rate limit would park it in 'failed' after a few rapid
