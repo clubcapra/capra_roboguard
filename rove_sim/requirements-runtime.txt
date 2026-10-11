@@ -1,0 +1,10 @@
+# Physics, shared GPU rendering and texture-aware CPU raycasts.
+numpy>=1.26
+pybullet>=3.2.7
+PyYAML>=6
+Pillow>=10
+trimesh>=4
+moderngl>=5.10
+embreex==4.4.0
+scipy>=1.11
+numba>=0.61

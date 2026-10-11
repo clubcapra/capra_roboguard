@@ -15,6 +15,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import hashlib
+from pathlib import Path
 
 # --- ground (drivable surface) classification: collision + flat-spot ----------
 GROUND_KEYWORDS = ("grass", "rock", "dirt", "road", "cliff", "ground",
@@ -30,61 +32,11 @@ CATEGORY_COLORS = {
     "foliage": [0.27, 0.40, 0.20, 1],
     "metal":   [0.55, 0.55, 0.58, 1],
 }
-MANIFEST_VERSION = 9
+MANIFEST_VERSION = 11
 
-# Alpha-mesh cutout (bake foliage leaf-silhouettes into geometry) is implemented
-# in _alpha_cutout, but on this asset the leaf detail is finer than geometry can
-# represent -- it shatters canopies/litter into angular shards that look worse
-# than clean opaque cards. PyBullet can't alpha-blend billboards (the way game
-# engines render foliage), so we keep cards opaque here and do the real
-# transparent-gap/leaf-hit logic in the lidar raycast (per-ray texture-alpha
-# lookup at the hit UV) where it's both correct and free. Flip to True to A/B it.
+# Explicit legacy Bullet raycasting can use baked cutout geometry. The GPU
+# renderer and Embree worker use original triangles and per-texel RGBA coverage.
 _CUTOUT_FOLIAGE = True
-
-
-def _flatten_texture(png: str) -> bool:
-    """Composite a texture's alpha away so PyBullet can render it.
-
-    PyBullet's renderer IGNORES per-texel texture alpha (loadTexture drops the
-    channel), so glTF alphaMode=BLEND cards (foliage, grass, leaf litter, the
-    road overlay) render their TRANSPARENT texels as opaque -- usually black,
-    giving the "black holes" + flat-colour cards. We can't get true cutout in
-    pybullet, so the next best thing: fill the transparent texels with the mean
-    of the opaque ones (a few dilation passes to keep edges sensible) and drop
-    the alpha. No more black; the texture reads as its real colours everywhere.
-    Returns True if it rewrote the file. Idempotent (RGB images are left as-is).
-    """
-    import numpy as np
-    from PIL import Image
-    im = Image.open(png)
-    if im.mode not in ("RGBA", "LA", "P"):
-        return False
-    im = im.convert("RGBA")
-    arr = np.asarray(im).astype(np.float32)
-    rgb, a = arr[..., :3], arr[..., 3]
-    opaque = a > 16.0
-    if opaque.all() or not opaque.any():
-        Image.fromarray(arr[..., :3].astype(np.uint8), "RGB").save(png)
-        return True
-    fill = rgb[opaque].mean(axis=0)
-    out = rgb.copy()
-    out[~opaque] = fill
-    # a few dilation passes so opaque colours bleed into the holes (better than a
-    # flat mean at card edges); cheap on these <=2k textures.
-    mask = opaque.copy()
-    for _ in range(4):
-        if mask.all():
-            break
-        nbr = np.zeros_like(out); cnt = np.zeros(mask.shape, np.float32)
-        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            sh = np.roll(np.where(mask[..., None], out, 0), (dy, dx), (0, 1))
-            sm = np.roll(mask, (dy, dx), (0, 1)).astype(np.float32)
-            nbr += sh; cnt += sm
-        grow = (~mask) & (cnt > 0)
-        out[grow] = (nbr[grow] / cnt[grow, None])
-        mask |= grow
-    Image.fromarray(out.astype(np.uint8), "RGB").save(png)
-    return True
 
 
 def _alpha_cutout(mesh, target_uv: float = 0.03, max_level: int = 3,
@@ -207,21 +159,23 @@ def build_assets(src: str, out_dir: str, collision_faces: int = 60000) -> str:
 
     manifest = {collision: obj, visual: [{obj, color, tex|null}], spawn_z_hint}.
     """
-    import numpy as np
-    import trimesh
-    import fast_simplification
-
     name = os.path.splitext(os.path.basename(src))[0]
     cache = os.path.join(out_dir, name)
     manifest = os.path.join(cache, "manifest.json")
     if os.path.exists(manifest):
         try:
             d = json.load(open(manifest))
-            if d.get("version") == MANIFEST_VERSION \
-                    and d.get("collision_faces") == collision_faces:
+            if d.get("version") in (9, 10, MANIFEST_VERSION) \
+                    and d.get("collision_faces") == collision_faces \
+                    and (d.get("all_visual_layers") or not os.path.isfile(src)):
                 return manifest
         except Exception:
             pass
+    if not os.path.isfile(src):
+        raise FileNotFoundError(f"Terrain source missing and no compatible exported assets: {src}")
+    import numpy as np
+    import trimesh
+    import fast_simplification
     os.makedirs(cache, exist_ok=True)
 
     scene = trimesh.load(src, force="scene")
@@ -260,11 +214,9 @@ def build_assets(src: str, out_dir: str, collision_faces: int = 60000) -> str:
     # cheap no-texture view.
     groups: dict = {}
     for gname, m in items:
-        # skip the billboard/overlay cards (aerial grass, decals, puddles, far
-        # backdrop) -- they're flat sprites that float as "umbrellas" over the
-        # ground, which is jarring once textured. Same set excluded from collision.
-        if any(k in _suffix(gname) for k in EXCLUDE_KEYWORDS):
-            continue
+        # Render/raycast every original material. Contact classification above
+        # is separate: omitting base terrain or decals from the visual export
+        # exposes sky through road/foliage opacity gaps.
         mat = getattr(getattr(m, "visual", None), "material", None)
         key = getattr(mat, "name", None) or _category(gname)
         groups.setdefault(key, []).append((gname, m))
@@ -280,12 +232,8 @@ def build_assets(src: str, out_dir: str, collision_faces: int = 60000) -> str:
         cdir = os.path.join(cache, cat, safe)
         os.makedirs(cdir, exist_ok=True)
         objp = os.path.join(cdir, "mesh.obj")
-        # The VISUAL stays the opaque merged mesh (clean, not shard-y, ~4x lighter
-        # than the cutout). For foliage/grass we ALSO bake the alpha-cutout leaf
-        # silhouette as a geometry-only mesh used ONLY for LIDAR collision -- so the
-        # lidar's rays pass through the leaf gaps and return on the leaves, while
-        # the render shows solid foliage. (pybullet can't render texture alpha, so
-        # we can't do true cutout in the VIEW; the cutout lives in the raycast.)
+        # Original UV-mapped geometry and RGBA are shared by GPU/Embree.
+        # A baked silhouette is retained only for legacy Bullet raycasting.
         collision_obj = None
         if _CUTOUT_FOLIAGE and cat in ("grass", "foliage"):
             try:
@@ -311,12 +259,8 @@ def build_assets(src: str, out_dir: str, collision_faces: int = 60000) -> str:
                     img.save(os.path.join(cdir, "texture.png")); pngs = ["texture.png"]
             if pngs:
                 texp = os.path.join(cdir, pngs[0])
-                # pybullet can't render texture alpha -> composite it away so the
-                # BLEND cards (foliage/road overlay) don't punch black holes.
-                try:
-                    _flatten_texture(texp)
-                except Exception:
-                    pass
+                # Preserve the source alpha. GPU rendering and LiDAR use the
+                # same coverage; a flattened texture cannot recover its holes.
         except Exception:
             # fall back to a geometry-only export with the category colour
             trimesh.Trimesh(vertices=merged.vertices, faces=merged.faces,
@@ -328,10 +272,22 @@ def build_assets(src: str, out_dir: str, collision_faces: int = 60000) -> str:
         mc = getattr(mat, "main_color", None) if mat else None
         if mc is not None:
             color = [float(c) / 255.0 if c > 1 else float(c) for c in mc[:3]] + [1.0]
+        alpha_mode = getattr(mat, "alphaMode", "OPAQUE") or "OPAQUE"
+        if texp:
+            from PIL import Image
+            with Image.open(texp) as image:
+                if image.convert("RGBA").getextrema()[3][0] < 255:
+                    alpha_mode = "MASK"
+        cutoff = getattr(mat, "alphaCutoff", None)
+        cutoff = 0.5 if cutoff is None else float(cutoff)
         visual.append({"obj": objp, "tex": texp, "color": color,
                        "category": cat, "material": str(key),
-                       "collision_obj": collision_obj})
+                       "collision_obj": collision_obj,
+                       "alpha_mode": alpha_mode,
+                       "alpha_cutoff": cutoff,
+                       "texture_sha256": hashlib.sha256(Path(texp).read_bytes()).hexdigest() if texp else None})
     data = {"version": MANIFEST_VERSION, "collision": coll, "visual": visual,
-            "collision_faces": collision_faces, "offset": off}
+            "collision_faces": collision_faces, "offset": off, "alpha_preserved": True,
+            "all_visual_layers": True}
     json.dump(data, open(manifest, "w"))
     return manifest

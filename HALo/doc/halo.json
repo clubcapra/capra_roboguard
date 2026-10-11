@@ -1,0 +1,5219 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HALo \u2014 Hardware Abstraction Layer and I/O",
+    "description": "Robot sensor API with UDP transport and HTTP documentation.\n\n## Discovery\n\n`GET /discover` lists all sensors with their endpoints and UDP ports.\n\n## Per-Sensor Endpoints\n\nEach sensor has its own routes:\n- `GET /{sensor_id}/info` - schema, commands, UDP packet format\n- `GET /{sensor_id}/data` - current data snapshot\n- `POST /{sensor_id}/command` - send a command\n- `POST /{sensor_id}/estop` - emergency stop (supported drivers only)\n\n## UDP Protocol\n\nPackets: `| version (1B) | msg_type (1B) | seq_num (2B LE) | JSON payload |`\n\n### Data Subscription\nSend **Subscribe (0x01)** to the sensor's data port. The robot pushes **Data (0x03)** packets to your address continuously. Send **Unsubscribe (0x02)** to stop.\n\n### Commands\n- **REST sensors**: Send **Command (0x10)**, get **CommandAck (0x11)**.\n- **Stream sensors** (CAN watchdog): Send **Command (0x10)** continuously at the advertised interval; every packet is processed once and acknowledged with **CommandAck (0x11)**.",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/admin/drivers/{id}/config": {
+      "get": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Read instance hardware connection configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Login required"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Validate and save connection configuration, then retry the driver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/drivers/{id}/policy": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Persist bounded driver recovery limits",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/drivers/{id}/retry": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Retry one driver resource group",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/reload": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Restart the entire service using its process supervisor",
+        "parameters": [
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/sensors/{id}/command": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Execute an authenticated hardware command",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/sensors/{id}/estop": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Execute the driver's emergency stop",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/sensors/{id}/ports": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Validate and persist this device's UDP port pair",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ports"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/admin/state": {
+      "get": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Driver lifecycle, hardware readiness, diagnostics and port reservations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Login required"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Sign in with the instance password",
+        "parameters": [
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "End the management session",
+        "parameters": [
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        }
+      }
+    },
+    "/auth/password": {
+      "post": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Change administrator password and end all sessions",
+        "parameters": [
+          {
+            "name": "X-HALo-Request",
+            "in": "header",
+            "description": "Must be 1 for management mutations",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation or command error"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Missing management request header"
+          },
+          "409": {
+            "description": "Recovery already running or resource conflict"
+          }
+        },
+        "security": [
+          {
+            "halo_session": []
+          }
+        ]
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Management authentication status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/discover": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "List all available sensors",
+        "description": "Returns every registered sensor with its ID, name, UDP ports, command mode, and HTTP endpoint paths.",
+        "responses": {
+          "200": {
+            "description": "List of sensors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "management"
+        ],
+        "summary": "Machine-readable driver lifecycle and hardware readiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/kinova_arm/command": {
+      "post": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - Send Command",
+        "description": "Send a command to **Kinova Gen2 6DOF (sim)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25003\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "erase_trajectories": {
+                    "type": "boolean"
+                  },
+                  "joint_1_pos": {
+                    "type": "number"
+                  },
+                  "joint_1_vel": {
+                    "type": "number"
+                  },
+                  "joint_2_pos": {
+                    "type": "number"
+                  },
+                  "joint_2_vel": {
+                    "type": "number"
+                  },
+                  "joint_3_pos": {
+                    "type": "number"
+                  },
+                  "joint_3_vel": {
+                    "type": "number"
+                  },
+                  "joint_4_pos": {
+                    "type": "number"
+                  },
+                  "joint_4_vel": {
+                    "type": "number"
+                  },
+                  "joint_5_pos": {
+                    "type": "number"
+                  },
+                  "joint_5_vel": {
+                    "type": "number"
+                  },
+                  "joint_6_pos": {
+                    "type": "number"
+                  },
+                  "joint_6_vel": {
+                    "type": "number"
+                  },
+                  "limp_mode": {
+                    "type": "boolean"
+                  },
+                  "move_home": {
+                    "type": "boolean"
+                  },
+                  "set_joint_zero": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "erase_trajectories": false,
+                "joint_1_pos": 0.0,
+                "joint_1_vel": 0.0,
+                "joint_2_pos": 0.0,
+                "joint_2_vel": 0.0,
+                "joint_3_pos": 0.0,
+                "joint_3_vel": 0.0,
+                "joint_4_pos": 0.0,
+                "joint_4_vel": 0.0,
+                "joint_5_pos": 0.0,
+                "joint_5_vel": 0.0,
+                "joint_6_pos": 0.0,
+                "joint_6_vel": 0.0,
+                "move_home": false,
+                "set_joint_zero": 0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/commands": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - List Commands",
+        "description": "List the commands accepted by **Kinova Gen2 6DOF (sim)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/data": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - Read Data",
+        "description": "Read current data from **Kinova Gen2 6DOF (sim)**.\n\nThis mirrors what you'd get via UDP subscription on port 25002.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel_x": {
+                      "type": "number"
+                    },
+                    "accel_y": {
+                      "type": "number"
+                    },
+                    "accel_z": {
+                      "type": "number"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "joint_1_current": {
+                      "type": "number"
+                    },
+                    "joint_1_pos": {
+                      "type": "number"
+                    },
+                    "joint_1_temp": {
+                      "type": "number"
+                    },
+                    "joint_1_vel": {
+                      "type": "number"
+                    },
+                    "joint_2_current": {
+                      "type": "number"
+                    },
+                    "joint_2_pos": {
+                      "type": "number"
+                    },
+                    "joint_2_temp": {
+                      "type": "number"
+                    },
+                    "joint_2_vel": {
+                      "type": "number"
+                    },
+                    "joint_3_current": {
+                      "type": "number"
+                    },
+                    "joint_3_pos": {
+                      "type": "number"
+                    },
+                    "joint_3_temp": {
+                      "type": "number"
+                    },
+                    "joint_3_vel": {
+                      "type": "number"
+                    },
+                    "joint_4_current": {
+                      "type": "number"
+                    },
+                    "joint_4_pos": {
+                      "type": "number"
+                    },
+                    "joint_4_temp": {
+                      "type": "number"
+                    },
+                    "joint_4_vel": {
+                      "type": "number"
+                    },
+                    "joint_5_current": {
+                      "type": "number"
+                    },
+                    "joint_5_pos": {
+                      "type": "number"
+                    },
+                    "joint_5_temp": {
+                      "type": "number"
+                    },
+                    "joint_5_vel": {
+                      "type": "number"
+                    },
+                    "joint_6_current": {
+                      "type": "number"
+                    },
+                    "joint_6_pos": {
+                      "type": "number"
+                    },
+                    "joint_6_temp": {
+                      "type": "number"
+                    },
+                    "joint_6_vel": {
+                      "type": "number"
+                    },
+                    "limp_mode": {
+                      "type": "boolean"
+                    },
+                    "limp_supported": {
+                      "type": "boolean"
+                    },
+                    "motion_inhibited": {
+                      "type": "boolean"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - Read Endpoint",
+        "description": "Read a single endpoint from **Kinova Gen2 6DOF (sim)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /kinova_arm/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/endpoints": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - List Endpoints",
+        "description": "List the readable endpoints exposed by **Kinova Gen2 6DOF (sim)**. Drivers declare the available fields and paths. Use `GET /kinova_arm/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/estop": {
+      "post": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **Kinova Gen2 6DOF (sim)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kinova_arm/health": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/kinova_arm/info": {
+      "get": {
+        "tags": [
+          "kinova_arm"
+        ],
+        "summary": "Kinova Gen2 6DOF (sim) - Info",
+        "description": "Full schema and UDP protocol details for **Kinova Gen2 6DOF (sim)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25002\nCommand UDP port: 25003",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/command": {
+      "post": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - Send Command",
+        "description": "Send a command to **Livox Mid-360**.\n\nMode: REST (one-shot)\nUDP command port: 25023\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/commands": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - List Commands",
+        "description": "List the commands accepted by **Livox Mid-360** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/data": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - Read Data",
+        "description": "Read current data from **Livox Mid-360**.\n\nThis mirrors what you'd get via UDP subscription on port 25022.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "maxItems": 3,
+                          "minItems": 3
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "gyro": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "maxItems": 3,
+                          "minItems": 3
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "imu_connected": {
+                      "type": "boolean"
+                    },
+                    "imu_packets": {
+                      "type": "integer"
+                    },
+                    "imu_timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "lidar_id": {
+                      "type": "integer"
+                    },
+                    "packet_type": {
+                      "type": "string"
+                    },
+                    "point_packet_index": {
+                      "type": "integer"
+                    },
+                    "point_packet_parts": {
+                      "type": "integer"
+                    },
+                    "point_packets": {
+                      "type": "integer"
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3
+                      }
+                    },
+                    "points_timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - Read Endpoint",
+        "description": "Read a single endpoint from **Livox Mid-360** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /livox_40/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/endpoints": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - List Endpoints",
+        "description": "List the readable endpoints exposed by **Livox Mid-360**. Drivers declare the available fields and paths. Use `GET /livox_40/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_40/health": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/livox_40/info": {
+      "get": {
+        "tags": [
+          "livox_40"
+        ],
+        "summary": "Livox Mid-360 - Info",
+        "description": "Full schema and UDP protocol details for **Livox Mid-360**.\n\nMode: REST (one-shot)\nData UDP port: 25022\nCommand UDP port: 25023",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/command": {
+      "post": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - Send Command",
+        "description": "Send a command to **Livox Mid-360**.\n\nMode: REST (one-shot)\nUDP command port: 25025\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/commands": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - List Commands",
+        "description": "List the commands accepted by **Livox Mid-360** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/data": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - Read Data",
+        "description": "Read current data from **Livox Mid-360**.\n\nThis mirrors what you'd get via UDP subscription on port 25024.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "maxItems": 3,
+                          "minItems": 3
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "gyro": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "maxItems": 3,
+                          "minItems": 3
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "imu_connected": {
+                      "type": "boolean"
+                    },
+                    "imu_packets": {
+                      "type": "integer"
+                    },
+                    "imu_timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "lidar_id": {
+                      "type": "integer"
+                    },
+                    "packet_type": {
+                      "type": "string"
+                    },
+                    "point_packet_index": {
+                      "type": "integer"
+                    },
+                    "point_packet_parts": {
+                      "type": "integer"
+                    },
+                    "point_packets": {
+                      "type": "integer"
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3
+                      }
+                    },
+                    "points_timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - Read Endpoint",
+        "description": "Read a single endpoint from **Livox Mid-360** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /livox_41/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/endpoints": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - List Endpoints",
+        "description": "List the readable endpoints exposed by **Livox Mid-360**. Drivers declare the available fields and paths. Use `GET /livox_41/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/livox_41/health": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/livox_41/info": {
+      "get": {
+        "tags": [
+          "livox_41"
+        ],
+        "summary": "Livox Mid-360 - Info",
+        "description": "Full schema and UDP protocol details for **Livox Mid-360**.\n\nMode: REST (one-shot)\nData UDP port: 25024\nCommand UDP port: 25025",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "List available log files",
+        "description": "Returns the directory tree under `LOG_DIR` as `{date \u2192 {hour \u2192 {sensors[], inputs}}}`. Use `GET /logs/file/{path}` with the relative path to download a specific CSV.",
+        "responses": {
+          "200": {
+            "description": "Available log files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogIndex"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs/file/{path}": {
+      "get": {
+        "tags": [
+          "logs"
+        ],
+        "summary": "Download a log file",
+        "description": "Download a CSV file from the log tree. `path` is a forward-slash-separated path relative to `LOG_DIR`, e.g. `2026-05-02/14/kinova_arm.csv` or `2026-05-02/14/inputs.csv`. Path traversal (`..`) is rejected.",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "description": "Relative path under LOG_DIR, e.g. 2026-05-02/14/kinova_arm.csv",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file contents",
+            "content": {
+              "text/csv": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive/endpoints": {
+      "post": {
+        "tags": [
+          "odrive"
+        ],
+        "summary": "Upload flat_endpoints.json",
+        "description": "Upload the ODrive `flat_endpoints.json` file to enable config read/write on all nodes.\n\n**How to get the file** (on your dev machine where odrivetool is installed):\n```\npython3 -c \"import odrive, os; print(os.path.dirname(odrive.__file__))\"\n```Then find `flat_endpoints.json` in that directory.\n\n**Upload via curl:**\n```\ncurl -X POST http://raspberrypi.local:8080/odrive/endpoints \\\n  -H 'Content-Type: application/json' \\\n  --data-binary @flat_endpoints.json\n```\n\nOr paste the file contents directly in the request body below.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "endpoints": {
+                  "axis0.controller.config.vel_limit": {
+                    "id": 456,
+                    "type": "float"
+                  },
+                  "axis0.motor.config.phase_resistance": {
+                    "id": 123,
+                    "type": "float"
+                  }
+                },
+                "fw_version": "0.6.11",
+                "hw_version": "1.0.0"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoints loaded",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loaded": 1234,
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/command": {
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - Send Command",
+        "description": "Send a command to **ODrive Node 31 (sim, drum left)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25007\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/commands": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 31 (sim, drum left)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/data": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - Read Data",
+        "description": "Read current data from **ODrive Node 31 (sim, drum left)**.\n\nThis mirrors what you'd get via UDP subscription on port 25006.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 31 (sim, drum left)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_31/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 31 (sim, drum left)**. Drivers declare the available fields and paths. Use `GET /odrive_31/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/estop": {
+      "post": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 31 (sim, drum left)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_31/health": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_31/info": {
+      "get": {
+        "tags": [
+          "odrive_31"
+        ],
+        "summary": "ODrive Node 31 (sim, drum left) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 31 (sim, drum left)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25006\nCommand UDP port: 25007",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/command": {
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - Send Command",
+        "description": "Send a command to **ODrive Node 32 (sim, drum right)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25009\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/commands": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 32 (sim, drum right)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/data": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - Read Data",
+        "description": "Read current data from **ODrive Node 32 (sim, drum right)**.\n\nThis mirrors what you'd get via UDP subscription on port 25008.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 32 (sim, drum right)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_32/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 32 (sim, drum right)**. Drivers declare the available fields and paths. Use `GET /odrive_32/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/estop": {
+      "post": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 32 (sim, drum right)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_32/health": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_32/info": {
+      "get": {
+        "tags": [
+          "odrive_32"
+        ],
+        "summary": "ODrive Node 32 (sim, drum right) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 32 (sim, drum right)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25008\nCommand UDP port: 25009",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/command": {
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - Send Command",
+        "description": "Send a command to **ODrive Node 33 (sim, drum right)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25011\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/commands": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 33 (sim, drum right)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/data": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - Read Data",
+        "description": "Read current data from **ODrive Node 33 (sim, drum right)**.\n\nThis mirrors what you'd get via UDP subscription on port 25010.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 33 (sim, drum right)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_33/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 33 (sim, drum right)**. Drivers declare the available fields and paths. Use `GET /odrive_33/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/estop": {
+      "post": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 33 (sim, drum right)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_33/health": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_33/info": {
+      "get": {
+        "tags": [
+          "odrive_33"
+        ],
+        "summary": "ODrive Node 33 (sim, drum right) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 33 (sim, drum right)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25010\nCommand UDP port: 25011",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/command": {
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - Send Command",
+        "description": "Send a command to **ODrive Node 34 (sim, drum left)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25013\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/commands": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 34 (sim, drum left)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/data": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - Read Data",
+        "description": "Read current data from **ODrive Node 34 (sim, drum left)**.\n\nThis mirrors what you'd get via UDP subscription on port 25012.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 34 (sim, drum left)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_34/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 34 (sim, drum left)**. Drivers declare the available fields and paths. Use `GET /odrive_34/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/estop": {
+      "post": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 34 (sim, drum left)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_34/health": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_34/info": {
+      "get": {
+        "tags": [
+          "odrive_34"
+        ],
+        "summary": "ODrive Node 34 (sim, drum left) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 34 (sim, drum left)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25012\nCommand UDP port: 25013",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/command": {
+      "post": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - Send Command",
+        "description": "Send a command to **ODrive Node 41 (sim, flipper fl)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25015\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/commands": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 41 (sim, flipper fl)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/data": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - Read Data",
+        "description": "Read current data from **ODrive Node 41 (sim, flipper fl)**.\n\nThis mirrors what you'd get via UDP subscription on port 25014.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 41 (sim, flipper fl)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_41/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 41 (sim, flipper fl)**. Drivers declare the available fields and paths. Use `GET /odrive_41/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/estop": {
+      "post": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 41 (sim, flipper fl)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_41/health": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_41/info": {
+      "get": {
+        "tags": [
+          "odrive_41"
+        ],
+        "summary": "ODrive Node 41 (sim, flipper fl) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 41 (sim, flipper fl)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25014\nCommand UDP port: 25015",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/command": {
+      "post": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - Send Command",
+        "description": "Send a command to **ODrive Node 42 (sim, flipper fr)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25017\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/commands": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 42 (sim, flipper fr)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/data": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - Read Data",
+        "description": "Read current data from **ODrive Node 42 (sim, flipper fr)**.\n\nThis mirrors what you'd get via UDP subscription on port 25016.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 42 (sim, flipper fr)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_42/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 42 (sim, flipper fr)**. Drivers declare the available fields and paths. Use `GET /odrive_42/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/estop": {
+      "post": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 42 (sim, flipper fr)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_42/health": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_42/info": {
+      "get": {
+        "tags": [
+          "odrive_42"
+        ],
+        "summary": "ODrive Node 42 (sim, flipper fr) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 42 (sim, flipper fr)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25016\nCommand UDP port: 25017",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/command": {
+      "post": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - Send Command",
+        "description": "Send a command to **ODrive Node 43 (sim, flipper rl)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25019\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/commands": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 43 (sim, flipper rl)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/data": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - Read Data",
+        "description": "Read current data from **ODrive Node 43 (sim, flipper rl)**.\n\nThis mirrors what you'd get via UDP subscription on port 25018.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 43 (sim, flipper rl)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_43/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 43 (sim, flipper rl)**. Drivers declare the available fields and paths. Use `GET /odrive_43/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/estop": {
+      "post": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 43 (sim, flipper rl)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_43/health": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_43/info": {
+      "get": {
+        "tags": [
+          "odrive_43"
+        ],
+        "summary": "ODrive Node 43 (sim, flipper rl) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 43 (sim, flipper rl)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25018\nCommand UDP port: 25019",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/command": {
+      "post": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - Send Command",
+        "description": "Send a command to **ODrive Node 44 (sim, flipper rr)**.\n\nMode: Stream (100ms watchdog)\nUDP command port: 25021\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "axis_state": {
+                    "type": "integer"
+                  },
+                  "clear_errors": {
+                    "type": "boolean"
+                  },
+                  "control_mode": {
+                    "type": "integer"
+                  },
+                  "current_limit": {
+                    "type": "number"
+                  },
+                  "input_mode": {
+                    "type": "integer"
+                  },
+                  "input_pos": {
+                    "type": "number"
+                  },
+                  "input_torque": {
+                    "type": "number"
+                  },
+                  "input_torque_ff": {
+                    "type": "number"
+                  },
+                  "input_vel": {
+                    "type": "number"
+                  },
+                  "input_vel_ff": {
+                    "type": "number"
+                  },
+                  "pos_gain": {
+                    "type": "number"
+                  },
+                  "reboot": {
+                    "type": "boolean"
+                  },
+                  "traj_accel_limit": {
+                    "type": "number"
+                  },
+                  "traj_decel_limit": {
+                    "type": "number"
+                  },
+                  "traj_inertia": {
+                    "type": "number"
+                  },
+                  "traj_vel_limit": {
+                    "type": "number"
+                  },
+                  "vel_gain": {
+                    "type": "number"
+                  },
+                  "vel_integrator_gain": {
+                    "type": "number"
+                  },
+                  "velocity_limit": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "axis_state": 0,
+                "clear_errors": false,
+                "control_mode": 0,
+                "current_limit": 0.0,
+                "input_mode": 0,
+                "input_pos": 0.0,
+                "input_torque": 0.0,
+                "input_torque_ff": 0.0,
+                "input_vel": 0.0,
+                "input_vel_ff": 0.0,
+                "pos_gain": 0.0,
+                "reboot": false,
+                "traj_accel_limit": 0.0,
+                "traj_decel_limit": 0.0,
+                "traj_inertia": 0.0,
+                "traj_vel_limit": 0.0,
+                "vel_gain": 0.0,
+                "vel_integrator_gain": 0.0,
+                "velocity_limit": 0.0
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/commands": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - List Commands",
+        "description": "List the commands accepted by **ODrive Node 44 (sim, flipper rr)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/data": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - Read Data",
+        "description": "Read current data from **ODrive Node 44 (sim, flipper rr)**.\n\nThis mirrors what you'd get via UDP subscription on port 25020.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_errors": {
+                      "type": "integer"
+                    },
+                    "axis_error": {
+                      "type": "integer"
+                    },
+                    "axis_state": {
+                      "type": "integer"
+                    },
+                    "bus_current": {
+                      "type": "number"
+                    },
+                    "bus_voltage": {
+                      "type": "number"
+                    },
+                    "count_cpr": {
+                      "type": "integer"
+                    },
+                    "disarm_reason": {
+                      "type": "integer"
+                    },
+                    "electrical_power": {
+                      "type": "number"
+                    },
+                    "fet_temp": {
+                      "type": "number"
+                    },
+                    "iq_measured": {
+                      "type": "number"
+                    },
+                    "iq_setpoint": {
+                      "type": "number"
+                    },
+                    "mechanical_power": {
+                      "type": "number"
+                    },
+                    "motor_temp": {
+                      "type": "number"
+                    },
+                    "node_id": {
+                      "type": "integer"
+                    },
+                    "pos_estimate": {
+                      "type": "number"
+                    },
+                    "procedure_result": {
+                      "type": "integer"
+                    },
+                    "shadow_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "torque_estimate": {
+                      "type": "number"
+                    },
+                    "torque_target": {
+                      "type": "number"
+                    },
+                    "trajectory_done": {
+                      "type": "boolean"
+                    },
+                    "vel_estimate": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - Read Endpoint",
+        "description": "Read a single endpoint from **ODrive Node 44 (sim, flipper rr)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /odrive_44/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/endpoints": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - List Endpoints",
+        "description": "List the readable endpoints exposed by **ODrive Node 44 (sim, flipper rr)**. Drivers declare the available fields and paths. Use `GET /odrive_44/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/estop": {
+      "post": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **ODrive Node 44 (sim, flipper rr)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odrive_44/health": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/odrive_44/info": {
+      "get": {
+        "tags": [
+          "odrive_44"
+        ],
+        "summary": "ODrive Node 44 (sim, flipper rr) - Info",
+        "description": "Full schema and UDP protocol details for **ODrive Node 44 (sim, flipper rr)**.\n\nMode: Stream (100ms watchdog)\nData UDP port: 25020\nCommand UDP port: 25021",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/command": {
+      "post": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - Send Command",
+        "description": "Send a command to **Radiacode (simulation)**.\n\nMode: REST (one-shot)\nUDP command port: 25027\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/commands": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - List Commands",
+        "description": "List the commands accepted by **Radiacode (simulation)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/data": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - Read Data",
+        "description": "Read current data from **Radiacode (simulation)**.\n\nThis mirrors what you'd get via UDP subscription on port 25026.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "background_usv_h": {
+                      "type": "number"
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "dose_rate_usv_h": {
+                      "type": "number"
+                    },
+                    "error_code": {
+                      "type": "integer"
+                    },
+                    "source_count": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "transport": {
+                      "type": "string"
+                    },
+                    "x_m": {
+                      "type": "number"
+                    },
+                    "y_m": {
+                      "type": "number"
+                    },
+                    "z_m": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - Read Endpoint",
+        "description": "Read a single endpoint from **Radiacode (simulation)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /radiacode_arm/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/endpoints": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - List Endpoints",
+        "description": "List the readable endpoints exposed by **Radiacode (simulation)**. Drivers declare the available fields and paths. Use `GET /radiacode_arm/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/radiacode_arm/health": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/radiacode_arm/info": {
+      "get": {
+        "tags": [
+          "radiacode_arm"
+        ],
+        "summary": "Radiacode (simulation) - Info",
+        "description": "Full schema and UDP protocol details for **Radiacode (simulation)**.\n\nMode: REST (one-shot)\nData UDP port: 25026\nCommand UDP port: 25027",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reload": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Reload all sensors (process bounce)",
+        "description": "Exits the API process so the systemd unit restarts it. Every driver re-runs its connect path, which is the reliable fix when one device (typically the Kinova arm) didn't answer on cold boot. The API is unavailable for ~3\u20135 s during the bounce, and active UDP subscriptions / streaming command sessions are dropped.",
+        "responses": {
+          "200": {
+            "description": "Restart scheduled",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "process is exiting; systemd will restart the service in ~2s",
+                  "status": "restarting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/command": {
+      "post": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - Send Command",
+        "description": "Send a command to **Robotiq 2F-140 Gripper (sim)**.\n\nMode: REST (one-shot)\nUDP command port: 25005\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "activate": {
+                    "type": "boolean"
+                  },
+                  "auto_release": {
+                    "type": "integer"
+                  },
+                  "force": {
+                    "type": "integer"
+                  },
+                  "goto": {
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "type": "integer"
+                  },
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "stop": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "example": {
+                "activate": false,
+                "auto_release": 0,
+                "force": 0,
+                "goto": false,
+                "position": 0,
+                "speed": 0,
+                "stop": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/commands": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - List Commands",
+        "description": "List the commands accepted by **Robotiq 2F-140 Gripper (sim)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/data": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - Read Data",
+        "description": "Read current data from **Robotiq 2F-140 Gripper (sim)**.\n\nThis mirrors what you'd get via UDP subscription on port 25004.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "activated": {
+                      "type": "boolean"
+                    },
+                    "current_a": {
+                      "type": "number"
+                    },
+                    "current_raw": {
+                      "type": "integer"
+                    },
+                    "fault": {
+                      "type": "integer"
+                    },
+                    "going_to_position": {
+                      "type": "boolean"
+                    },
+                    "link_up": {
+                      "type": "boolean"
+                    },
+                    "object_status": {
+                      "type": "integer"
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "position_request_echo": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - Read Endpoint",
+        "description": "Read a single endpoint from **Robotiq 2F-140 Gripper (sim)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /robotiq_gripper/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/endpoints": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - List Endpoints",
+        "description": "List the readable endpoints exposed by **Robotiq 2F-140 Gripper (sim)**. Drivers declare the available fields and paths. Use `GET /robotiq_gripper/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/estop": {
+      "post": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - Emergency Stop",
+        "description": "Send an **immediate emergency stop** to **Robotiq 2F-140 Gripper (sim)**.\n\nThe driver applies its emergency-stop behavior. No payload required.",
+        "responses": {
+          "200": {
+            "description": "E-stop acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/health": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/robotiq_gripper/info": {
+      "get": {
+        "tags": [
+          "robotiq_gripper"
+        ],
+        "summary": "Robotiq 2F-140 Gripper (sim) - Info",
+        "description": "Full schema and UDP protocol details for **Robotiq 2F-140 Gripper (sim)**.\n\nMode: REST (one-shot)\nData UDP port: 25004\nCommand UDP port: 25005",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/command": {
+      "post": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - Send Command",
+        "description": "Send a command to **VectorNav VN-300 (sim)**.\n\nMode: REST (one-shot)\nUDP command port: 25001\n\nThe JSON body is the same payload used in UDP Command (0x10) packets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "string"
+                  },
+                  "reset": {
+                    "type": "boolean"
+                  },
+                  "restore_factory_settings": {
+                    "type": "boolean"
+                  },
+                  "set_async_freq": {
+                    "type": "integer"
+                  },
+                  "set_async_type": {
+                    "type": "integer"
+                  },
+                  "set_initial_heading": {
+                    "type": "number"
+                  },
+                  "tare": {
+                    "type": "boolean"
+                  },
+                  "write_settings": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "example": {
+                "raw": "",
+                "reset": false,
+                "restore_factory_settings": false,
+                "set_async_freq": 0,
+                "set_async_type": 0,
+                "set_initial_heading": 0.0,
+                "tare": false,
+                "write_settings": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/commands": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - List Commands",
+        "description": "List the commands accepted by **VectorNav VN-300 (sim)** as a `name \u2192 {type, description, unit}` map. Same fields as `command_schema` in `/info`, presented as a lookup table.",
+        "responses": {
+          "200": {
+            "description": "Map of command name \u2192 metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/data": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - Read Data",
+        "description": "Read current data from **VectorNav VN-300 (sim)**.\n\nThis mirrors what you'd get via UDP subscription on port 25000.",
+        "responses": {
+          "200": {
+            "description": "Current sensor data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accel_x": {
+                      "type": "number"
+                    },
+                    "accel_y": {
+                      "type": "number"
+                    },
+                    "accel_z": {
+                      "type": "number"
+                    },
+                    "altitude": {
+                      "type": "number"
+                    },
+                    "att_uncertainty": {
+                      "type": "number"
+                    },
+                    "gnss_compass_active": {
+                      "type": "boolean"
+                    },
+                    "gnss_fix": {
+                      "type": "boolean"
+                    },
+                    "gnss_fix_type": {
+                      "type": "integer"
+                    },
+                    "gnss_heading_aiding": {
+                      "type": "boolean"
+                    },
+                    "gnss_num_sats": {
+                      "type": "integer"
+                    },
+                    "gps_tow": {
+                      "type": "number"
+                    },
+                    "gps_week": {
+                      "type": "integer"
+                    },
+                    "gyro_x": {
+                      "type": "number"
+                    },
+                    "gyro_y": {
+                      "type": "number"
+                    },
+                    "gyro_z": {
+                      "type": "number"
+                    },
+                    "ins_error": {
+                      "type": "integer"
+                    },
+                    "ins_mode": {
+                      "type": "integer"
+                    },
+                    "ins_status_raw": {
+                      "type": "integer"
+                    },
+                    "last_async_header": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "number"
+                    },
+                    "longitude": {
+                      "type": "number"
+                    },
+                    "mag_x": {
+                      "type": "number"
+                    },
+                    "mag_y": {
+                      "type": "number"
+                    },
+                    "mag_z": {
+                      "type": "number"
+                    },
+                    "messages_dropped": {
+                      "type": "integer"
+                    },
+                    "messages_parsed": {
+                      "type": "integer"
+                    },
+                    "pitch": {
+                      "type": "number"
+                    },
+                    "port": {
+                      "type": "string"
+                    },
+                    "pos_uncertainty": {
+                      "type": "number"
+                    },
+                    "pressure": {
+                      "type": "number"
+                    },
+                    "roll": {
+                      "type": "number"
+                    },
+                    "temperature": {
+                      "type": "number"
+                    },
+                    "timestamp_ns": {
+                      "type": "integer"
+                    },
+                    "vel_down": {
+                      "type": "number"
+                    },
+                    "vel_east": {
+                      "type": "number"
+                    },
+                    "vel_north": {
+                      "type": "number"
+                    },
+                    "vel_uncertainty": {
+                      "type": "number"
+                    },
+                    "yaw": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/endpoint/{path}": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - Read Endpoint",
+        "description": "Read a single endpoint from **VectorNav VN-300 (sim)** by path. Returns `{path, value, type}`.\n\nPaths come from `GET /vectornav_sim/endpoints`.",
+        "responses": {
+          "200": {
+            "description": "Endpoint value",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/endpoints": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - List Endpoints",
+        "description": "List the readable endpoints exposed by **VectorNav VN-300 (sim)**. Drivers declare the available fields and paths. Use `GET /vectornav_sim/endpoint/{path}` to read a single value.",
+        "responses": {
+          "200": {
+            "description": "Map of path \u2192 endpoint metadata",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/vectornav_sim/health": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "Controller connection and verified hardware readiness",
+        "responses": {
+          "200": {
+            "description": "Freshness and hardware errors; controller availability alone does not prove hardware readiness"
+          }
+        }
+      }
+    },
+    "/vectornav_sim/info": {
+      "get": {
+        "tags": [
+          "vectornav_sim"
+        ],
+        "summary": "VectorNav VN-300 (sim) - Info",
+        "description": "Full schema and UDP protocol details for **VectorNav VN-300 (sim)**.\n\nMode: REST (one-shot)\nData UDP port: 25000\nCommand UDP port: 25001",
+        "responses": {
+          "200": {
+            "description": "Sensor info with schemas and UDP protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommandMode": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Request/response: client sends a single command, server replies once.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Rest"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Streaming: client sends Command packets continuously at `interval_ms`.\nEach packet is processed as it arrives \u2014 the server does not loop or\nre-send anything. Typical use: CAN control loops sending ODrive setpoints.",
+            "required": [
+              "interval_ms",
+              "type"
+            ],
+            "properties": {
+              "interval_ms": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Expected client send interval in milliseconds.",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Stream"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Whether commands are one-shot or arrive as a continuous stream."
+      },
+      "CommandProtocolInfo": {
+        "type": "object",
+        "required": [
+          "description",
+          "flow",
+          "packets"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "flow": {
+            "type": "string"
+          },
+          "packets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PacketExample"
+            }
+          }
+        }
+      },
+      "CommandResult": {
+        "type": "object",
+        "required": [
+          "status",
+          "result"
+        ],
+        "properties": {
+          "result": {},
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ConfigEdit": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Credentials": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "DataDelivery": {
+        "type": "string",
+        "description": "A driver declares its delivery model; the transport handles every subscriber.",
+        "enum": [
+          "Snapshots",
+          "Updates"
+        ]
+      },
+      "DataSubscriptionInfo": {
+        "type": "object",
+        "required": [
+          "default_delivery",
+          "description",
+          "flow",
+          "subscribe_packet",
+          "unsubscribe_packet",
+          "data_push_packet"
+        ],
+        "properties": {
+          "data_push_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          },
+          "default_delivery": {
+            "$ref": "#/components/schemas/DataDelivery"
+          },
+          "description": {
+            "type": "string"
+          },
+          "flow": {
+            "type": "string"
+          },
+          "subscribe_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          },
+          "unsubscribe_packet": {
+            "$ref": "#/components/schemas/PacketExample"
+          }
+        }
+      },
+      "DiscoverResponse": {
+        "type": "object",
+        "required": [
+          "sensors"
+        ],
+        "properties": {
+          "sensors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensorSummary"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "FieldDescriptor": {
+        "type": "object",
+        "description": "Describes one field in a data or command schema (for OpenAPI docs).",
+        "required": [
+          "name",
+          "description",
+          "type_name"
+        ],
+        "properties": {
+          "confirmation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confirmation_value": {},
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ready_value": {},
+          "requires_ready": {
+            "type": "boolean",
+            "description": "Drivers declare command constraints; transport/UI code never infers them\nfrom a hardware brand or a particular command name."
+          },
+          "standalone": {
+            "type": "boolean"
+          },
+          "type_name": {
+            "type": "string",
+            "description": "Rust type name: \"f64\", \"u16\", \"bool\", \"String\", etc."
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Physical unit if applicable: \"degrees\", \"rpm\", \"m/s\"."
+          }
+        }
+      },
+      "LogDay": {
+        "type": "object",
+        "required": [
+          "date",
+          "hours"
+        ],
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogHour"
+            }
+          }
+        }
+      },
+      "LogHour": {
+        "type": "object",
+        "required": [
+          "hour",
+          "sensors"
+        ],
+        "properties": {
+          "hour": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sensors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LogIndex": {
+        "type": "object",
+        "required": [
+          "root",
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogDay"
+            }
+          },
+          "root": {
+            "type": "string"
+          }
+        }
+      },
+      "PacketExample": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "header_hex"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "header_hex": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "payload_example": {}
+        }
+      },
+      "PasswordChange": {
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Ports": {
+        "type": "object",
+        "required": [
+          "data_port",
+          "command_port"
+        ],
+        "properties": {
+          "command_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "data_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "RetryPolicy": {
+        "type": "object",
+        "properties": {
+          "attempt_timeout_ms": {
+            "type": "integer",
+            "format": "int64",
+            "default": 30000,
+            "minimum": 0
+          },
+          "max_attempts": {
+            "type": "integer",
+            "format": "int32",
+            "default": 3,
+            "minimum": 0
+          },
+          "retry_delay_ms": {
+            "type": "integer",
+            "format": "int64",
+            "default": 2000,
+            "minimum": 0
+          },
+          "stale_after_ms": {
+            "type": "integer",
+            "format": "int64",
+            "default": 3000,
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "SensorEndpoints": {
+        "type": "object",
+        "required": [
+          "info",
+          "data",
+          "command",
+          "commands",
+          "endpoints",
+          "health",
+          "endpoint"
+        ],
+        "properties": {
+          "calibrate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "command": {
+            "type": "string"
+          },
+          "commands": {
+            "type": "string"
+          },
+          "config": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "endpoints": {
+            "type": "string"
+          },
+          "estop": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "health": {
+            "type": "string"
+          },
+          "info": {
+            "type": "string"
+          },
+          "save_config": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SensorInfoResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "command_mode",
+          "data_delivery",
+          "data_port",
+          "command_port",
+          "data_schema",
+          "command_schema",
+          "has_estop",
+          "udp_protocol"
+        ],
+        "properties": {
+          "command_mode": {
+            "$ref": "#/components/schemas/CommandMode"
+          },
+          "command_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "command_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            }
+          },
+          "data_delivery": {
+            "$ref": "#/components/schemas/DataDelivery"
+          },
+          "data_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "data_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            }
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "estop_confirmation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "has_estop": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "udp_protocol": {
+            "$ref": "#/components/schemas/UdpProtocolInfo"
+          }
+        }
+      },
+      "SensorSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "command_mode",
+          "data_delivery",
+          "data_port",
+          "command_port",
+          "endpoints"
+        ],
+        "properties": {
+          "command_mode": {
+            "$ref": "#/components/schemas/CommandMode"
+          },
+          "command_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "data_delivery": {
+            "$ref": "#/components/schemas/DataDelivery"
+          },
+          "data_port": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "endpoints": {
+            "$ref": "#/components/schemas/SensorEndpoints",
+            "description": "HTTP paths for this sensor."
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "UdpProtocolInfo": {
+        "type": "object",
+        "required": [
+          "header_format",
+          "data_subscription",
+          "command_protocol"
+        ],
+        "properties": {
+          "command_protocol": {
+            "$ref": "#/components/schemas/CommandProtocolInfo"
+          },
+          "data_subscription": {
+            "$ref": "#/components/schemas/DataSubscriptionInfo"
+          },
+          "header_format": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "halo_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "halo_session"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "discovery",
+      "description": "Discover available sensors"
+    },
+    {
+      "name": "logs",
+      "description": "Time-series CSV logs. Sensor snapshots and commands are written to LOG_DIR/<YYYY-MM-DD>/<HH>/<sensor>.csv and inputs.csv, split hourly."
+    },
+    {
+      "name": "kinova_arm",
+      "description": "Kinova Gen2 6DOF (sim) | Stream (100ms watchdog) | Data UDP:25002 | Cmd UDP:25003"
+    },
+    {
+      "name": "livox_40",
+      "description": "Livox Mid-360 | REST (one-shot) | Data UDP:25022 | Cmd UDP:25023"
+    },
+    {
+      "name": "livox_41",
+      "description": "Livox Mid-360 | REST (one-shot) | Data UDP:25024 | Cmd UDP:25025"
+    },
+    {
+      "name": "odrive_31",
+      "description": "ODrive Node 31 (sim, drum left) | Stream (100ms watchdog) | Data UDP:25006 | Cmd UDP:25007"
+    },
+    {
+      "name": "odrive_32",
+      "description": "ODrive Node 32 (sim, drum right) | Stream (100ms watchdog) | Data UDP:25008 | Cmd UDP:25009"
+    },
+    {
+      "name": "odrive_33",
+      "description": "ODrive Node 33 (sim, drum right) | Stream (100ms watchdog) | Data UDP:25010 | Cmd UDP:25011"
+    },
+    {
+      "name": "odrive_34",
+      "description": "ODrive Node 34 (sim, drum left) | Stream (100ms watchdog) | Data UDP:25012 | Cmd UDP:25013"
+    },
+    {
+      "name": "odrive_41",
+      "description": "ODrive Node 41 (sim, flipper fl) | Stream (100ms watchdog) | Data UDP:25014 | Cmd UDP:25015"
+    },
+    {
+      "name": "odrive_42",
+      "description": "ODrive Node 42 (sim, flipper fr) | Stream (100ms watchdog) | Data UDP:25016 | Cmd UDP:25017"
+    },
+    {
+      "name": "odrive_43",
+      "description": "ODrive Node 43 (sim, flipper rl) | Stream (100ms watchdog) | Data UDP:25018 | Cmd UDP:25019"
+    },
+    {
+      "name": "odrive_44",
+      "description": "ODrive Node 44 (sim, flipper rr) | Stream (100ms watchdog) | Data UDP:25020 | Cmd UDP:25021"
+    },
+    {
+      "name": "radiacode_arm",
+      "description": "Radiacode (simulation) | REST (one-shot) | Data UDP:25026 | Cmd UDP:25027"
+    },
+    {
+      "name": "robotiq_gripper",
+      "description": "Robotiq 2F-140 Gripper (sim) | REST (one-shot) | Data UDP:25004 | Cmd UDP:25005"
+    },
+    {
+      "name": "vectornav_sim",
+      "description": "VectorNav VN-300 (sim) | REST (one-shot) | Data UDP:25000 | Cmd UDP:25001"
+    },
+    {
+      "name": "odrive",
+      "description": "ODrive global operations (endpoint map upload)"
+    }
+  ]
+}

@@ -11,7 +11,7 @@
 [robot]
 # Tried in order. First match wins.
 forgebot = "data/scene.forgebot"
-urdf     = "data/robot.urdf"
+urdf     = "../robot_doc/ik_legacy/robot.urdf"
 
 [ik]
 # Run python-fcl collision checks during IK; rejects steps that introduce
@@ -55,7 +55,7 @@ ws_path        = "/state"
 stdout_enabled = false             # length-prefixed proto frames on stdout
 
 [hardware]
-# When enabled, the engine sends a SUBSCRIBE packet to rove_sensor_api's
+# When enabled, the engine sends a SUBSCRIBE packet to HALo's
 # kinova_arm data port at startup; sensor_api then pushes joint state back
 # at subscribe_interval_ms. The UI's "Sync" button reads the latest frame
 # and snaps the model to the real arm.

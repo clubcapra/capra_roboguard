@@ -1,6 +1,6 @@
 //! REST API — post GoTo missions (and read status) over HTTP.
 //!
-//! Missions arrive over HTTP (matching the rest of the stack — rove_sensor_api and
+//! Missions arrive over HTTP (matching the rest of the stack — HALo and
 //! rove_ik_engine are REST), not the legacy UDP `Mission` proto. A posted GoTo is
 //! turned into the SAME `Mission` the control loop already compiles, so the
 //! autonomy path (router → GoTo → cost-map planner → reflexes → tracks) is

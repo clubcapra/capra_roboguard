@@ -45,7 +45,7 @@ def _apply_drive_ports(cfg: engine_config.EngineConfig, ports: dict) -> None:
 
 
 def _post_sensor_reload(host: str, http_port: int) -> None:
-    """POST /reload to rove_sensor_api to kick it when /discover stays down."""
+    """POST /reload to HALo to kick it when /discover stays down."""
     import urllib.request
     url = f"http://{host}:{http_port}/reload"
     try:
@@ -58,7 +58,7 @@ def _post_sensor_reload(host: str, http_port: int) -> None:
 
 
 async def _await_sensor_api(cfg: engine_config.EngineConfig) -> dict:
-    """Block until rove_sensor_api's GET /discover responds, returning its port
+    """Block until HALo's GET /discover responds, returning its port
     map. The drivetrain waits for autodiscover rather than ever using a fallback
     port. Retries every few seconds; if /discover is still down after ~60s, POSTs
     /reload to kick sensor_api (the documented recovery), then keeps trying.
@@ -244,7 +244,7 @@ async def run(config_path: Path) -> None:
         )
 
     async def reheal() -> dict:
-        """Recover from a rove_sensor_api reload / e-stop recovery WITHOUT
+        """Recover from a HALo reload / e-stop recovery WITHOUT
         restarting the engine — the fix for "uninstall + reinstall after e-stop".
 
         1. Re-discover served ports (boot order shuffles them) and re-point the

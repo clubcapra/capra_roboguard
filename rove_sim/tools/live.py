@@ -15,6 +15,8 @@ Paint:   enable "PAINT" slider (>0.5), then LEFT-CLICK/drag the ground to paint 
 Sensors: --sensors draws the live Livox cloud (height-coloured); P snapshots the cameras.
 Scene:   N = spawn object in front, X = delete last, M = save; SAVE/EXPORT/SPAWN/DELETE
          buttons too. Load with --scene <file>.
+Monitor: --follow-state <file> displays a running sim without stepping another
+         physics world. Orbit/zoom/pan still work; robot commands stay in HALo.
 """
 import argparse
 import glob
@@ -25,7 +27,6 @@ import time
 import numpy as np
 import pybullet as p
 
-from rove_sim import runtime
 from rove_sim.control import RoveControl, Tracks, Flippers, Ovis
 from rove_sim.world.friction import MATERIALS
 
@@ -78,9 +79,49 @@ def _ray_from_mouse(mx, my):
     return cam_pos, ray_to
 
 
+def _follow_state(sim, path):
+    """Render the authoritative physics process; never drive a second robot."""
+    from rove_sim.world.render_sync import (
+        apply_robot_state, apply_world_state, read_robot_state,
+    )
+    p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+    p.setRealTimeSimulation(0)
+    status_id = -1
+    previous_status = None
+    print(f"[live] following {path}; orbit/zoom/pan in this window, commands via HALo",
+          flush=True)
+    try:
+        while p.isConnected():
+            started = time.monotonic()
+            state = read_robot_state(path)
+            apply_robot_state(sim.robot, state)
+            apply_world_state(sim.world, state)
+            try:
+                fresh = state is not None and time.time() - os.path.getmtime(path) < 2
+            except OSError:
+                fresh = False
+            status = "LIVE - commands via HALo" if fresh else "STALE - waiting for simulator"
+            if status != previous_status:
+                status_id = p.addUserDebugText(
+                    status, [0, 0, 1.4], textColorRGB=[0.1, 0.65, 0.2] if fresh else [0.85, 0.2, 0.1],
+                    textSize=1.2, parentObjectUniqueId=sim.robot.body_id,
+                    parentLinkIndex=-1, replaceItemUniqueId=status_id,
+                )
+                previous_status = status
+                print(f"[live] {status}", flush=True)
+            time.sleep(max(0, 1 / 30 - (time.monotonic() - started)))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sim.disconnect()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--profile", default="standard")
+    ap.add_argument("--world-config", default=None, help="World YAML (terrain and datum)")
+    ap.add_argument("--follow-state", default=None,
+                    help="view the running simulator's shared state file; camera navigation only")
     ap.add_argument("--terrain", nargs="?",
                     const="../free_dirt_road_through_forest.glb", default=None)
     ap.add_argument("--display", default=None,
@@ -111,21 +152,14 @@ def main():
     if args.display:
         os.environ["DISPLAY"] = args.display
 
-    overrides = {"friction": {"origin": (-25.0, -25.0), "extent": (50.0, 50.0),
-                              "cell": 0.25}}
-    if args.terrain:
-        overrides["terrain"] = {"source": args.terrain,
-                                "texture": not args.no_texture}
+    if args.follow_state and (args.publish_state or args.rtsp or args.sensors):
+        ap.error("--follow-state displays existing state; use the running workers for sensors/RTSP")
     try:
-        if args.scene and os.path.exists(args.scene):
-            # the scene carries terrain+friction (via build_overrides) + the robot
-            # pose/joints/objects; --profile still picks the ROBOT (standard|caged).
-            from rove_sim.world.scene import load_scene_sim
-            sim = load_scene_sim(args.scene, args.profile, mode="gui")
-            print(f"[scene] loaded {args.scene} with profile {args.profile!r}")
-        else:
-            sim = runtime.build(args.profile, mode="gui", world="mock",
-                                world_overrides=overrides)
+        from rove_sim.world.scene import build_configured_sim
+        sim = build_configured_sim(
+            args.profile, world_config=args.world_config, scene_path=args.scene,
+            terrain=args.terrain, texture=not args.no_texture, mode="gui",
+        )
     except Exception as e:
         print(f"\n[live.py] could not open a native window: {e}\n{_X_HELP}")
         sys.exit(1)
@@ -138,6 +172,9 @@ def main():
     # Camera is PyBullet's built-in: CTRL+left-drag orbit, scroll zoom, CTRL+
     # middle-drag pan. We just set the initial view. WASD is the robot's (driving).
     p.resetDebugVisualizerCamera(4.0, 50, -30, base.tolist())
+    if args.follow_state:
+        _follow_state(sim, args.follow_state)
+        return
 
     # --- live sensors: draw BOTH Livox clouds in the 3D view; P snapshots cams --
     # The rove carries two Mid-360s (top dome up, bottom dome down) for full
@@ -341,7 +378,7 @@ def main():
             feeds.publish(dt)                              # stream cameras (RTSP)
         if args.publish_state:                             # feed parallel cam_workers
             from rove_sim.world.render_sync import publish_robot_state
-            publish_robot_state(sim.robot)
+            publish_robot_state(sim.robot, world=sim.world)
         time.sleep(max(0.0, dt - (time.time() - t0)))
     if feeds is not None:
         feeds.stop()

@@ -1,7 +1,7 @@
-//! Real Mid-360 perception via the livox_bridge `LVXR` UDP stream.
+//! Real Mid-360 perception via the HALo Livox `LVXR` UDP stream.
 //!
 //! The sim path (`perception::run`) consumes world-frame `LVX2`. On the real robot
-//! the two Mid-360s are raw on the LAN; the `livox_bridge` sidecar streams each
+//! the two Mid-360s are raw on the LAN; the `HALo` Livox driver streams each
 //! unit's points (sensor frame, m) + IMU as `LVXR` datagrams to localhost. Here we
 //! take the BOTTOM lidar (.40, the ground sensor), IMU-LEVEL it (gravity → +Z), and
 //! derive a **proximity** [`Hazard`]: stop if an obstacle or a ground edge/hole is
@@ -229,7 +229,7 @@ pub fn analyze(
     (hz, obs_bearing)
 }
 
-/// Subscribe to the sidecar's `LVXR` stream and publish a proximity [`Hazard`]
+/// Subscribe to the sensor API's `LVXR` stream and publish a proximity [`Hazard`]
 /// from the BOTTOM lidar. (Cost map left empty for now — needs a trusted world
 /// frame; the planner stays off and the control loop drives straight + stops on
 /// this hazard.)
@@ -260,7 +260,7 @@ pub async fn run(
         tokio::select! {
             _ = emit.tick() => {
                 if last_points.elapsed() > Duration::from_millis(1000) {
-                    // No fresh lidar (sidecar down / lidar lost).
+                    // No fresh lidar (sensor API down / lidar lost).
                     if require_lidar {
                         // SAFE default: never drive blind — emit a STOP hazard.
                         let mut hz = Hazard::none();

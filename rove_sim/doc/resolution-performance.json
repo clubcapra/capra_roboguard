@@ -1,0 +1,1289 @@
+{
+  "duration_seconds": 120.77211471299233,
+  "minimum_camera_fps": 23.490510164287148,
+  "mean_camera_fps": 27.248645061290958,
+  "minimum_lidar_hz": 27.13782270700335,
+  "mean_lidar_hz": 29.176252205864813,
+  "samples": [
+    {
+      "seconds": 0.00025030899269040674,
+      "camera": {
+        "fps_per_camera": 25.60768479285123,
+        "render_ms_mean": 37.74401802540892,
+        "render_ms_p95": 53.178992094763046,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 489,
+        "measured_seconds": 18.13262206299987
+      },
+      "lidar": {
+        "hz_per_lidar": 27.93962084961245,
+        "scans_per_lidar": 45247,
+        "measured_seconds": 1533.5534651199996,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2172,
+          "livox_bottom": 2934
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.016260862350463867,
+      "gpu": "Quadro P600, 449 MiB, 22 %"
+    },
+    {
+      "seconds": 3.0200321119918954,
+      "camera": {
+        "fps_per_camera": 26.53405700309413,
+        "render_ms_mean": 36.470062724038144,
+        "render_ms_p95": 45.500025644287234,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 569,
+        "measured_seconds": 21.14761520900356
+      },
+      "lidar": {
+        "hz_per_lidar": 27.736224950425083,
+        "scans_per_lidar": 45331,
+        "measured_seconds": 1536.581995504006,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2153,
+          "livox_bottom": 2943
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.011871337890625,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 6.046168018991011,
+      "camera": {
+        "fps_per_camera": 26.59306941631837,
+        "render_ms_mean": 36.02063012513099,
+        "render_ms_p95": 48.78599860603572,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 649,
+        "measured_seconds": 24.15591781400144
+      },
+      "lidar": {
+        "hz_per_lidar": 28.821292012886392,
+        "scans_per_lidar": 45418,
+        "measured_seconds": 1539.6005971670093,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2141,
+          "livox_bottom": 2929
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.025949478149414062,
+      "gpu": "Quadro P600, 449 MiB, 38 %"
+    },
+    {
+      "seconds": 9.065234421999776,
+      "camera": {
+        "fps_per_camera": 28.30451464824253,
+        "render_ms_mean": 33.20132570601452,
+        "render_ms_p95": 41.58615140186157,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 734,
+        "measured_seconds": 27.158972311008256
+      },
+      "lidar": {
+        "hz_per_lidar": 29.196216707882808,
+        "scans_per_lidar": 45506,
+        "measured_seconds": 1542.6146863169997,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2127,
+          "livox_bottom": 2945
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01311802864074707,
+      "gpu": "Quadro P600, 449 MiB, 41 %"
+    },
+    {
+      "seconds": 12.082648547002464,
+      "camera": {
+        "fps_per_camera": 27.81647977330247,
+        "render_ms_mean": 34.314087749018135,
+        "render_ms_p95": 42.60139449907001,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 818,
+        "measured_seconds": 30.178764919008245
+      },
+      "lidar": {
+        "hz_per_lidar": 29.634867150220543,
+        "scans_per_lidar": 45595,
+        "measured_seconds": 1545.6179054490058,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2155,
+          "livox_bottom": 2942
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.010484933853149414,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 15.099327181000262,
+      "camera": {
+        "fps_per_camera": 28.145406855254926,
+        "render_ms_mean": 33.0458998472964,
+        "render_ms_p95": 42.93243539577816,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 903,
+        "measured_seconds": 33.19879587600008
+      },
+      "lidar": {
+        "hz_per_lidar": 29.57180177563808,
+        "scans_per_lidar": 45684,
+        "measured_seconds": 1548.6275293020008,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2132,
+          "livox_bottom": 2940
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.003171682357788086,
+      "gpu": "Quadro P600, 449 MiB, 46 %"
+    },
+    {
+      "seconds": 18.118941298991558,
+      "camera": {
+        "fps_per_camera": 28.2100931406845,
+        "render_ms_mean": 33.44889402334743,
+        "render_ms_p95": 42.454901605378836,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 988,
+        "measured_seconds": 36.21190184399893
+      },
+      "lidar": {
+        "hz_per_lidar": 29.410988784430852,
+        "scans_per_lidar": 45773,
+        "measured_seconds": 1551.6536091340095,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2128,
+          "livox_bottom": 2946
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.014496564865112305,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 21.136433665000368,
+      "camera": {
+        "fps_per_camera": 26.461899548388235,
+        "render_ms_mean": 36.70556352572021,
+        "render_ms_p95": 44.16358445741935,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1068,
+        "measured_seconds": 39.23511640400102
+      },
+      "lidar": {
+        "hz_per_lidar": 29.30679770307768,
+        "scans_per_lidar": 45862,
+        "measured_seconds": 1554.6904472390015,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2140,
+          "livox_bottom": 2939
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.004109859466552734,
+      "gpu": "Quadro P600, 449 MiB, 38 %"
+    },
+    {
+      "seconds": 24.156918862994644,
+      "camera": {
+        "fps_per_camera": 26.681135466469247,
+        "render_ms_mean": 36.277094974296084,
+        "render_ms_p95": 47.23325200029649,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1149,
+        "measured_seconds": 42.27096921100747
+      },
+      "lidar": {
+        "hz_per_lidar": 29.409533196789596,
+        "scans_per_lidar": 45951,
+        "measured_seconds": 1557.7166768430034,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2126,
+          "livox_bottom": 2946
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.012574911117553711,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 27.17153062899888,
+      "camera": {
+        "fps_per_camera": 27.797773826989463,
+        "render_ms_mean": 34.90361793956254,
+        "render_ms_p95": 42.51711824690574,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1233,
+        "measured_seconds": 45.292793927001185
+      },
+      "lidar": {
+        "hz_per_lidar": 29.654544875403467,
+        "scans_per_lidar": 46041,
+        "measured_seconds": 1560.751624787008,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2135,
+          "livox_bottom": 2951
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.015090465545654297,
+      "gpu": "Quadro P600, 449 MiB, 41 %"
+    },
+    {
+      "seconds": 30.189113751999685,
+      "camera": {
+        "fps_per_camera": 26.77589289878552,
+        "render_ms_mean": 36.484802407492815,
+        "render_ms_p95": 45.004066996625625,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1314,
+        "measured_seconds": 48.31790312900557
+      },
+      "lidar": {
+        "hz_per_lidar": 29.47265131731945,
+        "scans_per_lidar": 46130,
+        "measured_seconds": 1563.7713734700083,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2169,
+          "livox_bottom": 2931
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.008610725402832031,
+      "gpu": "Quadro P600, 449 MiB, 43 %"
+    },
+    {
+      "seconds": 33.20374297199305,
+      "camera": {
+        "fps_per_camera": 27.291553830704885,
+        "render_ms_mean": 35.66007481702666,
+        "render_ms_p95": 45.86851065105294,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1396,
+        "measured_seconds": 51.32249570400745
+      },
+      "lidar": {
+        "hz_per_lidar": 29.45116447575583,
+        "scans_per_lidar": 46219,
+        "measured_seconds": 1566.7933252869989,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2131,
+          "livox_bottom": 2952
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.019261837005615234,
+      "gpu": "Quadro P600, 449 MiB, 38 %"
+    },
+    {
+      "seconds": 36.22156709700357,
+      "camera": {
+        "fps_per_camera": 28.103976184139533,
+        "render_ms_mean": 33.92808731758337,
+        "render_ms_p95": 42.403537599602714,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1481,
+        "measured_seconds": 54.34697876800783
+      },
+      "lidar": {
+        "hz_per_lidar": 29.407452529548692,
+        "scans_per_lidar": 46308,
+        "measured_seconds": 1569.8197690060042,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2146,
+          "livox_bottom": 2939
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.021096229553222656,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 39.236227222994785,
+      "camera": {
+        "fps_per_camera": 27.930964756798698,
+        "render_ms_mean": 33.92779012002783,
+        "render_ms_p95": 43.47106349450768,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1565,
+        "measured_seconds": 57.35439368301013
+      },
+      "lidar": {
+        "hz_per_lidar": 29.542987303925987,
+        "scans_per_lidar": 46397,
+        "measured_seconds": 1572.8323282670026,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2166,
+          "livox_bottom": 2942
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.003609895706176758,
+      "gpu": "Quadro P600, 449 MiB, 47 %"
+    },
+    {
+      "seconds": 42.25660145399161,
+      "camera": {
+        "fps_per_camera": 27.970364121950198,
+        "render_ms_mean": 33.19904996394706,
+        "render_ms_p95": 42.38358069851528,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1649,
+        "measured_seconds": 60.35757232000469
+      },
+      "lidar": {
+        "hz_per_lidar": 29.299591558553853,
+        "scans_per_lidar": 46486,
+        "measured_seconds": 1575.8699132729962,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2119,
+          "livox_bottom": 2943
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.011327505111694336,
+      "gpu": "Quadro P600, 449 MiB, 46 %"
+    },
+    {
+      "seconds": 45.28337667899905,
+      "camera": {
+        "fps_per_camera": 23.52586465686753,
+        "render_ms_mean": 40.49841815468029,
+        "render_ms_p95": 95.9256130081485,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1720,
+        "measured_seconds": 63.37552728300216
+      },
+      "lidar": {
+        "hz_per_lidar": 27.13782270700335,
+        "scans_per_lidar": 46568,
+        "measured_seconds": 1578.891526350999,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2145,
+          "livox_bottom": 2943
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.014695405960083008,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 48.304683182999725,
+      "camera": {
+        "fps_per_camera": 27.29846738633641,
+        "render_ms_mean": 35.52823696434161,
+        "render_ms_p95": 43.61235799296992,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1803,
+        "measured_seconds": 66.41599101400061
+      },
+      "lidar": {
+        "hz_per_lidar": 29.609279685810694,
+        "scans_per_lidar": 46658,
+        "measured_seconds": 1581.9311139720085,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2141,
+          "livox_bottom": 2949
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01592874526977539,
+      "gpu": "Quadro P600, 449 MiB, 38 %"
+    },
+    {
+      "seconds": 51.324238412998966,
+      "camera": {
+        "fps_per_camera": 27.43940464530347,
+        "render_ms_mean": 34.579583939343,
+        "render_ms_p95": 45.015082989993964,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1886,
+        "measured_seconds": 69.44083798400243
+      },
+      "lidar": {
+        "hz_per_lidar": 29.483362977561196,
+        "scans_per_lidar": 46747,
+        "measured_seconds": 1584.9497655440064,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2137,
+          "livox_bottom": 2935
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.019472837448120117,
+      "gpu": "Quadro P600, 449 MiB, 41 %"
+    },
+    {
+      "seconds": 54.3493351359939,
+      "camera": {
+        "fps_per_camera": 27.97422857405089,
+        "render_ms_mean": 34.069077071936114,
+        "render_ms_p95": 42.67060999482055,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 1970,
+        "measured_seconds": 72.44360175200563
+      },
+      "lidar": {
+        "hz_per_lidar": 29.726620973353437,
+        "scans_per_lidar": 46837,
+        "measured_seconds": 1587.9773548579979,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2141,
+          "livox_bottom": 2952
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01655435562133789,
+      "gpu": "Quadro P600, 449 MiB, 46 %"
+    },
+    {
+      "seconds": 57.36614351099706,
+      "camera": {
+        "fps_per_camera": 26.99361193469846,
+        "render_ms_mean": 35.87423993887547,
+        "render_ms_p95": 43.98989101173356,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2051,
+        "measured_seconds": 75.44431170501048
+      },
+      "lidar": {
+        "hz_per_lidar": 29.28935129134361,
+        "scans_per_lidar": 46925,
+        "measured_seconds": 1590.9818597760022,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2129,
+          "livox_bottom": 2940
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01732039451599121,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 60.38830586799304,
+      "camera": {
+        "fps_per_camera": 27.13730639463214,
+        "render_ms_mean": 35.73597685441732,
+        "render_ms_p95": 43.22577649872983,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2133,
+        "measured_seconds": 78.46598227199866
+      },
+      "lidar": {
+        "hz_per_lidar": 29.296820276567953,
+        "scans_per_lidar": 47013,
+        "measured_seconds": 1593.985598719999,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2153,
+          "livox_bottom": 2934
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.019394397735595703,
+      "gpu": "Quadro P600, 449 MiB, 40 %"
+    },
+    {
+      "seconds": 63.40336042600393,
+      "camera": {
+        "fps_per_camera": 28.188822619938,
+        "render_ms_mean": 33.87143767082735,
+        "render_ms_p95": 41.27441819291561,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2218,
+        "measured_seconds": 81.48136184801115
+      },
+      "lidar": {
+        "hz_per_lidar": 29.81922623876013,
+        "scans_per_lidar": 47103,
+        "measured_seconds": 1597.003785687004,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2147,
+          "livox_bottom": 2943
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02240920066833496,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 66.42592813300143,
+      "camera": {
+        "fps_per_camera": 28.236667840001417,
+        "render_ms_mean": 33.81294701179928,
+        "render_ms_p95": 41.70708460442256,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2303,
+        "measured_seconds": 84.49163205700461
+      },
+      "lidar": {
+        "hz_per_lidar": 29.225766506648412,
+        "scans_per_lidar": 47191,
+        "measured_seconds": 1600.0148273300001,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2131,
+          "livox_bottom": 2941
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02894425392150879,
+      "gpu": "Quadro P600, 449 MiB, 46 %"
+    },
+    {
+      "seconds": 69.44346009199216,
+      "camera": {
+        "fps_per_camera": 27.925050384220434,
+        "render_ms_mean": 33.88893082124663,
+        "render_ms_p95": 42.57159794506151,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2387,
+        "measured_seconds": 87.4996839259984
+      },
+      "lidar": {
+        "hz_per_lidar": 29.39821031413503,
+        "scans_per_lidar": 47280,
+        "measured_seconds": 1603.0422225030052,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2148,
+          "livox_bottom": 2939
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01847386360168457,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 72.46754102699924,
+      "camera": {
+        "fps_per_camera": 26.890071799972393,
+        "render_ms_mean": 35.699753889118405,
+        "render_ms_p95": 47.22790399682708,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2468,
+        "measured_seconds": 90.51194810299785
+      },
+      "lidar": {
+        "hz_per_lidar": 29.461619549528944,
+        "scans_per_lidar": 47369,
+        "measured_seconds": 1606.063101916996,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2123,
+          "livox_bottom": 2937
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.018541574478149414,
+      "gpu": "Quadro P600, 449 MiB, 44 %"
+    },
+    {
+      "seconds": 75.48919926999952,
+      "camera": {
+        "fps_per_camera": 27.660960145937405,
+        "render_ms_mean": 34.694820288316265,
+        "render_ms_p95": 43.1028534003417,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2551,
+        "measured_seconds": 93.51256701000966
+      },
+      "lidar": {
+        "hz_per_lidar": 28.769856016222572,
+        "scans_per_lidar": 47456,
+        "measured_seconds": 1609.0871003670036,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2129,
+          "livox_bottom": 2949
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.024037599563598633,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 78.50423303399293,
+      "camera": {
+        "fps_per_camera": 27.75294484839167,
+        "render_ms_mean": 34.30236571356155,
+        "render_ms_p95": 43.237521742412355,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2635,
+        "measured_seconds": 96.53927284100791
+      },
+      "lidar": {
+        "hz_per_lidar": 29.53208717348665,
+        "scans_per_lidar": 47545,
+        "measured_seconds": 1612.1007715470041,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2147,
+          "livox_bottom": 2943
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.019081592559814453,
+      "gpu": "Quadro P600, 449 MiB, 44 %"
+    },
+    {
+      "seconds": 81.52184994399431,
+      "camera": {
+        "fps_per_camera": 28.345134474663244,
+        "render_ms_mean": 32.76884835957939,
+        "render_ms_p95": 41.54869875492295,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2721,
+        "measured_seconds": 99.57330325200746
+      },
+      "lidar": {
+        "hz_per_lidar": 29.483192015825292,
+        "scans_per_lidar": 47634,
+        "measured_seconds": 1615.119440623006,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2135,
+          "livox_bottom": 2942
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.016583919525146484,
+      "gpu": "Quadro P600, 449 MiB, 42 %"
+    },
+    {
+      "seconds": 84.54045284999302,
+      "camera": {
+        "fps_per_camera": 27.721029484513657,
+        "render_ms_mean": 34.69005145234405,
+        "render_ms_p95": 42.35368870722595,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2805,
+        "measured_seconds": 102.6034937450022
+      },
+      "lidar": {
+        "hz_per_lidar": 29.556739929217354,
+        "scans_per_lidar": 47723,
+        "measured_seconds": 1618.1305981530022,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2113,
+          "livox_bottom": 2947
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.015142202377319336,
+      "gpu": "Quadro P600, 449 MiB, 45 %"
+    },
+    {
+      "seconds": 87.55842920100258,
+      "camera": {
+        "fps_per_camera": 28.11170519428188,
+        "render_ms_mean": 33.71506331810344,
+        "render_ms_p95": 44.12082719791214,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2890,
+        "measured_seconds": 105.62714526000491
+      },
+      "lidar": {
+        "hz_per_lidar": 29.478573128134048,
+        "scans_per_lidar": 47812,
+        "measured_seconds": 1621.1497402130044,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2141,
+          "livox_bottom": 2948
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.029104232788085938,
+      "gpu": "Quadro P600, 449 MiB, 49 %"
+    },
+    {
+      "seconds": 90.57519825099735,
+      "camera": {
+        "fps_per_camera": 26.835382123272552,
+        "render_ms_mean": 35.39465406132045,
+        "render_ms_p95": 47.46514299768023,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 2971,
+        "measured_seconds": 108.64554833799775
+      },
+      "lidar": {
+        "hz_per_lidar": 29.62191605808478,
+        "scans_per_lidar": 47901,
+        "measured_seconds": 1624.1542723919993,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2142,
+          "livox_bottom": 2924
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02185654640197754,
+      "gpu": "Quadro P600, 449 MiB, 54 %"
+    },
+    {
+      "seconds": 93.59523536199413,
+      "camera": {
+        "fps_per_camera": 27.167779882896575,
+        "render_ms_mean": 35.87073031756118,
+        "render_ms_p95": 43.2209261933167,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3053,
+        "measured_seconds": 111.66382956500456
+      },
+      "lidar": {
+        "hz_per_lidar": 29.594234462142612,
+        "scans_per_lidar": 47990,
+        "measured_seconds": 1627.1616149239999,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2160,
+          "livox_bottom": 2950
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009907245635986328,
+      "gpu": "Quadro P600, 449 MiB, 42 %"
+    },
+    {
+      "seconds": 96.61698264000006,
+      "camera": {
+        "fps_per_camera": 26.959314350740833,
+        "render_ms_mean": 36.0643808017801,
+        "render_ms_p95": 43.41378799290396,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3134,
+        "measured_seconds": 114.66835701500531
+      },
+      "lidar": {
+        "hz_per_lidar": 28.187498049174923,
+        "scans_per_lidar": 48075,
+        "measured_seconds": 1630.1771361970023,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2155,
+          "livox_bottom": 2954
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.031473398208618164,
+      "gpu": "Quadro P600, 449 MiB, 49 %"
+    },
+    {
+      "seconds": 99.63503458799096,
+      "camera": {
+        "fps_per_camera": 25.728810082810146,
+        "render_ms_mean": 37.89276878169636,
+        "render_ms_p95": 52.481394305505084,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3212,
+        "measured_seconds": 117.6999779780017
+      },
+      "lidar": {
+        "hz_per_lidar": 27.774731218569542,
+        "scans_per_lidar": 48159,
+        "measured_seconds": 1633.2014678940031,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2154,
+          "livox_bottom": 2942
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.0095672607421875,
+      "gpu": "Quadro P600, 449 MiB, 46 %"
+    },
+    {
+      "seconds": 102.65155827600393,
+      "camera": {
+        "fps_per_camera": 28.034702745506987,
+        "render_ms_mean": 33.96178502384025,
+        "render_ms_p95": 42.87716879916843,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3297,
+        "measured_seconds": 120.73193450600957
+      },
+      "lidar": {
+        "hz_per_lidar": 29.61814999456834,
+        "scans_per_lidar": 48248,
+        "measured_seconds": 1636.206382111006,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2143,
+          "livox_bottom": 2955
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01408839225769043,
+      "gpu": "Quadro P600, 449 MiB, 50 %"
+    },
+    {
+      "seconds": 105.66702965999139,
+      "camera": {
+        "fps_per_camera": 23.490510164287148,
+        "render_ms_mean": 41.62649821176876,
+        "render_ms_p95": 81.33622999594081,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3368,
+        "measured_seconds": 123.75443165500474
+      },
+      "lidar": {
+        "hz_per_lidar": 27.777790206162642,
+        "scans_per_lidar": 48332,
+        "measured_seconds": 1639.2303807580029,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2148,
+          "livox_bottom": 2944
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009487390518188477,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 108.68642091899528,
+      "camera": {
+        "fps_per_camera": 27.71896116702121,
+        "render_ms_mean": 34.54853817744324,
+        "render_ms_p95": 42.3437416953675,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3452,
+        "measured_seconds": 126.78484825300984
+      },
+      "lidar": {
+        "hz_per_lidar": 29.60950855030802,
+        "scans_per_lidar": 48421,
+        "measured_seconds": 1642.236171950004,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2157,
+          "livox_bottom": 2935
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02876734733581543,
+      "gpu": "Quadro P600, 449 MiB, 51 %"
+    },
+    {
+      "seconds": 111.70378872100264,
+      "camera": {
+        "fps_per_camera": 26.69545010086968,
+        "render_ms_mean": 36.02548599919379,
+        "render_ms_p95": 46.14381899591535,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3533,
+        "measured_seconds": 129.81907317500736
+      },
+      "lidar": {
+        "hz_per_lidar": 28.686030365003866,
+        "scans_per_lidar": 48508,
+        "measured_seconds": 1645.2690070579993,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2134,
+          "livox_bottom": 2945
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01009678840637207,
+      "gpu": "Quadro P600, 449 MiB, 48 %"
+    },
+    {
+      "seconds": 114.73298625099414,
+      "camera": {
+        "fps_per_camera": 27.32100680548715,
+        "render_ms_mean": 35.39446135397245,
+        "render_ms_p95": 44.937262948951684,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3615,
+        "measured_seconds": 132.82042669699877
+      },
+      "lidar": {
+        "hz_per_lidar": 29.402669379676897,
+        "scans_per_lidar": 48597,
+        "measured_seconds": 1648.2959431110066,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2140,
+          "livox_bottom": 2941
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01522207260131836,
+      "gpu": "Quadro P600, 449 MiB, 51 %"
+    },
+    {
+      "seconds": 117.75701097300043,
+      "camera": {
+        "fps_per_camera": 28.567748380963163,
+        "render_ms_mean": 32.345463372875265,
+        "render_ms_p95": 41.911381002137205,
+        "width": 800,
+        "height": 600,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 3701,
+        "measured_seconds": 135.8308144550101
+      },
+      "lidar": {
+        "hz_per_lidar": 29.65329597583144,
+        "scans_per_lidar": 48686,
+        "measured_seconds": 1651.2972958129976,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2132,
+          "livox_bottom": 2941
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.03118443489074707,
+      "gpu": "Quadro P600, 449 MiB, 51 %"
+    }
+  ]
+}

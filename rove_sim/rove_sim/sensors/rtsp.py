@@ -9,6 +9,7 @@ publishes to the server. Frames are pushed from the sim's render loop via push()
 a writer thread paces them to ffmpeg at a fixed fps (repeating the last frame if
 the sim is slow) so clients get a steady CFR stream and the sim never blocks.
 """
+
 from __future__ import annotations
 
 import os
@@ -45,13 +46,15 @@ class RtspServer:
         with os.fdopen(fd, "w") as f:
             # TCP-only RTSP: avoids binding the shared UDP RTP/RTCP ports (8000/
             # 8001) so multiple/respawned servers don't clash on them.
-            f.write(f"rtspAddress: :{self.port}\nrtspTransports: [tcp]\n"
-                    f"rtmp: no\nhls: no\nwebrtc: no\nsrt: no\n"
-                    f"logLevel: error\npaths:\n  all_others:\n")
-        self.proc = subprocess.Popen([self.bin, self._cfg],
-                                     stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.DEVNULL)
-        time.sleep(1.0)                         # let it bind the port
+            f.write(
+                f"rtspAddress: :{self.port}\nrtspTransports: [tcp]\n"
+                f"rtmp: no\nhls: no\nwebrtc: no\nsrt: no\nmoq: no\n"
+                f"logLevel: error\npaths:\n  all_others:\n"
+            )
+        self.proc = subprocess.Popen(
+            [self.bin, self._cfg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        time.sleep(1.0)  # let it bind the port
         return self
 
     def stop(self) -> None:
@@ -69,25 +72,69 @@ class RtspServer:
 class RtspStream:
     """One camera -> one rtsp://host:port/<name> H.264 stream."""
 
-    def __init__(self, name: str, width: int, height: int, fps: float = 15.0,
-                 host: str = "127.0.0.1", port: int = 8554,
-                 scale: Optional[tuple] = None, encoder: str = "libx264",
-                 bitrate: str = "2M"):
+    def __init__(
+        self,
+        name: str,
+        width: int,
+        height: int,
+        fps: float = 15.0,
+        host: str = "127.0.0.1",
+        port: int = 8554,
+        scale: Optional[tuple] = None,
+        encoder: str = "libx264",
+        bitrate: str = "2M",
+        input_format: str = "rgb24",
+    ):
         self.name = name
         self.url = f"rtsp://{host}:{port}/{name}"
         self.fps = float(fps)
         vf = ["-vf", f"scale={scale[0]}:{scale[1]}"] if scale else []
-        enc = (["-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll"]
-               if encoder == "h264_nvenc" else
-               ["-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency"])
-        cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-               "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{width}x{height}",
-               "-r", f"{self.fps:g}", "-i", "-", *vf, *enc,
-               "-pix_fmt", "yuv420p", "-b:v", bitrate, "-g", str(int(self.fps * 2)),
-               "-f", "rtsp", "-rtsp_transport", "tcp", self.url]
-        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                     stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.DEVNULL)
+        enc = (
+            ["-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll"]
+            if encoder == "h264_nvenc"
+            else ["-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency"]
+        )
+        cmd = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            input_format,
+            "-s",
+            f"{width}x{height}",
+            "-r",
+            f"{self.fps:g}",
+            "-i",
+            "-",
+            *vf,
+            *enc,
+            "-threads",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+            "-colorspace",
+            "bt709",
+            "-color_primaries",
+            "bt709",
+            "-color_trc",
+            "bt709",
+            "-b:v",
+            bitrate,
+            "-g",
+            str(int(self.fps * 2)),
+            "-f",
+            "rtsp",
+            "-rtsp_transport",
+            "tcp",
+            self.url,
+        ]
+        self.proc = subprocess.Popen(
+            cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=None
+        )
         self._frame: Optional[bytes] = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -100,19 +147,24 @@ class RtspStream:
             with self._lock:
                 self._frame = np.ascontiguousarray(rgb, np.uint8).tobytes()
 
+    def push_bytes(self, frame: bytes) -> None:
+        """Publish an already packed frame without another RGB copy/conversion."""
+        with self._lock:
+            self._frame = frame
+
     def _writer(self) -> None:
         period = 1.0 / self.fps
-        nxt = time.time()
+        nxt = time.monotonic()
         while not self._stop.is_set():
             with self._lock:
                 frame = self._frame
             if frame is not None and self.proc.stdin is not None:
                 try:
-                    self.proc.stdin.write(frame)        # repeats last frame -> CFR
+                    self.proc.stdin.write(frame)  # repeats last frame -> CFR
                 except (BrokenPipeError, ValueError):
                     break
-            nxt += period
-            time.sleep(max(0.0, nxt - time.time()))
+            nxt = max(nxt + period, time.monotonic())
+            self._stop.wait(max(0.0, nxt - time.monotonic()))
 
     def stop(self) -> None:
         self._stop.set()
@@ -133,9 +185,18 @@ class RtspCameraFeeds:
     """Ties a set of Camera sensors to RTSP streams. Call publish() each frame
     (it rate-gates internally to the stream fps and renders only then)."""
 
-    def __init__(self, cameras, fps: float = 15.0, port: int = 8554,
-                 scale: Optional[tuple] = None, encoder: str = "libx264",
-                 render_fps: float = 20.0, manage_server: bool = True):
+    def __init__(
+        self,
+        cameras,
+        fps: float = 15.0,
+        port: int = 8554,
+        scale: Optional[tuple] = None,
+        encoder: str = "libx264",
+        render_fps: float = 20.0,
+        manage_server: bool = True,
+        bitrate: str = "2M",
+        input_format: str = "rgb24",
+    ):
         self.fps = float(fps)
         # when False, push to an EXISTING mediamtx (one shared server for many
         # workers -- multiple mediamtx clash on their UDP RTP/MoQ ports).
@@ -149,8 +210,10 @@ class RtspCameraFeeds:
         self.streams: dict = {}
         self.cameras = list(cameras)
         self._port, self._scale, self._encoder = port, scale, encoder
+        self._bitrate = bitrate
+        self._input_format = input_format
         self._accum = 0.0
-        self._rr = 0                              # round-robin cursor
+        self._rr = 0  # round-robin cursor
 
     def start(self) -> "RtspCameraFeeds":
         if not self.cameras or (self.manage_server and not self.server.available):
@@ -159,8 +222,16 @@ class RtspCameraFeeds:
             self.server.start()
         for c in self.cameras:
             self.streams[c.name] = RtspStream(
-                c.name, c.width, c.height, fps=self.fps, port=self._port,
-                scale=self._scale, encoder=self._encoder)
+                c.name,
+                c.width,
+                c.height,
+                fps=self.fps,
+                port=self._port,
+                scale=self._scale,
+                encoder=self._encoder,
+                bitrate=self._bitrate,
+                input_format=self._input_format,
+            )
         return self
 
     def urls(self) -> list:
@@ -179,7 +250,7 @@ class RtspCameraFeeds:
         self._rr += 1
         s = self.streams.get(c.name)
         if s is not None:
-            s.push(c.rgb_frame())                 # rgb-only fast path (no depth)
+            s.push(c.rgb_frame())  # rgb-only fast path (no depth)
 
     def stop(self) -> None:
         for s in self.streams.values():

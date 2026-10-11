@@ -245,6 +245,7 @@ fn wrap_pi(a: f64) -> f64 {
 }
 
 pub struct PositionService {
+    use_attitude_for_tilt: bool,
     datum: Datum,
     filter: PositionFilter,
     /// Which VN axis is body-up (the VN is mounted rotated on the real robot).
@@ -268,6 +269,7 @@ impl PositionService {
         Self {
             datum,
             filter: PositionFilter::new(correction_gain),
+            use_attitude_for_tilt: false,
             up_axis,
             gyro_yaw_sign,
             heading_rad: 0.0,
@@ -276,6 +278,26 @@ impl PositionService {
             last_z: 0.0,
             seeded: false,
         }
+    }
+
+    /// Select reported attitude when the configured mounting is trustworthy.
+    /// The legacy accelerometer path remains the default for existing instances.
+    pub fn use_attitude_for_tilt(&mut self, enabled: bool) {
+        self.use_attitude_for_tilt = enabled;
+    }
+
+    fn tilt(&self, roll_deg: f64, pitch_deg: f64, acceleration_tilt: f64) -> f64 {
+        if !self.use_attitude_for_tilt { return acceleration_tilt; }
+        if !roll_deg.is_finite() || !pitch_deg.is_finite() { return 180.0; }
+        let roll = roll_deg.to_radians();
+        let pitch = pitch_deg.to_radians();
+        // Vertical component of the configured sensor up-axis in world space.
+        let vertical = match self.up_axis {
+            UpAxis::X => -pitch.sin(),
+            UpAxis::Y => roll.sin() * pitch.cos(),
+            UpAxis::Z => roll.cos() * pitch.cos(),
+        };
+        vertical.clamp(-1.0, 1.0).acos().to_degrees()
     }
 
     /// Fuse the drive-forward heading: integrate the up-axis gyro, and correct
@@ -307,7 +329,8 @@ impl PositionService {
     /// attitude and GNSS all come from the VN. `None` if the frame lacks fields.
     pub fn update(&mut self, frame: &serde_json::Value, now: Instant) -> Option<Pose> {
         let r = parse_vectornav(frame, &self.datum)?;
-        let (tilt_deg, yaw_rate) = tilt_and_yaw_rate(r.accel, r.gyro, self.up_axis);
+        let (acceleration_tilt, yaw_rate) = tilt_and_yaw_rate(r.accel, r.gyro, self.up_axis);
+        let tilt_deg = self.tilt(r.roll_deg, r.pitch_deg, acceleration_tilt);
         let (x, y, conf, drift) =
             self.filter.update(r.x, r.y, r.vel_e, r.vel_n, r.gnss_fix, now);
         Some(Pose {
@@ -343,7 +366,8 @@ impl PositionService {
         now: Instant,
     ) -> Option<Pose> {
         let r = parse_vectornav(frame, &self.datum)?; // attitude + IMU only
-        let (tilt_deg, yaw_rate) = tilt_and_yaw_rate(r.accel, r.gyro, self.up_axis);
+        let (acceleration_tilt, yaw_rate) = tilt_and_yaw_rate(r.accel, r.gyro, self.up_axis);
+        let tilt_deg = self.tilt(r.roll_deg, r.pitch_deg, acceleration_tilt);
         // Fused drive-forward heading (gyro + GNSS course) — the VN's own yaw is
         // unusable (side mount). Injected via yaw_ned_deg so GoTo/perception (which
         // read heading_enu_rad) use it with drive_offset_deg = 0.
@@ -441,6 +465,23 @@ mod tests {
             "yaw": yaw, "roll": roll, "pitch": pitch,
             "gyro_z": gyro_z, "vel_east": 0.0, "vel_north": 0.0,
         })
+    }
+
+    #[test]
+    fn attitude_tilt_ignores_drive_acceleration_but_detects_tip_over() {
+        let datum = Datum { lat: 46.7512, lon: 7.6131, alt: 560.0 };
+        let mut svc = PositionService::new(datum, 0.05, UpAxis::Z, 1.0);
+        let mut frame = vn_frame(0.0, 0.0, 0.0, 0.0);
+        frame["accel_x"] = serde_json::json!(9.81);
+        frame["accel_z"] = serde_json::json!(9.81);
+        let now = Instant::now();
+        assert!(svc.update(&frame, now).unwrap().tilt_deg > 44.0);
+        svc.use_attitude_for_tilt(true);
+        assert!(svc.update(&frame, now).unwrap().tilt_deg < 0.01);
+        frame["roll"] = serde_json::json!(42.0);
+        assert!((svc.update(&frame, now).unwrap().tilt_deg - 42.0).abs() < 0.01);
+        frame["roll"] = serde_json::json!(180.0);
+        assert!((svc.update(&frame, now).unwrap().tilt_deg - 180.0).abs() < 0.01);
     }
 
     #[test]

@@ -26,7 +26,7 @@ class EngineState:
     # engine startup from mesh geometry; used as the rotation pivot / IK
     # position target when an Ovis arrives with no tcp_offset_local set.
     tcp_offsets: dict[str, np.ndarray] = field(default_factory=dict)
-    # Latest kinova_arm state pushed by rove_sensor_api. Ordered by kinova
+    # Latest kinova_arm state pushed by HALo. Ordered by kinova
     # actuator index (1..N). None until the first frame arrives.
     latest_kinova_positions: list[float] | None = None
     latest_kinova_t: float = 0.0
@@ -50,7 +50,7 @@ class EngineState:
 
     # ---- flippers (track sub-drives 41..44, each its own ODrive) ----------
     # Latest motor position (revolutions) per ODrive node id, pushed by
-    # rove_sensor_api. One subscriber per node writes its own key, so a dead
+    # HALo. One subscriber per node writes its own key, so a dead
     # node (43/44 are fried on the current robot) simply never appears.
     latest_flipper_positions: dict[int, float] = field(default_factory=dict)
     # Per-node last-frame monotonic timestamp, for staleness gating.

@@ -41,7 +41,7 @@ class ModelSpec:
 
 @dataclass
 class ApiSpec:
-    sensors: str = "rove_sensor_api"           # sensor-API adapter key
+    sensors: str = "HALo"           # sensor-API adapter key
     control: str = "rove_control_bridge"       # control-bridge adapter key
     transport: Dict[str, Any] = field(default_factory=dict)
 
@@ -104,7 +104,7 @@ def load_profile(path: str) -> Profile:
 
     a = doc.get("api", {})
     api = ApiSpec(
-        sensors=a.get("sensors", "rove_sensor_api"),
+        sensors=a.get("sensors", "HALo"),
         control=a.get("control", "rove_control_bridge"),
         transport=dict(a.get("transport", {})),
     )

@@ -1,4 +1,4 @@
-"""SimSensorApi: the mock sim implementing rove_sensor_api's robot-facing side.
+"""SimSensorApi: the mock sim implementing HALo's robot-facing side.
 
 Each control tick (or sensor tick) it samples its per-driver devices from the
 physics state and publishes one DATA frame per channel over a Transport, in the
@@ -14,6 +14,7 @@ from .devices import build_devices
 from ..transport import build_transport
 
 
+@register_sensor_api("HALo")
 @register_sensor_api("rove_sensor_api")
 class SimSensorApi(SensorApi):
     def __init__(self, robot, profile, transport=None, devices=None, actuators=None):

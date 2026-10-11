@@ -47,6 +47,7 @@ class RoveControl:
     ovis: Ovis = field(default_factory=Ovis)
     gripper: Gripper = field(default_factory=Gripper)
     timestamp_us: int = 0
+    arm_limp_mode: bool = False
 
     @staticmethod
     def stop() -> "RoveControl":

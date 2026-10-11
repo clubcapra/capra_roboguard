@@ -1,0 +1,3 @@
+# Copy to vectornav.toml. Use a stable udev device path for this sensor.
+port = "/dev/serial/by-id/replace-with-imu-adapter"
+baudrate = 115200

@@ -1,1 +1,830 @@
-{"version": 9, "collision": "assets/terrain/free_dirt_road_through_forest/collision.obj", "visual": [{"obj": "assets/terrain/free_dirt_road_through_forest/rock/Broken_Rocks/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/rock/Broken_Rocks/Broken_Rocks.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "rock", "material": "Broken_Rocks", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road/Dirt_Road.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "ground", "material": "Dirt_Road", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/grass/Grass_Close/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/grass/Grass_Close/Grass_Close.png", "color": [0.8980392156862745, 0.8980392156862745, 0.8980392156862745, 1.0], "category": "grass", "material": "Grass_Close", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Cobblestone/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Cobblestone/Cobblestone.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "ground", "material": "Cobblestone", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/rock/Tall_Cliff/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/rock/Tall_Cliff/Tall_Cliff.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "rock", "material": "Tall_Cliff", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/rock/Sloped_Rock/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/rock/Sloped_Rock/Sloped_Rock.png", "color": [0.7411764705882353, 0.7411764705882353, 0.7411764705882353, 1.0], "category": "rock", "material": "Sloped_Rock", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Fence/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Fence/Wood_Fence.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "trunk", "material": "Wood_Fence", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/rock/Road_Edge_Gravel_Dusty/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/rock/Road_Edge_Gravel_Dusty/Road_Edge_Gravel_Dusty.png", "color": [0.6431372549019608, 0.6431372549019608, 0.6431372549019608, 1.0], "category": "rock", "material": "Road_Edge_Gravel_Dusty", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Trails/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Trails/Dirt_Road_Trails.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "ground", "material": "Dirt_Road_Trails", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Mud_Pile/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Mud_Pile/Mud_Pile.png", "color": [0.792156862745098, 0.792156862745098, 0.792156862745098, 1.0], "category": "ground", "material": "Mud_Pile", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Maple_Leaves/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Maple_Leaves/Fallen_Maple_Leaves.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "foliage", "material": "Fallen_Maple_Leaves", "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Maple_Leaves/mesh_cutout.obj"}, {"obj": "assets/terrain/free_dirt_road_through_forest/foliage/Forest_Bush/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/foliage/Forest_Bush/Forest_Bush.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "foliage", "material": "Forest_Bush", "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Forest_Bush/mesh_cutout.obj"}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Ground_Dirt/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Ground_Dirt/Ground_Dirt.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "ground", "material": "Ground_Dirt", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Generic_Leaves/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Generic_Leaves/Fallen_Generic_Leaves.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "foliage", "material": "Fallen_Generic_Leaves", "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Generic_Leaves/mesh_cutout.obj"}, {"obj": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Oak/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Oak/Trunk_Oak.png", "color": [0.9176470588235294, 0.9176470588235294, 0.9176470588235294, 1.0], "category": "trunk", "material": "Trunk_Oak", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Log/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Log/Wood_Log.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "trunk", "material": "Wood_Log", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Birch/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Birch/Trunk_Birch.png", "color": [0.8156862745098039, 0.8156862745098039, 0.8156862745098039, 1.0], "category": "trunk", "material": "Trunk_Birch", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Bare/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Bare/Dirt_Road_Bare.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "ground", "material": "Dirt_Road_Bare", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/metal/Metal_Fence/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/metal/Metal_Fence/Metal_Fence.png", "color": [0.4, 0.4, 0.4, 1.0], "category": "metal", "material": "Metal_Fence", "collision_obj": null}, {"obj": "assets/terrain/free_dirt_road_through_forest/foliage/Background_Tree_Atlas/mesh.obj", "tex": "assets/terrain/free_dirt_road_through_forest/foliage/Background_Tree_Atlas/Background_Tree_Atlas.png", "color": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 1.0], "category": "foliage", "material": "Background_Tree_Atlas", "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Background_Tree_Atlas/mesh_cutout.obj"}], "collision_faces": 60000, "offset": [5.0, 35.0, -173.26510675358026]}
+{
+  "version": 11,
+  "collision": "assets/terrain/free_dirt_road_through_forest/collision.obj",
+  "visual": [
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/rock/Broken_Rocks/mesh.obj",
+      "tex": "rock/Broken_Rocks/Broken_Rocks.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "rock",
+      "material": "Broken_Rocks",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Broken_Rocks_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Broken_Rocks_Normal.jpeg",
+        "roughness": "Broken_Rocks_Roughness.jpeg"
+      },
+      "source_sha256": {
+        "Broken_Rocks_Diffuse.jpeg": "89a680cdad07bef0319edde785908ad461297326d1d53da4dba3e998a7bab5d0",
+        "Broken_Rocks_Normal.jpeg": "09218e84c95438cf37e3416624560d1eae6520e248531f0c73164d038b924290",
+        "Broken_Rocks_Roughness.jpeg": "e2bdad0b32721c8b8241bb87dea7dc87b9b23d87e1841cf27f9cf1a3da8d9835"
+      },
+      "texture_sha256": "9fa923c0c646256bf8dd14af6fa3950e0707f86e80443a07da3b99cdaaa47666",
+      "normal_tex": "rock/Broken_Rocks/Broken_Rocks_normal.png",
+      "normal_sha256": "5e5a393ee3ba2142d59385e672eacb32dcda784b020fc97a66fce50823668b29",
+      "roughness_tex": "rock/Broken_Rocks/Broken_Rocks_roughness.png",
+      "roughness_sha256": "cd456a771c3f270d038cb253512c8996ea0c9f716499f9df7135849e0062a287"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road/mesh.obj",
+      "tex": "ground/Dirt_Road/Dirt_Road.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Dirt_Road",
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Dirt_Road_Diffuse.png",
+        "opacity": "Dirt_Road_Opacity.png",
+        "flip_y": true,
+        "normal": "Dirt_Road_Normal.png",
+        "roughness": "Dirt_Road_Roughness.png"
+      },
+      "source_sha256": {
+        "Dirt_Road_Diffuse.png": "9749f5a636ccb352591166a5b39c0c07c821f9ee00f5032566240e8c1a7796ab",
+        "Dirt_Road_Opacity.png": "732b07ec1970ad2f46e71e50f7ed20596ac58f4f1dec3ec4c20712fa15093ee2",
+        "Dirt_Road_Normal.png": "3542f3272b03ff31a951e57e2d5727569e32675f242f24d466fb30860ce89be6",
+        "Dirt_Road_Roughness.png": "45576acf6b4657c9b765b823c43b9439c5ea8b3873f23dfd95657c840b9c409c"
+      },
+      "texture_sha256": "bcd2c0cea51cc9b140d3cf3cb783a82922b6448184d8c61627e070c6e9835d0d",
+      "normal_tex": "ground/Dirt_Road/Dirt_Road_normal.png",
+      "normal_sha256": "8cbff8e64ea7aa27b02cd53189d523b6790f4ce8528f8aa9cc5d7390811d913f",
+      "roughness_tex": "ground/Dirt_Road/Dirt_Road_roughness.png",
+      "roughness_sha256": "6ac37b4234161768c477f0f870e8f7bd0c8c8b31a2a9337db6a4514959a0ea36"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/grass/Grass_Close/mesh.obj",
+      "tex": "grass/Grass_Close/Grass_Close.png",
+      "color": [
+        0.8980392156862745,
+        0.8980392156862745,
+        0.8980392156862745,
+        1.0
+      ],
+      "category": "grass",
+      "material": "Grass_Close",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Grass_Close_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Grass_Close_Normal.jpeg",
+        "roughness": "Grass_Close_Roughness.png"
+      },
+      "source_sha256": {
+        "Grass_Close_Diffuse.png": "6b2c25a354dfafb5349f8af577dd55952de8889f79ba939aa7a5ca0205a0b803",
+        "Grass_Close_Normal.jpeg": "c42599c2da47a48c45fe6786003812555bfb83933b48b46ecba3be29aa0ddc0c",
+        "Grass_Close_Roughness.png": "4ca78803fd32e9ab894af1254a03c4a20011f10320030074141bc3c8689f5bbe"
+      },
+      "texture_sha256": "b20a9fc1864795484bac647e770a289ce5ba2a391483d1100a048b88fe1239d9",
+      "normal_tex": "grass/Grass_Close/Grass_Close_normal.png",
+      "normal_sha256": "c5d13b0bf5a4fcc377c83a7bf9812d1d208e3eec6c474348a23a3e44e2c14cd7",
+      "roughness_tex": "grass/Grass_Close/Grass_Close_roughness.png",
+      "roughness_sha256": "8540e74de197d7bc06fcb3794f49912d276642f32cb7342fc45e35dfe14a2e9e"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Cobblestone/mesh.obj",
+      "tex": "ground/Cobblestone/Cobblestone.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Cobblestone",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Cobblestone_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Cobblestone_Normal.jpeg",
+        "roughness": "Cobblestone_Roughness.jpeg"
+      },
+      "source_sha256": {
+        "Cobblestone_Diffuse.jpeg": "950059ff0ae0480fd36496842d2b6ed47617f313dd7e309ff2094450fcae6806",
+        "Cobblestone_Normal.jpeg": "7430340efb42ab1e2e9995d44f41ae943668ecaf1cc6cb9dfc65b99b5103bfa0",
+        "Cobblestone_Roughness.jpeg": "ad7fc896dc0747c2c158cd74cdeff909bd6ba9b0909df3171cfbe192dd9f4e51"
+      },
+      "texture_sha256": "dc2724caf9d1db12df65e7c9316d9f7e73eb222212ed4476d37dcaea19b94bc4",
+      "normal_tex": "ground/Cobblestone/Cobblestone_normal.png",
+      "normal_sha256": "b9b229306ad8e143664102b4e2214f7b183515ad7d1d5391bf70e8d05f234ef0",
+      "roughness_tex": "ground/Cobblestone/Cobblestone_roughness.png",
+      "roughness_sha256": "431216961ea9727122f96e0cb6f8d958057acd0795e80a3c20fc0acf7207ebf7"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/rock/Tall_Cliff/mesh.obj",
+      "tex": "rock/Tall_Cliff/Tall_Cliff.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "rock",
+      "material": "Tall_Cliff",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Tall_Cliff_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Tall_Cliff_Normal.png",
+        "roughness": "Tall_Cliff_Roughness.jpeg"
+      },
+      "source_sha256": {
+        "Tall_Cliff_Diffuse.jpeg": "b433141cbfd6b9e45442463044772a63181396cdbea47777dfd15ec61ece6915",
+        "Tall_Cliff_Normal.png": "532b67d44d9c027b98c59d19d19b45e8f8a14131448420e5b2c15c3a73809cdf",
+        "Tall_Cliff_Roughness.jpeg": "ae6c0cb21308d5f6d41fad3ae5ec2555c66524c159a5ceddd99af2c24e7a287a"
+      },
+      "texture_sha256": "19dab3491b649d6986c187c17b361f795c82fb538f7ed20e01d55498e516003b",
+      "normal_tex": "rock/Tall_Cliff/Tall_Cliff_normal.png",
+      "normal_sha256": "f3ebe0db38c318d4de4f6982b288ae1cba91e2c513f1ceba0da9f964802d9bc6",
+      "roughness_tex": "rock/Tall_Cliff/Tall_Cliff_roughness.png",
+      "roughness_sha256": "1329656ae684ab15e6c6501eace2f90a1c4e867ec243a0d82e850b9b033bf02c"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/rock/Sloped_Rock/mesh.obj",
+      "tex": "rock/Sloped_Rock/Sloped_Rock.png",
+      "color": [
+        0.7411764705882353,
+        0.7411764705882353,
+        0.7411764705882353,
+        1.0
+      ],
+      "category": "rock",
+      "material": "Sloped_Rock",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Rock_Sloped_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Rock_Sloped_Normal.png",
+        "roughness": "Rock_Sloped_Roughness.png"
+      },
+      "source_sha256": {
+        "Rock_Sloped_Diffuse.png": "5ef8c89d5c12b66c27b1cc7871c626c17e38afa6e21aba9722b72e5bd2f61ece",
+        "Rock_Sloped_Normal.png": "39e94f50d91defaad15061c92f7cbbf5f5511c38aa2c4dc131609f9e6f1a00dc",
+        "Rock_Sloped_Roughness.png": "0f03696134016d67be6d922cbf1dff7f5d860ab5cbe87e5a6871183e897a7f47"
+      },
+      "texture_sha256": "b58cb00084f5ee145241491dd02b6db23a51cd731b3e4722460179ca5145ff28",
+      "normal_tex": "rock/Sloped_Rock/Sloped_Rock_normal.png",
+      "normal_sha256": "132e3c6e3c54b3e4cce97cb19854c2ed2d7fd12134eba4f4ae30ece9f43341af",
+      "roughness_tex": "rock/Sloped_Rock/Sloped_Rock_roughness.png",
+      "roughness_sha256": "38c3436dd9fd2ad8619c80a3d0c68edc681eabd8d753d5cdbe98139e594c441e"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Fence/mesh.obj",
+      "tex": "trunk/Wood_Fence/Wood_Fence.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "trunk",
+      "material": "Wood_Fence",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Wooden Fence Diffuse.png",
+        "opacity": null,
+        "flip_y": true
+      },
+      "source_sha256": {
+        "Wooden Fence Diffuse.png": "ad022effeefd262d315acf39b6c4679dd722126d4c0b7d8ec4d7eb5d6a8b98ee"
+      },
+      "texture_sha256": "4757b083d3bef4f743849d90d6047c4eec3679899eae21752bf9c04e7e7dbf7a"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/rock/Road_Edge_Gravel_Dusty/mesh.obj",
+      "tex": "rock/Road_Edge_Gravel_Dusty/Road_Edge_Gravel_Dusty.png",
+      "color": [
+        0.6431372549019608,
+        0.6431372549019608,
+        0.6431372549019608,
+        1.0
+      ],
+      "category": "rock",
+      "material": "Road_Edge_Gravel_Dusty",
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Dusty_Road_Edge_Gravel_Diffuse.png",
+        "opacity": "Dusty_Road_Edge_Gravel_Opacity.png",
+        "flip_y": true,
+        "normal": "Dusty_Road_Edge_Gravel_Normal.png",
+        "roughness": "Dusty_Road_Edge_Gravel_Roughness.png"
+      },
+      "source_sha256": {
+        "Dusty_Road_Edge_Gravel_Diffuse.png": "c82cb7c2bc067c4bcc8f04549042150e547b2676aec7cbb530be1dcd229bfa65",
+        "Dusty_Road_Edge_Gravel_Opacity.png": "14f675ad22185ef4aa85f7b01f7d453edd232a70a188da5c8757ecfd89cc1419",
+        "Dusty_Road_Edge_Gravel_Normal.png": "041e372fcc88f698e8e2b7c27681a37ca3d026a715d0fcffac36292725cdabc1",
+        "Dusty_Road_Edge_Gravel_Roughness.png": "aa7dc8d02f6c107d44a8f9197c9c7a4755c0ba32a83ff0745cc94109c29d68e1"
+      },
+      "texture_sha256": "456ecbea7ace77f2b772c59f0fee828056f9e6b5f3722b58160d8e47153a6b74",
+      "normal_tex": "rock/Road_Edge_Gravel_Dusty/Road_Edge_Gravel_Dusty_normal.png",
+      "normal_sha256": "57a19ed5910500bdefd093a08807decc106dadc1712bf66b04cf1430b075ffd1",
+      "roughness_tex": "rock/Road_Edge_Gravel_Dusty/Road_Edge_Gravel_Dusty_roughness.png",
+      "roughness_sha256": "ba7631efac8118e64d828d063595125e2b7c3f8be4c1abf9cdd6c233b5c60add"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Trails/mesh.obj",
+      "tex": "ground/Dirt_Road_Trails/Dirt_Road_Trails.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Dirt_Road_Trails",
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Dirt_Road_Trails_Diffuse.png",
+        "opacity": "Dirt_Road_Trails_Opacity.png",
+        "flip_y": true,
+        "normal": "Dirt_Road_Trails_Normal.png",
+        "roughness": "Dirt_Road_Trails_Roughness.png"
+      },
+      "source_sha256": {
+        "Dirt_Road_Trails_Diffuse.png": "125747d21a387501d7f908ed064a13f25e7a8fe46ec1b15c6023a0ed764749bd",
+        "Dirt_Road_Trails_Opacity.png": "ee24e956411f3951e10040621174399188842f7c9ee50333bc77d26d420d7e86",
+        "Dirt_Road_Trails_Normal.png": "98d76e3c30009c16174b84fd34b399ec3f4c276bc020bbc0441e7ec46bee5729",
+        "Dirt_Road_Trails_Roughness.png": "68c61c38937e2931f8ee113bbe7b57377575fb6bea08ffd9781beafac7aefb66"
+      },
+      "texture_sha256": "7964fb5a8ee896655ea68476f1cfc1b92f9ef9b02a949d3f54b55077079f8f00",
+      "normal_tex": "ground/Dirt_Road_Trails/Dirt_Road_Trails_normal.png",
+      "normal_sha256": "b5f034025e58b5eae9bb493484b33db5d536e37be1eec394208f6172bf3724da",
+      "roughness_tex": "ground/Dirt_Road_Trails/Dirt_Road_Trails_roughness.png",
+      "roughness_sha256": "ed0180f6b22932a2ce5a806eafb13b0ad4afe54ed92bea3f83fcdd26cdc2dbb2"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Mud_Pile/mesh.obj",
+      "tex": "ground/Mud_Pile/Mud_Pile.png",
+      "color": [
+        0.792156862745098,
+        0.792156862745098,
+        0.792156862745098,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Mud_Pile",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Wall_Mud_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Wall_Mud_Normal.png",
+        "roughness": "Wall_Mud_Roughness.png"
+      },
+      "source_sha256": {
+        "Wall_Mud_Diffuse.png": "ba4348b3137fb7933a569950eaf112c9d429230b67bcbff485a96300bf0803e3",
+        "Wall_Mud_Normal.png": "ff16d8e1feaa4d5d9748ea745054604042ea8c5267689df78914660ac5f857d2",
+        "Wall_Mud_Roughness.png": "2005a8112f1ec155814ba2045ccf3b07c5bc65211f1f19275bb1135912e94995"
+      },
+      "texture_sha256": "fe7db958bd4ff877631bf474bf5f2e4f64722d941800aa361e05490df4134364",
+      "normal_tex": "ground/Mud_Pile/Mud_Pile_normal.png",
+      "normal_sha256": "c1cf871cd1c5d7d6f35051055cdaeb09d2a3e2d1fca0a06ef84168b9eb7e6212",
+      "roughness_tex": "ground/Mud_Pile/Mud_Pile_roughness.png",
+      "roughness_sha256": "1070894f049645749ac94e078f8710fb326d8f2e7b267cd4f471933d3a1aa0df"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Maple_Leaves/mesh.obj",
+      "tex": "foliage/Fallen_Maple_Leaves/Fallen_Maple_Leaves.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "foliage",
+      "material": "Fallen_Maple_Leaves",
+      "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Maple_Leaves/mesh_cutout.obj",
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Fallen_Maple_Leaves_Diffuse.png",
+        "opacity": "Fallen_Maple_Leaves_Opacity.png",
+        "flip_y": true,
+        "normal": "Fallen_Maple_Leaves_Normal.png",
+        "roughness": "Fallen_Maple_Leaves_Roughness.png"
+      },
+      "source_sha256": {
+        "Fallen_Maple_Leaves_Diffuse.png": "57fa6df0c94de53b1d165c744d50e10b27da1c3e93d9cf81dbc3b7829afc3fcf",
+        "Fallen_Maple_Leaves_Opacity.png": "841d3b13353a5e4481eceb594851d332c8dc9dafb783dd5f640d3076c336c9e2",
+        "Fallen_Maple_Leaves_Normal.png": "939d07b341d4ebd75f5bc99fb1536075c9686e9bbc1438deca8bdaec06a6a5d5",
+        "Fallen_Maple_Leaves_Roughness.png": "c9a4b552a9d6f183a9f068f9009ff305604047f23425e593ca512efa2e2b0baa"
+      },
+      "texture_sha256": "5340575f0fdb21860309325cd3656a7bc8963dabba5b91fea62094ef05165d88",
+      "normal_tex": "foliage/Fallen_Maple_Leaves/Fallen_Maple_Leaves_normal.png",
+      "normal_sha256": "f3b6ca1214505a562d3d63e5ad1670e89242e57582a7c09cc272e1648e44d349",
+      "roughness_tex": "foliage/Fallen_Maple_Leaves/Fallen_Maple_Leaves_roughness.png",
+      "roughness_sha256": "b5f5aee7bc0972992b6af4dc71d346ab76ebd7be0ddd621fcdaa23dd50c7508f"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/foliage/Forest_Bush/mesh.obj",
+      "tex": "foliage/Forest_Bush/Forest_Bush.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "foliage",
+      "material": "Forest_Bush",
+      "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Forest_Bush/mesh_cutout.obj",
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Bush_Leaves_Diffuse.png",
+        "opacity": "Bush_Leaves_Opacity.png",
+        "flip_y": true,
+        "normal": "Bush_Leaves_Normal.png"
+      },
+      "source_sha256": {
+        "Bush_Leaves_Diffuse.png": "9307501a0ab102d8b53af6f4a4f0c40fb9be3b68b5314f3b9e23f2be001f8c05",
+        "Bush_Leaves_Opacity.png": "281c87a7d2b1c09bc2ce3b22d026026f1ebdd786e09584168e627cd0599bb795",
+        "Bush_Leaves_Normal.png": "9ffbaa50718479e0a53a2dc6937bea95c0ea465494ecce7960fe01ab1da7decc"
+      },
+      "texture_sha256": "088d672ed205c4b9e194c39e3c6cb5e6f5d7addd0784ac9dad875f79017f97d9",
+      "normal_tex": "foliage/Forest_Bush/Forest_Bush_normal.png",
+      "normal_sha256": "dc7d2c673b4f3fb9064c838dbee7116d480247a6da158bfa366fdf4aa1769938"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Ground_Dirt/mesh.obj",
+      "tex": "ground/Ground_Dirt/Ground_Dirt.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Ground_Dirt",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Ground_Dirt_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Ground_Dirt_Normal.jpeg",
+        "roughness": "Ground_Dirt_Roughness.jpeg"
+      },
+      "source_sha256": {
+        "Ground_Dirt_Diffuse.jpeg": "2ef048d2882e1cf9dc4162d8e1f75b019acc9255a1b5a157be63ffd5895e8b41",
+        "Ground_Dirt_Normal.jpeg": "12416dafde7798efae0d9330d7202aabe514ed301e5f2dcf8cd7c69ad8f9d459",
+        "Ground_Dirt_Roughness.jpeg": "4f40fd9df1365a558f676ec37b986ca842758b5c57e5e4468b07f0b27ef32d9f"
+      },
+      "texture_sha256": "41f3a9481283d659e9466078eee7aca79a4bc10e01b7b0d648d30b7630a3aa59",
+      "normal_tex": "ground/Ground_Dirt/Ground_Dirt_normal.png",
+      "normal_sha256": "b74bcb9808ace554403082b07058164992826a9b6a0beed70d710d3ce71cf5d3",
+      "roughness_tex": "ground/Ground_Dirt/Ground_Dirt_roughness.png",
+      "roughness_sha256": "8449649b948da9ac927c6199c5e2d9d55942bfd0b63b026daeca436f607ea1dc"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Generic_Leaves/mesh.obj",
+      "tex": "foliage/Fallen_Generic_Leaves/Fallen_Generic_Leaves.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "foliage",
+      "material": "Fallen_Generic_Leaves",
+      "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Fallen_Generic_Leaves/mesh_cutout.obj",
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Fallen_Generic_Leaves_Diffuse.png",
+        "opacity": "Fallen_Generic_Leaves_Opacity.png",
+        "flip_y": true,
+        "normal": "Fallen_Generic_Leaves_Normal.png",
+        "roughness": "Fallen_Generic_Leaves_Roughness.png"
+      },
+      "source_sha256": {
+        "Fallen_Generic_Leaves_Diffuse.png": "70380358bde8f568824c3b2b1c2cac972c9b3f2415b5fc4c5151cd95ba85525c",
+        "Fallen_Generic_Leaves_Opacity.png": "c61f91ede129e9430c22aab4b99eab34608aec06ee37a355be54cbc0981db003",
+        "Fallen_Generic_Leaves_Normal.png": "7b2f0cdb683f7e85cc9f33159145f21b22e22ab70a7f3eafada29f7d3a03493d",
+        "Fallen_Generic_Leaves_Roughness.png": "983e38f3644faa7674196236d80897c7ab0ca0366e8038e67be56b832c5da4e6"
+      },
+      "texture_sha256": "68e62fc20b3a55614d15a11d324d93b2fb11d641c1ec19ccf1f9aa38c73c3c33",
+      "normal_tex": "foliage/Fallen_Generic_Leaves/Fallen_Generic_Leaves_normal.png",
+      "normal_sha256": "7140af2dcfd61334632c601e5fe13a04f8efecdd650f9f8c113d1c5e75164be5",
+      "roughness_tex": "foliage/Fallen_Generic_Leaves/Fallen_Generic_Leaves_roughness.png",
+      "roughness_sha256": "d84bf0277e750685fa15944b9771e9c69fda0d205ac410db28c99af0e7d10a05"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Oak/mesh.obj",
+      "tex": "trunk/Trunk_Oak/Trunk_Oak.png",
+      "color": [
+        0.9176470588235294,
+        0.9176470588235294,
+        0.9176470588235294,
+        1.0
+      ],
+      "category": "trunk",
+      "material": "Trunk_Oak",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Trunk_Oak_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Trunk_Oak_Normal.png",
+        "roughness": "Trunk_Oak_Roughness.png"
+      },
+      "source_sha256": {
+        "Trunk_Oak_Diffuse.png": "183ca8621212bedc99a4e5bceb1c5e3fceb458dd6908844975009465b75a082a",
+        "Trunk_Oak_Normal.png": "d0bd8db90689c789ca129143b0a5955b15869bc97e10c2a1675423c1de6134dc",
+        "Trunk_Oak_Roughness.png": "e733b120e042422b4a310f090f6ae8b30f032ebc10756bdcfdb2f72fd3e8236a"
+      },
+      "texture_sha256": "b6f0dd39c007969e0a92e7a3561b5e0166c63c7a96972a4bdd4fc6f1634e9fd2",
+      "normal_tex": "trunk/Trunk_Oak/Trunk_Oak_normal.png",
+      "normal_sha256": "d8a93e421c1d61a8f7d4e68566a5ee8b080ee864e7f01b1fbcaca1b25257c41d",
+      "roughness_tex": "trunk/Trunk_Oak/Trunk_Oak_roughness.png",
+      "roughness_sha256": "315adc70638fb9e1f0ab51a5e6f48f17bbe53074cde10faaf0569cd71cd603ca"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/trunk/Wood_Log/mesh.obj",
+      "tex": "trunk/Wood_Log/Wood_Log.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "trunk",
+      "material": "Wood_Log",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Wood_Log_Diffuse.png",
+        "opacity": null,
+        "flip_y": true
+      },
+      "source_sha256": {
+        "Wood_Log_Diffuse.png": "67bac20a50273218520c3ad112653a1aceba0bde30da25fa7913a75e02275a79"
+      },
+      "texture_sha256": "39ff7a091e75e3862f4f07f5497a680d4c7215965dcfe7da0fb08d2d27ca48b1"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/trunk/Trunk_Birch/mesh.obj",
+      "tex": "trunk/Trunk_Birch/Trunk_Birch.png",
+      "color": [
+        0.8156862745098039,
+        0.8156862745098039,
+        0.8156862745098039,
+        1.0
+      ],
+      "category": "trunk",
+      "material": "Trunk_Birch",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Trunk_Birch_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Trunk_Birch_Normal.png",
+        "roughness": "Trunk_Birch_Roughness.png"
+      },
+      "source_sha256": {
+        "Trunk_Birch_Diffuse.png": "0365243de2a71332cbe1d9253fdcfb1c49ebe4975a834d9f4e011f3e2e9681c0",
+        "Trunk_Birch_Normal.png": "b3a1b926f9ef67ad3947c65122d918e1b8aa0e5d6788400b8c37f477c3ec60db",
+        "Trunk_Birch_Roughness.png": "9039753a7b1e911871766cae52713b011a0ab3919b00250d489803fc52865ac6"
+      },
+      "texture_sha256": "b04c2066bba17fb750a32e78bcb24bf7fe6bdf505e35b8adf2bbb69251c26a9d",
+      "normal_tex": "trunk/Trunk_Birch/Trunk_Birch_normal.png",
+      "normal_sha256": "33a074898c1b034aa8d6d2bea196b0972a5e267b623c9efee3c45bfce786aa8b",
+      "roughness_tex": "trunk/Trunk_Birch/Trunk_Birch_roughness.png",
+      "roughness_sha256": "52874c37e78146a6f6979b7957f75b6e5a5375c60d35442e2642f947419d30fe"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/ground/Dirt_Road_Bare/mesh.obj",
+      "tex": "ground/Dirt_Road_Bare/Dirt_Road_Bare.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "ground",
+      "material": "Dirt_Road_Bare",
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Dirt_Road_Bare_Diffuse.png",
+        "opacity": null,
+        "flip_y": true,
+        "normal": "Dirt_Road_Bare_Normal.png",
+        "roughness": "Dirt_Road_Bare_Roughness.png"
+      },
+      "source_sha256": {
+        "Dirt_Road_Bare_Diffuse.png": "4c82d80c3accfb4410e3c6bee61d40848cd2d5c4c0d4c901c5d933760a781903",
+        "Dirt_Road_Bare_Normal.png": "95dc9243f42a357e2be1607c995c7c264244b3b703ef6574e76b51170eff36da",
+        "Dirt_Road_Bare_Roughness.png": "1c10d5f4353610334e883613fcfe7f0a4e67bcbf814205536494a6b9dc05333a"
+      },
+      "texture_sha256": "24923f6b860574f3cf8f9ad58c7fc289182ee6a43f8c64cc2d32dc3a2df8fe4a",
+      "normal_tex": "ground/Dirt_Road_Bare/Dirt_Road_Bare_normal.png",
+      "normal_sha256": "4f447603ed2eb1c4300511d33f3ce0d5d416ffb586683b9bce2cb2d69f559103",
+      "roughness_tex": "ground/Dirt_Road_Bare/Dirt_Road_Bare_roughness.png",
+      "roughness_sha256": "d927a8efbccf31a7f51bd229fbf7832bb85395a504b6a42049f61ed97766b957"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/metal/Metal_Fence/mesh.obj",
+      "tex": "metal/Metal_Fence/Metal_Fence.png",
+      "color": [
+        0.4,
+        0.4,
+        0.4,
+        1.0
+      ],
+      "category": "metal",
+      "material": "Metal_Fence",
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Metal_Fence_Diffuse.png",
+        "opacity": "Metal_Fence_Opacity.png",
+        "flip_y": true,
+        "normal": "Metal_Fence_Normal.png",
+        "roughness": "Metal_Fence_Roughness.png"
+      },
+      "source_sha256": {
+        "Metal_Fence_Diffuse.png": "c146369133b50e98e6cfca0eee1470851888fd37067ee703db36567f4e90d665",
+        "Metal_Fence_Opacity.png": "5034ba74ec8c3e1bf70670808ebac5237f6448bc45afec42221f9b373d9029fa",
+        "Metal_Fence_Normal.png": "c476261e567dfb6cfa4649fa37bcee27fb0e8f9b301bf98839333f0db5bc134b",
+        "Metal_Fence_Roughness.png": "38fc1e6eb4ff080b00419f7660502b171b0427cbb00884f88a60a727fcfc4cd3"
+      },
+      "texture_sha256": "edb09303a905f10476743e9674f20fe5c9f1be73da25d3b99e8b109a726550e4",
+      "normal_tex": "metal/Metal_Fence/Metal_Fence_normal.png",
+      "normal_sha256": "91f6787570946a43c544e5317140ff98b0c6842380d150c2ee20491ac8ee765b",
+      "roughness_tex": "metal/Metal_Fence/Metal_Fence_roughness.png",
+      "roughness_sha256": "20cb81983f6a727cf49af69477c9761e1810fcf013b2f0c96c88e26b0449d96a"
+    },
+    {
+      "obj": "assets/terrain/free_dirt_road_through_forest/foliage/Background_Tree_Atlas/mesh.obj",
+      "tex": "foliage/Background_Tree_Atlas/Background_Tree_Atlas.png",
+      "color": [
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333,
+        1.0
+      ],
+      "category": "foliage",
+      "material": "Background_Tree_Atlas",
+      "collision_obj": "assets/terrain/free_dirt_road_through_forest/foliage/Background_Tree_Atlas/mesh_cutout.obj",
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Background_Tree_Atlas_Diffuse.png",
+        "opacity": "Background_Tree_Atlas_Opacity.png",
+        "flip_y": true,
+        "normal": "Background_Tree_Atlas_Normal.png",
+        "roughness": "Background_Tree_Atlas_Roughness.png"
+      },
+      "source_sha256": {
+        "Background_Tree_Atlas_Diffuse.png": "0cdb46bc58b271f41a34dc01e33d975c971af8debe404e9e77bfd97b97f1754b",
+        "Background_Tree_Atlas_Opacity.png": "35544451ce5cd8a4ecd5c14bb955ea8f17b0dac9412e07cef014899000d5462e",
+        "Background_Tree_Atlas_Normal.png": "a22dfff38ea83fa06fcf185f411509d2d7e0a6eb42cbcc5f40cccb4b4a9e7ba8",
+        "Background_Tree_Atlas_Roughness.png": "bad9b23a5b053d250921fad63dbaa5454ebc95dc2ee81470a72a6a72faf7943c"
+      },
+      "texture_sha256": "a101c7882c184fe5ca4e74029cb4399cbe7d68de4a758c21346eac4b1999e2af",
+      "normal_tex": "foliage/Background_Tree_Atlas/Background_Tree_Atlas_normal.png",
+      "normal_sha256": "575e218fc2f824b653f5eccde434b47b3d1629df9982df42f20c20ff04ca1575",
+      "roughness_tex": "foliage/Background_Tree_Atlas/Background_Tree_Atlas_roughness.png",
+      "roughness_sha256": "99e35432874d86c58989d8c06219b176f2f58b544d538b1567eb04532810453e"
+    },
+    {
+      "obj": "grass/Aerial_Grass/mesh.obj",
+      "tex": "grass/Aerial_Grass/Aerial_Grass.png",
+      "material": "Aerial_Grass",
+      "category": "grass",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Aerial_Grass_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": false,
+        "normal": "Aerial_Grass_Normal.jpeg",
+        "roughness": "Aerial_Grass_Roughness.png"
+      },
+      "source_sha256": {
+        "Aerial_Grass_Diffuse.jpeg": "ad16217e27cc6599ed6e11402fbe6a3dfd3118eeeb8e990a27f3efc3a36c2374",
+        "Aerial_Grass_Normal.jpeg": "1a4071c4c70c8bc4436c9bc74335361ba6c1310382d7eeb7bd0247aeab621b51",
+        "Aerial_Grass_Roughness.png": "1d4aef22562c785e0c19651f970cc7f1f7c83f0bbf0ae1ee78eeb9463c9e39c0"
+      },
+      "texture_sha256": "4ade74f3242322e4651a195afdfb2906d35a205e617d3d35c1dafb39bc55e0b0",
+      "normal_tex": "grass/Aerial_Grass/Aerial_Grass_normal.png",
+      "normal_sha256": "26e2589eb866b1d11ff5cf6d9031e046b662837a637f580906bb2b30d27f8294",
+      "roughness_tex": "grass/Aerial_Grass/Aerial_Grass_roughness.png",
+      "roughness_sha256": "7abc89a7125a69b2bfe6bb99301f6620e6cb915130f64b5499ad999afa9d07da"
+    },
+    {
+      "obj": "rock/Terrain_Far/mesh.obj",
+      "tex": "rock/Terrain_Far/Terrain_Far.png",
+      "material": "Terrain_Far",
+      "category": "rock",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "OPAQUE",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Terrain_Far_Diffuse.jpeg",
+        "opacity": null,
+        "flip_y": false
+      },
+      "source_sha256": {
+        "Terrain_Far_Diffuse.jpeg": "3bf1d2ad43e02ba95cb64ee4da008dfc93531245f404e190793ad4ffbce1a365"
+      },
+      "texture_sha256": "601c5003230b5cfd2d012122a4f620b842ab664c008877ecadd8fd10b6d8d608"
+    },
+    {
+      "obj": "ground/Puddle_Streaks/mesh.obj",
+      "tex": "ground/Puddle_Streaks/Puddle_Streaks.png",
+      "material": "Puddle_Streaks",
+      "category": "ground",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Puddle_Streaks_Diffuse.png",
+        "opacity": "Puddle_Streaks_Opacity.png",
+        "flip_y": false,
+        "normal": "Puddle_Streaks_Normal.png"
+      },
+      "source_sha256": {
+        "Puddle_Streaks_Diffuse.png": "659aef838dfb30da3b79618e1663f1c4937c1e01a44db0573ceb8a2e05a26875",
+        "Puddle_Streaks_Opacity.png": "d18693fa794efe6d09fd11fa59d69f60d166f52c2544420c6f16662e43ffae10",
+        "Puddle_Streaks_Normal.png": "ba1f320afa036f5f3ad110e3e62f7094407037d8f2a458e73b7317b4457ffd98"
+      },
+      "texture_sha256": "61f3f9c96b28d9081dd5b9815789cdec36a68527bf0323b0237a99990361d947",
+      "normal_tex": "ground/Puddle_Streaks/Puddle_Streaks_normal.png",
+      "normal_sha256": "650e0520e711a630fa82956fafa2f150e8d0ed4b7d84387a102d083d3a753b54"
+    },
+    {
+      "obj": "rock/Rock_Decal/mesh.obj",
+      "tex": "rock/Rock_Decal/Rock_Decal.png",
+      "material": "Rock_Decal",
+      "category": "rock",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Rock_Decal_Diffuse.png",
+        "opacity": "Rock_Decal_Opacity.png",
+        "flip_y": false,
+        "normal": "Rock_Decal_Normal.png",
+        "roughness": "Rock_Decal_Roughness.png"
+      },
+      "source_sha256": {
+        "Rock_Decal_Diffuse.png": "2a73fd7e91418df7e182dd321a7f827331e1259dc17e613924d35bcb70d20a4b",
+        "Rock_Decal_Opacity.png": "d6267994d7b58e5c3c7f8ee04af6a7a7e597b1f0ca99beee36c58fea0507ed5d",
+        "Rock_Decal_Normal.png": "ccd3d16ad82312e0a2b10b00ae814a8e87fb326900728a72ad1999f9bd5a5d8b",
+        "Rock_Decal_Roughness.png": "5b004bb0846ff631ca6628bf9fb07130d203667b96ff410d3eeb4c8b0bf33d80"
+      },
+      "texture_sha256": "fd9ec2185993faaeb96ed10c40f8b3a599cf7c304b30a76285db78214d7b97ec",
+      "normal_tex": "rock/Rock_Decal/Rock_Decal_normal.png",
+      "normal_sha256": "8ea09e78c99ac3f7b8f07d6a513556cebdffce217287cb4a3bbd4e65253453dc",
+      "roughness_tex": "rock/Rock_Decal/Rock_Decal_roughness.png",
+      "roughness_sha256": "2d39107fbe6c6c6db1c68240e5c12fe8a4d4ebd317d876d2f14c55164efcf45b"
+    },
+    {
+      "obj": "grass/Grass_Vegetation_Green/mesh.obj",
+      "tex": "grass/Grass_Vegetation_Green/Grass_Vegetation_Green.png",
+      "material": "Grass_Vegetation_Green",
+      "category": "grass",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Grass_Vegetation_Green_Diffuse.png",
+        "opacity": "Grass_Vegetation_Opacity.png",
+        "flip_y": false,
+        "normal": "Grass_Vegetation_Green_Normal.png",
+        "roughness": "Grass_Vegetation_Green_Roughness.png"
+      },
+      "source_sha256": {
+        "Grass_Vegetation_Green_Diffuse.png": "7c2a08cac1ca1398b7b4db3ca9c291e7bfa0ae93751ddc4cee128b92ea4948dc",
+        "Grass_Vegetation_Opacity.png": "2503b6a9d2021bc1cc9c0c6f79a5662d83a1bf8d8e00a83a871c2f10943ff5a2",
+        "Grass_Vegetation_Green_Normal.png": "c1c25c413c69e1034c0b996d558d14d564f4e906ee7bd46b2432419021711bc0",
+        "Grass_Vegetation_Green_Roughness.png": "e5b33d4084d113efda6eb6856f98417b53c406092e4c46627c0a1dd0ba62bcfb"
+      },
+      "texture_sha256": "4858cd229f93fbf396aeb44573483c926649e65fe6e48c0d64ac0c29752be0ac",
+      "normal_tex": "grass/Grass_Vegetation_Green/Grass_Vegetation_Green_normal.png",
+      "normal_sha256": "6e43ea592d423b6ca2f1dcdb783c6f93832fde597505f045927a7ade6c3e45c2",
+      "roughness_tex": "grass/Grass_Vegetation_Green/Grass_Vegetation_Green_roughness.png",
+      "roughness_sha256": "28657cdb7f5d5e971557cb4e0bdf4437903647e2ac9c3cdcc2706d09f1714c53"
+    },
+    {
+      "obj": "grass/Grass_Vegetation_Dry/mesh.obj",
+      "tex": "grass/Grass_Vegetation_Dry/Grass_Vegetation_Dry.png",
+      "material": "Grass_Vegetation_Dry",
+      "category": "grass",
+      "color": [
+        0.5,
+        0.5,
+        0.5,
+        1
+      ],
+      "collision_obj": null,
+      "alpha_mode": "MASK",
+      "alpha_cutoff": 0.5,
+      "source_images": {
+        "diffuse": "Grass_Vegetation_Dry_Diffuse.png",
+        "opacity": "Grass_Vegetation_Opacity.png",
+        "flip_y": false
+      },
+      "source_sha256": {
+        "Grass_Vegetation_Dry_Diffuse.png": "47e74fdda5fb7e8782426dcf854d41ea7e82aa476fc1d5b3524a7bda429e2d22",
+        "Grass_Vegetation_Opacity.png": "2503b6a9d2021bc1cc9c0c6f79a5662d83a1bf8d8e00a83a871c2f10943ff5a2"
+      },
+      "texture_sha256": "80f57ad33a1b1a7e592eabbc87cd8936c030e3053525badfc25ea9681d3e3c15"
+    }
+  ],
+  "collision_faces": 60000,
+  "offset": [
+    5.0,
+    35.0,
+    -173.26510675358026
+  ],
+  "alpha_preserved": true,
+  "attribution": {
+    "author": "99.Miles",
+    "title": "[UPDATE] Dirt Road Through Forest",
+    "license": "CC BY 4.0",
+    "url": "https://sketchfab.com/3d-models/update-dirt-road-through-forest-c4676cdf7715484382400ff63faffd45"
+  },
+  "texture_source": {
+    "file": "update-dirt-road-through-forest.zip",
+    "sha256": "a13138ac15448bc2606a03c685264a3f75997d4ac60fbb20ec2ee5463c6c02df",
+    "geometry_source": "Author-provided DIRT SCENE PACKED TEXTURES.blend; matched existing geometry and reused original recentering offset",
+    "note": "Original diffuse and opacity images from the user-provided model archive, not web-viewer derivatives"
+  },
+  "all_visual_layers": true
+}

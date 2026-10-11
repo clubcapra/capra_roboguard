@@ -1,6 +1,6 @@
 //! `GET /discover` — resolve each sensor's data + command UDP ports.
 //!
-//! rove_sensor_api advertises ports dynamically (registration order), so we read
+//! HALo advertises ports dynamically (registration order), so we read
 //! them rather than hard-coding. Returns id -> (data_port, command_port).
 
 use anyhow::{Context, Result};
@@ -14,7 +14,7 @@ pub struct Endpoints {
 
 pub type Discovery = HashMap<String, Endpoints>;
 
-/// Blocking one-shot at startup. `host`/`port` point at rove_sensor_api's HTTP API.
+/// Blocking one-shot at startup. `host`/`port` point at HALo's HTTP API.
 pub fn discover(host: &str, port: u16) -> Result<Discovery> {
     let url = format!("http://{host}:{port}/discover");
     let body = ureq::get(&url)

@@ -1,0 +1,13 @@
+# Enable hardware by copying to livox.toml. Paths are relative to this file.
+# Replace documentation addresses with this host and the connected lidars.
+host_ip = "192.0.2.1"
+lidar_ips = ["192.0.2.10", "192.0.2.11"]
+# multicast_ip = "239.1.1.1"  # optional; omitted means unicast
+library = "../src/drivers/livox/native/build/libhalo_livox.so"
+stale_ms = 1000
+
+# Optional LVXR mirrors for existing perception/calibration clients.
+# HALo consumers normally discover livox_<id> and subscribe to its data port.
+# No destinations are required for standard UDP subscriptions.
+# points_target = "127.0.0.1:7020"
+# imu_target = "127.0.0.1:7021"

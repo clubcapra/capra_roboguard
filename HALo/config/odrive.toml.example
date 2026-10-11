@@ -1,0 +1,3 @@
+# Host networking must configure this CAN bus and its bitrate first.
+interface = "can0"
+discovery_ms = 2000

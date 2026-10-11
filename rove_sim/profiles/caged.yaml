@@ -5,7 +5,7 @@
 name: caged
 
 model:
-  path: ../../rove_caged_urdf/rove_caged.urdf
+  path: ../../robot_doc/rove_caged_urdf/rove_caged.urdf
   kind: urdf
   mesh_format: glb
   base_position: [0, 0, 0.5]
@@ -14,7 +14,7 @@ model:
 total_mass: 100.0    # real robot ~100 kg; role masses scale to this
 
 api:
-  sensors: rove_sensor_api
+  sensors: HALo
   control: rove_control_bridge
   transport: {sensors: udp, control: udp}
 

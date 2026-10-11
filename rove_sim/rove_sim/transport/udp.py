@@ -3,7 +3,7 @@
 A publisher (mock SimSensorApi) sends DATA frames to a per-channel UDP port; a
 subscriber (real-mode RobotStateSource) binds those ports and keeps the latest
 decoded payload per channel from a background rx thread. Channel->port mapping
-defaults to the rove_sensor_api auto-assignment (data ports 5000, 5002, ...),
+defaults to the HALo auto-assignment (data ports 5000, 5002, ...),
 overridable per channel.
 
 This is intentionally lightweight: no SUBSCRIBE handshake (the publisher pushes
@@ -19,7 +19,7 @@ from typing import Dict, Optional
 from . import Transport
 from .packet import MSG_DATA, decode, encode
 
-# rove_sensor_api auto-assigns data ports from 5000 upward (data,cmd,data,cmd...)
+# HALo auto-assigns data ports from 5000 upward (data,cmd,data,cmd...)
 DEFAULT_PORTS = {"vectornav": 5000, "kinova": 5002, "robotiq": 5004,
                  "odrive_31": 5006, "odrive_32": 5008, "odrive_33": 5010,
                  "odrive_34": 5012, "pmic": 5014,
@@ -27,7 +27,7 @@ DEFAULT_PORTS = {"vectornav": 5000, "kinova": 5002, "robotiq": 5004,
                  "control": 5020, "livox_top": 5022, "livox_bottom": 5024,
                  "ground_truth": 5030,
                  # robot pose+joint state for decoupled render workers (cam_worker)
-                 "robot_state": 5032}
+                 "robot_state": 5032, "radiacode": 5034}
 
 
 class UdpTransport(Transport):

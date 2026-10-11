@@ -1,0 +1,27 @@
+[Unit]
+Description=HALo - Hardware Abstraction Layer and I/O
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_GROUP@
+WorkingDirectory="@PROJECT_DIR@"
+ExecStart="@PROJECT_DIR@/target/release/halo"
+Environment="HALO_CONFIG_DIR=@PROJECT_DIR@/config"
+Environment="LOG_DIR=@LOG_DIR@"
+Environment=RUST_LOG=halo=info
+Environment=LOG_POLL_HZ=10
+# Configure CAN interfaces/bitrate through the host's networking before startup.
+# HALo handles late or missing hardware with bounded driver recovery.
+Restart=on-failure
+RestartSec=2s
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_RAW
+NoNewPrivileges=true
+SupplementaryGroups=dialout
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

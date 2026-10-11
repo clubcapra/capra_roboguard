@@ -37,10 +37,11 @@ _IMU_LEVER_M = np.array([0.011, 0.02329, -0.04412])
 class LidarScan:
     points: np.ndarray                            # (N, 3) world xyz of hits
     ranges: np.ndarray                            # (N,) metres
-    hit_ids: np.ndarray                           # (N,) pybullet body id
+    hit_ids: np.ndarray                           # (N,) body id or terrain primitive id (>=1,000,000)
     pose: Tuple[Any, Any]                         # sensor (pos, orn xyzw)
     n_rays: int = 0
     t: float = 0.0
+    timestamp_ns: int = 0
 
 
 @register("livox_mid360")
@@ -80,6 +81,8 @@ class LivoxMid360(Sensor):
         # the synced concave self-occluders (the real pole/mast mesh). They stop
         # the ray (-> shadow) but never appear in the cloud (they're the robot).
         self.occluder_ids = set(kw.pop("occluder_ids", None) or [])
+        self.world_raycaster = None  # optional shared texture-aware terrain BVH
+        self.moving_raycaster = None
         super().__init__(**kw)
         # orthonormal scan basis: w = spin (pole), (u, v) span the azimuth plane
         self._w = spin / np.linalg.norm(spin)
@@ -133,6 +136,35 @@ class LivoxMid360(Sensor):
         starts = np.repeat(origin[None, :], len(dirs), axis=0)
         ends = origin + dirs * self.range_m
         self._frame += 1
+
+        if self.world_raycaster is not None:
+            pts, distances, faces = self.world_raycaster.cast(starts, dirs, self.range_m)
+            ids = faces + 1_000_000  # stable terrain primitive IDs in this BVH
+            # The lightweight Bullet world contains only robot/occluders and
+            # dynamic scene props. Self geometry still casts real shadows; an
+            # excluded robot return must block terrain behind it rather than
+            # letting the laser pass through the robot.
+            if self.moving_raycaster is not None:
+                hits, close, body = self.moving_raycaster.cast(
+                    starts, dirs, self.range_m, self.robot.link_index.get(self.link, -2))
+            else:
+                results = p.rayTestBatch(starts.tolist(), ends.tolist(),
+                                        numThreads=self.ray_threads,
+                                        collisionFilterMask=self.ray_mask)
+                body = np.fromiter((r[0] for r in results), np.int32, len(results))
+                close = np.fromiter((r[2] for r in results), np.float32, len(results)) * self.range_m
+                hits = np.asarray([r[3] for r in results], np.float32)
+            nearer = (body >= 0) & (close <= distances)
+            blocked = nearer & ((body == self.robot.body_id) if self.exclude_self else False)
+            if self.occluder_ids:
+                blocked |= nearer & np.isin(body, list(self.occluder_ids))
+            props = nearer & ~blocked
+            if props.any():
+                pts[props] = hits[props]; distances[props] = close[props]; ids[props] = body[props]
+            keep = ~blocked & np.isfinite(distances) & (distances >= self.min_range)
+            return LidarScan(points=pts[keep], ranges=distances[keep], hit_ids=ids[keep],
+                             pose=(tuple(origin), tuple(orn)), n_rays=len(dirs),
+                             t=self.clock.now() if self.clock else 0.0)
 
         id_parts, hit_parts = [], []
         for s in range(0, len(dirs), _BATCH):
@@ -406,3 +438,43 @@ class LidarUdpPublisher:
             self._subs.close()
         except OSError:
             pass
+
+
+class HaloLivoxPublisher:
+    """Feed HALo's Livox driver using the native adapter's LVXR wire format.
+
+    Backend ports are inputs owned by HALo. Consumers obtain output settings
+    from discovery; they do not compete for the simulator's hardware stream.
+    """
+    _HEADER = struct.Struct("<4sBBBBHHQ")
+
+    def __init__(self, host: str, port: int, lidar_id: int):
+        self.port, self.lidar_id = int(port), int(lidar_id)
+        self._target = (host, self.port)
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.setblocking(False)
+
+    def _send(self, kind: int, dtype: int, count: int, timestamp: int, payload: bytes):
+        header = self._HEADER.pack(b"LVXR", 1, kind, self.lidar_id, dtype, count, 0, timestamp)
+        try:
+            self._sock.sendto(header + payload, self._target)
+        except OSError:
+            pass
+
+    def publish(self, scan: LidarScan):
+        if scan is None:
+            return
+        position, orientation = scan.pose
+        rotation = np.asarray(p.getMatrixFromQuaternion(orientation)).reshape(3, 3)
+        # The standalone simulator stores world points; LVXR uses sensor XYZ.
+        points = np.ascontiguousarray((scan.points - np.asarray(position)) @ rotation, dtype="<f4").reshape(-1, 3)
+        timestamp = scan.timestamp_ns or time.time_ns()
+        for offset in range(0, max(1, len(points)), 4000):
+            chunk = points[offset:offset + 4000]
+            self._send(1, 1, len(chunk), timestamp, chunk.tobytes())
+
+    def publish_imu(self, gyro, accel, timestamp):
+        self._send(2, 0, 1, timestamp, _IMU_PAYLOAD.pack(*gyro, *accel))
+
+    def close(self):
+        self._sock.close()

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Install the rove_sim FULL STACK (physics + cameras + lidars + the real
-# rove_sensor_api, sim-backed) as a boot-persistent systemd service.
+# HALo, sim-backed) as a boot-persistent systemd service.
 #
 # The service runs:  tools/rove.sh headless --tiny --api
 #   * physics server (telemetry/control, robot_state, Livox IMU)
 #   * 5 cameras @640p -> RTSP rtsp://127.0.0.1:8554/<cam>   (--tiny: fits the 2 GB GPU)
 #   * 2 Livox Mid-360 -> multi-packet UDP point clouds 5022/5024  @ ~10 Hz
-#   * rove_sensor_api binary in SIM-BACKEND mode -> HTTP :8080 + UDP 5000+
+#   * HALo binary in SIM-BACKEND mode -> HTTP :8080 + UDP 5000+
 #
 # MUST be run with sudo. Runs as the invoking (non-root) user so EGL/GPU + the
 # venv work exactly as they do interactively. Re-run any time to redeploy.
@@ -40,7 +40,7 @@ id "$RUN_USER" >/dev/null 2>&1 || { echo "error: user '$RUN_USER' does not exist
 echo "==> Installing $UNIT_DST (runs as $RUN_USER)"
 cat > "$UNIT_DST" <<EOF
 [Unit]
-Description=Capra Roboguard sim — physics + cameras + lidars + rove_sensor_api (sim-backed)
+Description=Capra Roboguard sim — physics + cameras + lidars + HALo (sim-backed)
 After=network.target
 
 [Service]

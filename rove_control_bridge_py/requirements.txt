@@ -1,6 +1,0 @@
-# Protobuf runtime + compiler (must match capra_teleop_interface version)
-protobuf>=5.26.0
-grpcio-tools>=1.60.0
-
-# YAML config loading
-pyyaml>=6.0

@@ -1,7 +1,7 @@
 # rove_sim
 
 PyBullet simulation that **implements the robot's own service APIs**
-(`rove_sensor_api`, `rove_control_bridge`) against physics, so the autonomy
+(`HALo`, `rove_control_bridge`) against physics, so the autonomy
 stack is written once and switched between sim and the real robot with a single
 `mock`/`real` flag. See `SAR_Sim_Build_Plan.md` for the full spec.
 
@@ -31,6 +31,101 @@ rove_sim_venv/bin/python -m rove_sim.main --profile caged    --mode gui --hold
 
 rove_sim_venv/bin/python -m pytest tests/ -q
 ```
+
+## Forest world and saved test scene
+
+The forest world is configured in `config/world.yaml`; `scenes/forest_demo.json`
+adds the saved spawn, friction map and demo object. The optimized fleet shares
+that configuration across physics, LiDAR and camera workers.
+
+Install Python runtime dependencies from `requirements-runtime.txt`. Linux also
+needs the NVIDIA EGL driver, `g++`, FFmpeg and MediaMTX 1.21.2 (`tools/bin/mediamtx`). The
+small native alpha filter compiles locally on first use and is cached; runtime
+workers never fetch packages or assets. The Embree wheel version is pinned to
+match the vendored public headers.
+
+```bash
+python -m pip install -r requirements-runtime.txt
+SIM_PYTHON=/path/to/sim/venv/bin/python \
+RSA_BACKEND=1 PORTS=../HALo/config/ports.toml \
+SIM_VIEW_PASSWORD=choose-a-password VIEW_HOST=0.0.0.0 tools/sim_fleet.sh
+```
+
+Open `http://<server>:8081/` from the SSH client machine. Login with
+`SIM_VIEW_PASSWORD`, drag to orbit and scroll to zoom. The browser receives the
+same GPU renderer’s 800×600 live view; no desktop, VNC or second software
+renderer is required. Hardware commands go through HALo. Camera streams are
+`rtsp://<server>:8554/cam_front`, `cam_rear`, `cam_left`, `cam_right` and `cam_arm`.
+
+`tools/rove.sh headless --api --scene <scene>` uses the same fleet and honors
+the scene selection. Launchers stop only their own child processes.
+
+Defaults are five **800×600 cameras at 30 fps**, plus both LiDARs at **30 Hz,
+4,000 rays per scan per sensor** (120,000 emitted rays/s each). This is a measured
+simulation budget, below a physical Mid-360’s nominal 200,000 points/s; the
+nonrepetitive pattern accumulates coverage between scans. `FPS`, `RES`, `LHZ`,
+`LRAYS`, `CAMERAS` and `LIDARS` override the budget. `WORLD_CONFIG`, `SCENE`,
+`STATE_FILE`, `RTSP_PORT` and `PROFILE` select the instance. `METRICS` and
+`LIDAR_METRICS` select the worker measurement files. `RTSP_SHARED=1` uses an
+existing RTSP server; `WORKERS_ONLY=1` attaches cameras to existing physics.
+
+LiDAR acquisition uses timestamped physics history with 50 ms of buffering,
+linear position/joint interpolation and quaternion SLERP. The worker divides
+its nominal scan budget into smaller batches at a 60 Hz target (`--motion-hz`);
+30 Hz × 4,000 rays becomes 60 Hz × 2,000 rays per sensor. Actual throughput is
+reported in the worker metrics. LVXR packets carry acquisition timestamps,
+rather than their publication time. Stale physics pauses acquisition; respawns
+are treated as discontinuities. The live overlay refreshes at up to 30 Hz.
+Pose history is published separately from camera state to avoid extra parsing
+in the camera render loop. `--pose-delay-ms` adjusts the interpolation buffer.
+
+The GPU uploads original geometry/RGBA textures once, culls spatial draw ranges,
+and uses double-buffered camera readback, mipmaps, 4× anisotropic colour filtering,
+and linear-light environment illumination. `environment.hdri` in the world YAML
+selects a local Radiance panorama, with `rotation_deg` and `strength` controls.
+The panorama supplies the visible sky, nine precomputed diffuse-light
+coefficients, and the direction/colour of the shadow-casting solar contribution.
+A filtered
+4096×4096 forest shadow map is baked once when the renderer starts and shared
+by every camera; transparent foliage gaps also pass sunlight. Subtle distance
+haze separates distant trees. Moving robot links and props receive terrain
+shadows, but do not cast visual shadows; they are excluded from the static bake
+to prevent stale silhouettes. No shadow geometry is redrawn per frame.
+`SHADOW_SIZE=0` (or `gpu_worker.py --shadow-size 0`) disables the bake for comparisons.
+See [lighting measurements and captures](doc/lighting.md). Texture alpha is
+never flattened. Both cameras and LiDAR use repeat-wrapped bilinear coverage at
+the material’s alpha cutoff; a transparent texel neither writes depth nor stops
+a ray. Native Embree filtering lets rays continue inside the BVH, including
+through deeply layered foliage. Moving-link BVHs preserve mast openings and
+robot shadows; scene props follow authoritative physics. Physics workers load
+only contact geometry, keeping camera/foliage copies out of Bullet.
+
+Exported assets can be deployed without the source GLB. A missing source without
+compatible exports fails visibly. The forest asset’s `ATTRIBUTION.md` records its
+license. Use original downloaded textures, not web-viewer image derivatives:
+those derivatives may have rearranged image blocks.
+`tools/restore_terrain_textures.py <manifest> <source-image-directory>` imports
+the local diffuse/opacity images recorded in `source_images`, applying the same
+orientation to both. The selected orientation matches each mesh's UV convention: the six
+restored layers use unflipped source UVs, while the older exports need flipped
+images. GPU mipmaps weight RGB by alpha so transparent atlas padding does not
+darken distant leaves. Imports check source hashes before writing; workers check
+exported texture hashes on load. The original forest images are available in
+the original model ZIP under `textures/`, or the author’s linked texture-packed
+Blender file. The visual export retains all original materials, including ground
+beneath transparent road layers; contact-mesh exclusions are separate. Robot
+visuals and self-occlusion use URDF link frames rather than base inertial frames.
+
+```bash
+SIM_REQUIRE_GPU=1 python -m pytest tests/test_texture_coverage.py tests/test_forest_world.py -q
+# From HALo/: discovery, commands and recovery against this same world.
+python tests/test_sim_flow.py --split-lidar --browser \
+  --world-config ../rove_sim/config/world.yaml --scene ../rove_sim/scenes/forest_demo.json
+```
+
+See [the measured performance report](doc/performance.md) for the P600 results.
+The older `cam_worker.py`, `pyrender_worker.py` and desktop viewer remain legacy
+entry points. Use `sim_fleet.sh` / `gpu_worker.py` for alpha-correct forest feeds.
 
 ## Headless GPU rendering (EGL)
 
@@ -98,5 +193,5 @@ tools/convert_meshes.py   GLB->OBJ + URDF rewrite (cached)
 - URDFs carry no inertials and stale joint limits (placeholder `±π`, `effort=10`).
   Masses are role-based defaults in the loader; limits/`max_track_rad_s` are
   tunable config, all tagged `TODO(calibrate)`.
-- `rove_ik_engine/data/robot.urdf` is a stale demo topology — **not** used here.
+- `robot_doc/ik_legacy/robot.urdf` is a stale demo topology — **not** used here.
 ```

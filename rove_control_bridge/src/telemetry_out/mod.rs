@@ -1,7 +1,7 @@
 //! Telemetry OUT — the bridge republishes aggregated robot state as RoveTelemetry
 //! to whoever subscribes (operator / udp_multiplexer).
 //!
-//! It folds the per-sensor rove_sensor_api frames (VectorNav, the 8 ODrive nodes,
+//! It folds the per-sensor HALo frames (VectorNav, the 8 ODrive nodes,
 //! gripper) into one [`proto::RoveTelemetry`] and, on a subscribe, pushes it at a
 //! fixed rate. Subscribe = send any datagram to the port; the push stops if a
 //! subscriber goes quiet for a few seconds (re-subscribe to keep it alive).

@@ -14,7 +14,7 @@
 # forgebot path is intentionally a non-existent file: load_robot tries it first,
 # misses, and falls back to the URDF below.
 forgebot = "data/rove_caged.forgebot"   # absent -> falls back to urdf
-urdf     = "data/rove_caged.urdf"
+urdf     = "../robot_doc/rove_caged_urdf/rove_caged.urdf"
 
 [ik]
 # Collision-aware IK / motion ON for the caged rover (flippers vs cage/chassis).

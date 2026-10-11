@@ -1,4 +1,4 @@
-"""M3/M4: bilateral rove_sensor_api seam -- full physics telemetry, control in,
+"""M3/M4: bilateral HALo seam -- full physics telemetry, control in,
 point-cloud codec, GNSS modes, IMU error model.
 
     ../rove_sim_venv/bin/python -m pytest tests/test_m3_api.py -q

@@ -102,7 +102,7 @@ class HttpWsServer:
         app.router.add_post("/api/v1/sync", self._http_sync)
         app.router.add_get("/api/v1/sync/status", self._http_sync_status)
 
-        # Recover from a rove_sensor_api reload / e-stop recovery without a
+        # Recover from a HALo reload / e-stop recovery without a
         # restart: re-discover ports + re-anchor synced flippers. The e-stop
         # watchdog POSTs this on arm-recovery (alongside sensor_api's /reload).
         app.router.add_post("/api/v1/reload", self._http_reload)
@@ -271,10 +271,21 @@ class HttpWsServer:
                         "size_bytes": f.stat().st_size,
                         "usage": [],
                     }
+        # URDFs now live in robot_doc. Serve the loaded model's assets first,
+        # rather than relying on a duplicate copy in the engine data directory.
+        for stem, asset in self.state.project.assets.mesh_data.items():
+            out[stem] = {
+                "suffix": asset.suffix,
+                "size_bytes": len(asset.data),
+                "usage": [],
+            }
         return web.json_response(out)
 
     async def _http_mesh_by_stem(self, request: web.Request) -> web.FileResponse | web.Response:
         stem = request.match_info["stem"]
+        asset = self.state.project.assets.mesh_data.get(stem)
+        if asset is not None:
+            return web.Response(body=asset.data, content_type="application/octet-stream")
         meshes_dir = self.data_dir / "meshes"
         if not meshes_dir.exists():
             raise web.HTTPNotFound()
@@ -331,7 +342,7 @@ class HttpWsServer:
         )
 
     async def _http_reload(self, _request: web.Request) -> web.Response:
-        """Recover from a rove_sensor_api reload / e-stop recovery without
+        """Recover from a HALo reload / e-stop recovery without
         restarting: re-discover served ports and re-anchor synced flippers to
         their live angle (the worm gear means a power-cycled flipper didn't move,
         so we keep its position and re-derive the offset). The e-stop watchdog

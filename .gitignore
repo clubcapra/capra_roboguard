@@ -1,6 +1,8 @@
 # Rust build artifacts
 target/
 **/target/
+HALo/src/drivers/livox/native/build/
+robot_doc/**/.rove_sim_cache/
 
 # Downloaded tool binaries
 rove_sim/tools/bin/ffmpeg
@@ -21,3 +23,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Rebuildable parsed-mesh and compiled-kernel caches
+**/.runtime/
+*.nbc
+*.nbi

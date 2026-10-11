@@ -16,7 +16,7 @@ Two run modes, **orthogonal** to the engine connection mode (`gui|headless`):
 | `--world` | Robot state | World | Sensors | Use |
 |---|---|---|---|---|
 | **mock** | PyBullet **physics** (actuators apply forces) | ground + terrain + friction | synthesized from physics | dev / autonomy testing |
-| **real** | **synced kinematically** from `rove_sensor_api` telemetry (no physics) | perceived objects (lidar/vision → bodies) | real feeds | on-robot world model |
+| **real** | **synced kinematically** from `HALo` telemetry (no physics) | perceived objects (lidar/vision → bodies) | real feeds | on-robot world model |
 
 Seams (all registry-driven from the profile manifest):
 `world/` (MockWorld·RealWorld) · `drivers/` (MockDriver·SyncDriver) ·
@@ -43,7 +43,7 @@ On the Jetson, **real mode is kinematic** (no physics); tensor cores run percept
   `MockDriver` = physics (verbatim), `SyncDriver` = kinematic `resetJointState`.
   Validated: kinematic twin tracks the physics robot with **0.0 rad** joint error.
 - **Telemetry loop ("the API is the seam").** Mock `SimSensorApi` publishes per-driver
-  telemetry (kinova/odrive/robotiq/vectornav) in the real `rove_sensor_api` wire format
+  telemetry (kinova/odrive/robotiq/vectornav) in the real `HALo` wire format
   (`<BBH>`+JSON); `RoveSensorApiStateSource` consumes the same bytes from the mock OR
   the real robot. In-process + UDP transports. Offline mock→real loop works (no hardware).
 - **Terrain.** `free_dirt_road_through_forest.glb` loads as the FULL scene, mesh-first:
@@ -95,7 +95,7 @@ the robot 11.4 m, a point cloud + camera frame were read by external clients. 27
 
 - **M2 camera RTSP** (`sensors/rtsp.py`): mediamtx (`tools/bin/mediamtx`) + one ffmpeg
   per camera; `rtsp://host:8554/<cam>` H.264. 720p render, downscaled (default 640×360).
-- **M3 bilateral rove_sensor_api**: `SimSensorApi` publishes vectornav/kinova/robotiq +
+- **M3 bilateral HALo**: `SimSensorApi` publishes vectornav/kinova/robotiq +
   **4× ODrive** (physics current from the track-force model, I²R thermal temp, vel,
   stuck flag) + **pmic** (SoC/voltage from a drained `Battery`). `RoveControlBridge`
   (`rove_control_bridge`) decodes control over UDP → `RoveControl` (autonomy drives the
@@ -130,13 +130,13 @@ the robot 11.4 m, a point cloud + camera frame were read by external clients. 27
 - **M5 — `SimControlBridge` over real transport.** Close the teleop loop end-to-end;
   terrain course. (Terrain + friction backend already in place.)
 
-### ✅ M5 — sim backs the REAL rove_sensor_api binary (2026-06-09)
+### ✅ M5 — sim backs the REAL HALo binary (2026-06-09)
 
-The genuine `rove_sensor_api` Rust binary now runs **sim-backed**: set
+The genuine `HALo` Rust binary now runs **sim-backed**: set
 `ROVE_SIM_BACKEND=host:5000` (or drop a `config/sim.toml`) and every hardware
-driver is replaced by a **per-sensor mock** (`rove_sensor_api/src/drivers/*/mock.rs`,
+driver is replaced by a **per-sensor mock** (`HALo/src/drivers/*/mock.rs`,
 each reusing its real driver's schema) fed by the sim over UDP. Autonomy/IK then
-connect to a byte-identical `rove_sensor_api` — indistinguishable from the robot.
+connect to a byte-identical `HALo` — indistinguishable from the robot.
 
 - **Sim side**: `sim_server --rsa-backend` publishes telemetry on the shared
   **backend ports (6000+)** the mocks subscribe to (control stays on 5020). The
@@ -147,9 +147,9 @@ connect to a byte-identical `rove_sensor_api` — indistinguishable from the rob
 - **Livox Mid-360 IMU**: emitted by the SIM as **native Livox-SDK2 UDP packets**
   (port 56401, 200 Hz, gyro rad/s + accel g, lever-arm applied), whenever the
   lidar runs — a **separate** lidar stream alongside the point clouds (5022/5024).
-  It is **not** a rove_sensor_api sensor: that API only covers Pi-board hardware
+  It is **not** a HALo sensor: that API only covers Pi-board hardware
   (VectorNav/Kinova/Robotiq/ODrives, 7 mocks); lidars are consumed directly.
-- **Shared `ports.toml`** (`rove_sensor_api/config/ports.toml`) is the single
+- **Shared `ports.toml`** (`HALo/config/ports.toml`) is the single
   source of truth read by both sides — no port-overlap drift.
 - **Verified live**: `rove.sh headless --api` → `/discover` lists 8 sim-backed
   sensors; vectornav serves Thun lat/lon + 1 g; driving via `POST /odrive_3x/command`
@@ -164,11 +164,11 @@ connect to a byte-identical `rove_sensor_api` — indistinguishable from the rob
 
 The full stack now runs **headless as a systemd service** on the dedicated sim
 box (`think2-gpu-host`: Quadro **P600 / 2 GB**, 8-vCPU VM, Debian 13), so autonomy
-can develop against a live `rove_sensor_api` without anyone babysitting a terminal.
+can develop against a live `HALo` without anyone babysitting a terminal.
 
 - **Service**: `rove_sim/scripts/install_service.sh` (sudo) installs a boot-persistent
   unit running `tools/rove.sh headless --tiny --api` → physics + 5 cameras (RTSP
-  :8554) + 2 Livox (UDP 5022/5024) + the real `rove_sensor_api` (HTTP :8080, sim-backed).
+  :8554) + 2 Livox (UDP 5022/5024) + the real `HALo` (HTTP :8080, sim-backed).
   `uninstall_service.sh` removes it. Runs as the project-owner user (EGL/GPU + venv).
 - **Lidar at real fidelity, multi-packet**: the point-cloud UDP transport is now
   **`LVX2` multi-packet** — each Mid-360 scan is fragmented across N datagrams and

@@ -1,15 +1,15 @@
 # capra_autonomy — engine config (GoTo vertical slice).
 #
-# The robot surface (sim or real) lives behind rove_sensor_api. In the current
+# The robot surface (sim or real) lives behind HALo. In the current
 # dev topology that is think2 = 192.168.2.4 (sim-backed). Point this at the real
 # robot's Jetson by changing robot_host only — the wire seams are identical.
 
 robot_host = "192.168.2.2"
-http_port  = 8080          # rove_sensor_api /discover (resolves data + command ports)
+http_port  = 8080          # HALo /discover (resolves data + command ports)
 
 # ---------- Pose source (VectorNav VN-300 + external GNSS broadcast) -----
 # On the REAL robot the VN-300 has a working IMU/AHRS but NO GNSS, so attitude
-# (yaw/roll/pitch/gyro_z) comes from the VN via rove_sensor_api and POSITION comes
+# (yaw/roll/pitch/gyro_z) comes from the VN via HALo and POSITION comes
 # from the external GNSS broadcast below (see [gnss]).
 [datum]                    # local-ENU origin — set to the OPERATING SITE.
 # Captured live from the :7010 broadcast on 2026-06-17 (acc ~1.3 m — good fix).
@@ -43,7 +43,7 @@ source   = "broadcast"
 port     = 7010
 stale_ms = 1500                     # a fix older than this -> treated as no-fix
 
-# ---------- Drive (track ODrives via rove_sensor_api) -------------------
+# ---------- Drive (track ODrives via HALo) -------------------
 # Port of rove_control_bridge tracks_velocity strategy.
 [tracks]
 left_nodes    = [31, 34]
@@ -98,11 +98,11 @@ max_pitch_deg     = 35.0    # SAR L0: pitch > 35deg -> kill drive
 # (cliffs), regardless of pose error. This is what keeps GoTo from driving into
 # things or off the map. The top Livox (5022) has a ~6 m near blind spot (its
 # lowest beam is only -7deg), so near sensing uses the bottom one.
-# Real Mid-360s via the livox_bridge sidecar (LVXR), bottom lidar = ground sensor.
+# Real Mid-360s via the HALo Livox driver (LVXR), bottom lidar = ground sensor.
 # Heading-independent PROXIMITY reflex: stop if an obstacle or ground edge/hole is
 # close in any near direction (the body heading isn't trusted yet, so no directional
-# corridor / cost-map routing — that comes once heading is calibrated). Start the
-# sidecar: livox_bridge/build/livox_bridge livox_bridge/config/mid360.json
+# corridor / cost-map routing — that comes once heading is calibrated).
+# Enable config/livox.toml in HALo; it starts SDK2 in-process.
 [perception]
 source             = "lvxr"
 lvxr_pts_port      = 7020
@@ -134,7 +134,7 @@ demo_forward_m    = 0.0
 waypoints         = []
 
 # ---------- Front door (operator) + rove_ik_engine ----------------------
-# Front-door ports MUST stay clear of rove_sensor_api's served block (5000-5017:
+# Front-door ports MUST stay clear of HALo's served block (5000-5017:
 # data=5000+2i, cmd=5001+2i for 9 devices) — e.g. 5005 is the gripper cmd port,
 # 5007 is odrive_31's cmd port. Keep these in the 5050+ band.
 [comms]

@@ -1,12 +1,12 @@
-"""Shared sim ⇄ rove_sensor_api port map.
+"""Shared sim ⇄ HALo port map.
 
-Reads the SAME `ports.toml` the Rust `rove_sensor_api` reads (its
+Reads the SAME `ports.toml` the Rust `HALo` reads (its
 `config/ports.toml`), so the two processes can never drift into a port overlap.
-In rove_sensor_api-backend mode the sim publishes telemetry on the *backend*
+In HALo-backend mode the sim publishes telemetry on the *backend*
 ports (default 6000+); the Rust mock drivers subscribe there and re-serve on the
 canonical 5000+ ports to autonomy.
 
-The default location mirrors the repo layout: `rove_sensor_api/config/ports.toml`
+The default location mirrors the repo layout: `HALo/config/ports.toml`
 sits a couple levels up from `rove_sim/`. Override with an explicit path.
 """
 from __future__ import annotations
@@ -20,11 +20,12 @@ from typing import Dict, Optional
 # (tracks) + flippers 41-44.
 CHANNEL_ORDER = ["vectornav", "kinova", "robotiq",
                  "odrive_31", "odrive_32", "odrive_33", "odrive_34",
-                 "odrive_41", "odrive_42", "odrive_43", "odrive_44", "pmic"]
+                 "odrive_41", "odrive_42", "odrive_43", "odrive_44", "pmic", "livox_40", "livox_41", "radiacode"]
 
-# Override keys in ports.toml use the rove_sensor_api *served* ids; map the sim
+# Override keys in ports.toml use the HALo *served* ids; map the sim
 # channel name to that id where they differ.
-_SERVED_ID = {"vectornav": "vectornav_sim"}
+_SERVED_ID = {"vectornav": "vectornav_sim", "kinova": "kinova_arm",
+              "robotiq": "robotiq_gripper", "radiacode": "radiacode_arm"}
 
 _DEFAULTS = {"served_base": 5000, "backend_base": 6000,
              "control_port": 5100, "livox_imu_port": 56401}
@@ -33,7 +34,7 @@ _DEFAULTS = {"served_base": 5000, "backend_base": 6000,
 def _default_ports_path() -> str:
     here = os.path.dirname(os.path.abspath(__file__))            # .../rove_sim/rove_sim/transport
     root = os.path.dirname(os.path.dirname(os.path.dirname(here)))  # .../capra_roboguard
-    return os.path.join(root, "rove_sensor_api", "config", "ports.toml")
+    return os.path.join(root, "HALo", "config", "ports.toml")
 
 
 class PortMap:

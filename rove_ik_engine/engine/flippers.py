@@ -1,7 +1,7 @@
 """Flipper ODrive mirror — read-only sync of the track flippers into the model.
 
 Each flipper is an independent ODrive node (41=FL, 42=FR, 43=BL, 44=BR) served
-by rove_sensor_api on its own data port. Unlike the kinova arm (one stream of
+by HALo on its own data port. Unlike the kinova arm (one stream of
 `joint_N_pos`), here we open ONE subscriber per node and read its `pos_estimate`
 (motor revolutions). The model joint angle is
 
@@ -549,8 +549,7 @@ def apply_flipper_command(state: EngineState, dt: float) -> None:
 
 
 def apply_drive_watchdog(state: EngineState, timeout_s: float) -> None:
-    """Self-stop the drives on input silence — clone of the old
-    rove_control_bridge_py idle watchdog, run per tick.
+    """Self-stop the drives on input silence, checked every tick.
 
     `drive_vel_cmd` (drums) and `flipper_cmd_steps` (the held flipper ramp step)
     PERSIST — unlike consume-once Ovis (which is why the arm halts on its own).
@@ -685,7 +684,7 @@ class FlipperCommandSender:
           * no target (released to the mirror, or never commanded) -> idle the
             axis; the 540:1 worm gear holds the flipper, so it stays put without
             power. With nothing buffered there is no setpoint to servo and no axis
-            to re-arm, so a rove_sensor_api reload leaves the flipper safely idle
+            to re-arm, so a HALo reload leaves the flipper safely idle
             (the "no self-motion on API reload" property).
           * a planned pose owns the joint -> servo to its trajectory.
           * unsynced (no offset) -> can't map model->motor; warn + skip.
@@ -748,7 +747,7 @@ class FlipperCommandSender:
                             "input_mode": _INPUT_MODE_PASSTHROUGH}, cmd_port)
                 self._armed[eid] = _CONTROL_MODE_VELOCITY
             # Re-assert ClosedLoopControl on EVERY tick alongside the setpoint
-            # WHILE DRIVING (clone of the old rove_control_bridge_py keepalive). If
+            # WHILE DRIVING (drive-intent keepalive). If
             # the ODrive faults / resets / hits its own watchdog mid-drive, this
             # re-arms it next tick instead of leaving it stuck — which otherwise
             # shows up as the drum juddering/vibrating. The keepalive only runs

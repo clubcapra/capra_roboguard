@@ -1,4 +1,4 @@
-//! Telemetry subscriber for a single rove_sensor_api data port.
+//! Telemetry subscriber for a single HALo data port.
 //!
 //! Protocol: send a `Subscribe` (0x01) frame to the data port, then receive
 //! `Data` (0x03) frames pushed back to our source address. We re-send Subscribe

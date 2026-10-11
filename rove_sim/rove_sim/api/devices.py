@@ -1,4 +1,4 @@
-"""Per-driver telemetry codecs mirroring rove_sensor_api's data schemas.
+"""Per-driver telemetry codecs mirroring HALo's data schemas.
 
 Each device is a symmetric pair:
   * sample()      -- read the sim's physics/kinematic state -> the driver's JSON
@@ -58,11 +58,14 @@ class KinovaArmDevice:
             st = p.getJointState(self.body, ix)
             o[f"joint_{i+1}_pos"] = math.degrees(st[0]) * self.sign[i] + self.offset_deg[i]
             o[f"joint_{i+1}_vel"] = math.degrees(st[1]) * self.sign[i]
-            cur = abs(st[3])
+            # Bullet retains the last motor impulse after force=0 disables its
+            # servo constraint. The actuator applies zero effort in limp mode.
+            cur = 0.0 if getattr(self.robot, "arm_limp_mode", False) else abs(st[3])
             total_cur += cur
             o[f"joint_{i+1}_current"] = cur
             o[f"joint_{i+1}_temp"] = 25.0
         # Base power + IMU fields the real Kinova schema carries (at rest ~1 G up).
+        o["limp_mode"] = bool(getattr(self.robot, "arm_limp_mode", False))
         o["bus_voltage"] = 24.0
         o["bus_current"] = round(total_cur, 3)
         o["accel_x"] = 0.0
@@ -344,6 +347,30 @@ class PmicDevice:
         pass
 
 
+class RadiacodeDevice:
+    """HALo's dose schema, sampled at the actual arm detector block."""
+    channel = "radiacode"
+
+    def __init__(self, robot, spec):
+        from ..sensors.radiation import RadiationSensor
+        from ..core.clock import SimClock
+        self.sensor = RadiationSensor(name=spec.name, robot=robot, link=spec.bind,
+                                      clock=SimClock(), **spec.params)
+        self.robot = robot
+
+    def sample(self):
+        self.sensor.sources = getattr(self.robot, "radiation_sources", [])
+        reading = self.sensor.sample()
+        x, y, z = reading.position
+        return dict(dose_rate_usv_h=reading.dose_rate_usv_h,
+                    background_usv_h=self.sensor.background, source_count=len(reading.contributions),
+                    x_m=x, y_m=y, z_m=z, connected=True, error_code=0,
+                    transport="simulation", timestamp_ns=_now_ns())
+
+    def apply(self, payload, state):
+        pass
+
+
 def build_devices(profile, robot, actuators=None) -> list:
     """Auto-wire telemetry devices from what the profile declares. `actuators`
     (the live actuator list) enables the physics-derived ODrive/Pmic telemetry;
@@ -362,6 +389,9 @@ def build_devices(profile, robot, actuators=None) -> list:
                 robot, pr["driven_joint"], pr["closed_rad"], pr.get("mimic", {})))
     if any(s.use in ("vn300", "vectornav") for s in profile.sensors):
         devices.append(VectorNavDevice(robot, datum))
+    for spec in profile.sensors:
+        if spec.use == "radiation":
+            devices.append(RadiacodeDevice(robot, spec))
     # 8 ODrives: 4 drums (track sides) + 4 flippers. Drums need the live tracks
     # actuator (physics current); flippers read their own joint. Per the
     # rove_control_bridge config: 31,34 = LEFT, 32,33 = RIGHT.

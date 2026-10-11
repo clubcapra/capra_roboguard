@@ -1,4 +1,4 @@
-//! Fire-and-forget command sender to rove_sensor_api command ports.
+//! Fire-and-forget command sender to HALo command ports.
 //!
 //! Each call wraps a JSON payload in a `Command` (0x10) frame and sends it to
 //! `host:command_port`. Mirrors rove_control_bridge's SensorApiUdpClient: dropped

@@ -117,7 +117,7 @@ def build(profile: str, mode: str = "headless", world: str = "mock",
           control_hz: float = 50.0, safety: bool = True,
           state_source=None, world_overrides=None, step_sensors: bool = False,
           egl: bool = True, solver_iterations: int | None = None,
-          timestep: float | None = None) -> Sim:
+          timestep: float | None = None, settle_seconds: float = 0.5) -> Sim:
     prof = load_profile(resolve_profile(profile))
     # egl=False -> CPU-only pybullet (no GPU/VRAM): for processes that never call
     # getCameraImage (physics server, lidar raycast worker, and the pyrender camera
@@ -129,6 +129,10 @@ def build(profile: str, mode: str = "headless", world: str = "mock",
     if timestep is not None:
         ecfg.timestep = float(timestep)
     engine = Engine(ecfg).connect()
+    if mode == "gui":
+        # Loading the forest creates many bodies. Avoid rendering each partial
+        # scene while meshes and textures are still being uploaded.
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
     # World seam owns gravity/ground (mock physics) or the geometric world model
     # (real). `world=` overrides the profile's `world.use` (default 'mock');
     # `world_overrides` injects extra world spec (e.g. terrain) without editing
@@ -227,8 +231,10 @@ def build(profile: str, mode: str = "headless", world: str = "mock",
               control_hz=control_hz, guard=guard, world=world_obj,
               driver=driver, source=source, sensors=sensor_list, clock=clock,
               step_sensors=step_sensors, occluders=occluders)
-    driver.settle(0.5)             # physics settle in mock; no-op kinematic in real
+    driver.settle(settle_seconds)  # render/raycast mirrors don't step physics
     if occluders:                  # settle moved the robot -> realign the occluders
         from .robot.occluder import sync_occluders
         sync_occluders(robot, occluders)
+    if mode == "gui":
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
     return sim

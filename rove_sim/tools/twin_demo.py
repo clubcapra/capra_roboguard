@@ -1,7 +1,7 @@
 """Mock vs synced-twin validation clip.
 
 Phase A: drive the MOCK (physics) sim through an arm maneuver; each tick, publish
-its state as rove_sensor_api telemetry and decode it back to a RobotState frame
+its state as HALo telemetry and decode it back to a RobotState frame
 (the full wire loop), recording the rendered image too.
 Phase B: build a REAL (kinematic) sim and replay those decoded frames through the
 SyncDriver -- no physics, no actuators, just telemetry -> URDF -- and render it.
@@ -22,7 +22,7 @@ from rove_sim import runtime
 from rove_sim.api.sim_sensor_api import SimSensorApi
 from rove_sim.state.base import RobotState
 from rove_sim.state.manual import ReplayStateSource
-from rove_sim.state.rove_sensor_api import RoveSensorApiStateSource
+from rove_sim.state.halo import RoveSensorApiStateSource
 from rove_sim.transport import InProcessTransport
 from rove_sim.control import RoveControl, Ovis, Gripper
 

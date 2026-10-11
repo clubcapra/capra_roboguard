@@ -1,7 +1,7 @@
 """API-seam adapter contract (S1, S2): the swappable wire seam.
 
 The seam is the API, not an abstraction layer. A SensorApi adapter serializes
-sim telemetry into a specific robot's wire format (e.g. rove_sensor_api); a
+sim telemetry into a specific robot's wire format (e.g. HALo); a
 ControlBridge adapter accepts that robot's control/estop/mission messages and
 hands decoded RoveControl intent to the actuators. A different robot with a
 different proto = a new adapter registered here and named in the profile's

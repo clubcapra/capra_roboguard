@@ -1,4 +1,4 @@
-//! Wire transport to rove_sensor_api: packet codec, port discovery, telemetry
+//! Wire transport to HALo: packet codec, port discovery, telemetry
 //! subscription, and command sending. Identical bytes against sim or real robot.
 
 pub mod command;

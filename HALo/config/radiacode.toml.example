@@ -1,0 +1,6 @@
+# Stable instance identity; used by discovery and persistent UDP port assignments.
+id = "radiacode_arm"
+# Placeholder hardware transport. This does not connect to a physical Radiacode.
+transport = "mock"
+mock_dose_rate_usv_h = 0.1
+# In simulator mode the same driver reads real simulated arm-detector telemetry.

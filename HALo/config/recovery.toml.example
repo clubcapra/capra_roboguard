@@ -1,0 +1,5 @@
+# Bounded initialization and stale-telemetry recovery for each driver group.
+max_attempts = 3
+attempt_timeout_ms = 30000
+retry_delay_ms = 2000
+stale_after_ms = 3000

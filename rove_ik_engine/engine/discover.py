@@ -1,6 +1,6 @@
-"""Resolve rove_sensor_api served ports at startup.
+"""Resolve HALo served ports at startup.
 
-rove_sensor_api assigns served UDP ports (data = base+2i, cmd = base+2i+1) by
+HALo assigns served UDP ports (data = base+2i, cmd = base+2i+1) by
 sensor REGISTRATION ORDER, which varies between boots — so a port hardcoded in
 config can silently point at the wrong sensor after a restart. For READS that's
 just missing data; for COMMANDS it's dangerous (you could drive the wrong

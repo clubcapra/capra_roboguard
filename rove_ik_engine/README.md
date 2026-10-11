@@ -19,7 +19,7 @@ autonomy layer reads against.
                                                │ StateUpdate (joint q, ee, diag)
                                                ▼
                                     ┌─────────────────────────────┐
-                                    │  rove_sensor_api            │
+                                    │  HALo            │
                                     │  Kinova arm cmd port        │
                                     │  (and later: ODrives, etc.) │
                                     └─────────────────────────────┘
@@ -57,7 +57,7 @@ Defaults are in `engine.toml`.
 Two robot builds share this engine; pick one with the config file:
 
 - **`engine.toml` — CAGED rover (the default the systemd service runs).** Loads
-  `data/rove_caged.urdf` (drivetrain + a fixed cage, no Kinova arm), so
+  `../robot_doc/rove_caged_urdf/rove_caged.urdf` (drivetrain + a fixed cage, no Kinova arm), so
   `[hardware]` is off. Collision-aware IK/motion is on. Run: `python3 run.py`.
 - **`engine.standard.toml` — arm build.** Loads `data/scene.forgebot` (the
   Kinova arm + drivetrain). Run: `python3 run.py engine.standard.toml`.
@@ -72,8 +72,8 @@ visualises everything but sends no motor packets — flip them on only after
 verifying mirror direction. The command paths refuse to drive on stale feedback
 (no "ghost" motion on a dropped link), drum and flipper command channels are
 fully segmented, and `POST /api/v1/reload` re-discovers ports + re-anchors the
-flippers after an e-stop/sensor_api reload (the arm e-stop watchdog calls it on
-recovery) so the engine self-heals instead of needing a reinstall.
+flippers after an e-stop/sensor_api reload. Call it after power-cycle recovery
+to restore the engine's hardware connections.
 
 ## Module layout
 
@@ -86,11 +86,11 @@ rove_ik_engine/
 │   ├── ik_loop.py      Tick: pull latest Ovis, solve IK, emit StateUpdate
 │   ├── chain.py        Walk the kinematic tree, derive the IK base/tip
 │   ├── state.py        Engine state container (joint q, last Ovis, diag)
-│   ├── loader.py       Load .forgebot or .urdf into a kinematic model
+│   ├── loader.py       Load .forgebot or robot_doc URDF into a kinematic model
 │   ├── config.py       Read + validate engine.toml
 │   ├── server.py       UDP + WebSocket transports orchestration
 │   ├── tcp.py          (legacy) raw-TCP transport
-│   ├── hardware.py     Sync joint state to/from rove_sensor_api (Kinova)
+│   ├── hardware.py     Sync joint state to/from HALo (Kinova)
 │   ├── transports/     UDP / WS handlers
 │   └── proto/          Generated protobuf (Ovis, StateUpdate)
 ├── forgebot/           Vendored copy of forgebot.core + needed forgebot.io
@@ -98,7 +98,6 @@ rove_ik_engine/
 │                        to the editor's IK behaviour)
 ├── data/               Scene + meshes
 │   ├── scene.forgebot  Preferred — lossless export from the editor
-│   ├── robot.urdf      Fallback URDF
 │   ├── meshes/
 │   └── manifest.json   Joint/link ids advertised at build time
 ├── ui/                 Bundled visualiser (HTML + assets)
@@ -129,7 +128,7 @@ All messages are protobuf — schema in `engine/proto/messages.proto`.
 - `[ik]` — `collision_aware` toggle, `twist_frame`, velocity caps, tick rate.
 - `[input]` / `[output]` — enable UDP and/or WebSocket, configure bind
   addresses. Multiple outputs can run simultaneously.
-- `[hardware]` — sync joint state with the Kinova arm via rove_sensor_api.
+- `[hardware]` — sync joint state with the Kinova arm via HALo.
   `vel_output_enabled` closes the loop (gizmo → IK → qdot → arm).
 
 ## Roadmap

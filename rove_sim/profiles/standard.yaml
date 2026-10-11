@@ -5,7 +5,7 @@
 name: standard
 
 model:
-  path: ../../rove_standard_urdf/rove_standard.urdf
+  path: ../../robot_doc/rove_standard_urdf/rove_standard.urdf
   kind: urdf
   mesh_format: glb
   # Spawn in the CENTRE of the open road area (world frame), not at the origin --
@@ -52,7 +52,7 @@ gripper:
   mount_rpy: [0, -1.5708, 0]
 
 api:
-  sensors: rove_sensor_api          # adapter key (rove_sim/api registry)
+  sensors: HALo          # adapter key (rove_sim/api registry)
   control: rove_control_bridge
   transport: {sensors: udp, control: udp}
 
@@ -195,3 +195,9 @@ sensors:
   - {use: camera, as: cam_arm,   bind: chinese_camera_7, provides: [camera],
      params: {width: 640, height: 480, hfov_deg: 90.0,
               aim_link: [left_inner_finger_pad, right_inner_finger_pad]}}
+
+  # Simulated Radiacode body on the gripper mount, with point-source dose rates.
+  - {use: radiation, as: radiacode_arm, bind: chinese_camera_7, provides: [radiation],
+     params: {rate_hz: 10, offset: [0.06, 0.04, 0.04],
+              visual_extents: [0.07, 0.04, 0.025], background_usv_h: 0.1,
+              minimum_distance_m: 0.1}}

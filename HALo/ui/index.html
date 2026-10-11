@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>HALo · Hardware Abstraction Layer and I/O</title>
+  <link rel="stylesheet" href="/assets/halo.css">
+  <script src="/assets/halo.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">HALo</a><span>Hardware Abstraction Layer and I/O</span><button id="logout" hidden>Logout</button></header>
+  <main>
+    <section id="login-panel" class="login panel">
+      <p class="eyebrow">Device access</p><h1>Login</h1>
+      <p>Sign in to inspect hardware, configure connections and recover drivers.</p>
+      <form id="login-form"><label>Password<input id="password" type="password" autocomplete="current-password" required maxlength="1024"></label><button type="submit">Log in</button></form>
+      <p id="login-error" role="alert"></p>
+    </section>
+    <div id="console" hidden>
+      <nav class="sidebar" aria-label="Management">
+        <div class="menu-label">Status</div><button data-view="hardware" aria-current="page">Overview</button>
+        <button data-view="commands">Sensor commands</button>
+        <div class="menu-label">Configuration</div><button data-view="connections">Hardware connections</button>
+        <button data-view="settings">Settings</button>
+        <div class="menu-label">Maintenance</div><button data-view="api">API reference</button><button data-view="logs">System logs</button>
+        <div class="sidebar-status"><span class="status-light" aria-hidden="true"></span><span id="connection-state" role="status">Connecting</span></div>
+      </nav>
+      <div id="message" role="status" hidden></div>
+      <section id="view-hardware">
+        <div class="title"><div><p class="eyebrow">Status / Overview</p><h1>Overview</h1><p>Discovery advertises devices after hardware initialization succeeds.</p></div><button id="restart" class="danger">Restart HALo</button></div>
+        <div class="metrics"><article class="panel"><span>Hardware ready</span><strong id="ready-count">—</strong></article><article class="panel"><span>Drivers with errors</span><strong id="error-count">—</strong></article><article class="panel"><span>Last refreshed</span><strong id="last-refresh">—</strong></article></div>
+        <div class="panel"><h2>Driver status</h2><p class="hint">Retry affects the selected driver. Devices sharing a hardware connection share a recovery group.</p><div class="table-wrap"><table><thead><tr><th>Driver</th><th>State</th><th>Attempt</th><th>Diagnostics</th><th>Recovery</th></tr></thead><tbody id="drivers"></tbody></table></div><p id="sim-note" hidden>Simulator adapter active. Physical driver probing is disabled; each mock uses the same health checks and recovery supervisor as a physical driver.</p></div>
+        <div class="panel"><h2>Hardware status</h2><div class="table-wrap"><table><thead><tr><th>Identity</th><th>Controller</th><th>Hardware</th><th>Health</th><th>Telemetry</th></tr></thead><tbody id="devices"></tbody></table></div></div>
+
+      </section>
+      <section id="view-commands" hidden>
+        <div class="title"><div><p class="eyebrow">Status / Sensor commands</p><h1>Sensor commands</h1><p>Select a sensor to inspect its data and send commands declared by its driver.</p></div></div>
+        <div id="sensor-tabs" class="sensor-tabs" role="tablist" aria-label="Sensors"></div>
+        <div id="sensor-panel" role="tabpanel" aria-labelledby="sensor-tab-active">
+          <div class="panel"><h2 id="sensor-title">No sensors loaded</h2><p id="sensor-health"></p><p id="sensor-mode" class="hint"></p>
+            <form id="sensor-command-form"><div id="sensor-command-fields" class="table-wrap"></div><p id="sensor-command-hint" role="status"></p><button id="sensor-command-send" type="submit" hidden>Send command</button><button id="sensor-estop" class="danger" type="button" hidden>Emergency stop</button></form><pre id="sensor-command-result" hidden></pre>
+          </div>
+          <div class="panel"><h2>Current sensor data</h2><div class="table-wrap"><table><thead><tr><th>Field</th><th>Value</th><th>Unit</th><th>Description</th></tr></thead><tbody id="sensor-data"></tbody></table></div></div>
+        </div>
+      </section>
+      <section id="view-connections" hidden>
+        <div class="title"><div><p class="eyebrow">Configuration / Hardware connections</p><h1>Connections</h1><p>Identities and port reservations survive driver failures and restarts.</p></div></div>
+        <div class="panel"><h2>Hardware connections</h2><p>Configure serial paths, baudrates, controller addresses and driver recovery limits.</p><div id="config-buttons" class="actions"></div></div>
+
+        <div class="panel"><h2>Served UDP ports</h2><p class="hint">Ports stay assigned to each identity through hardware loss, estops, power cycles and device additions or removal. Only saving a new pair changes them. Saving reconnects that device’s UDP listeners; consumers can fetch discovery again for the new mapping.</p><div class="table-wrap"><table><thead><tr><th>Sensor identity</th><th>Data port</th><th>Command port</th><th></th></tr></thead><tbody id="ports"></tbody></table></div></div>
+      </section>
+      <section id="view-api" hidden>
+        <div class="title"><div><p class="eyebrow">Maintenance / API reference</p><h1>API reference</h1><p>Descriptions are generated from the current drivers and served locally.</p></div><a href="/openapi.json" target="_blank" rel="noopener">OpenAPI JSON ↗</a></div>
+        <div class="panel"><h2>Discovery manifest</h2><pre id="manifest"></pre></div>
+        <div class="panel"><h2>Operations</h2><div id="operations"></div></div>
+        <div class="panel"><h2>HTTP request</h2><form id="request-form"><div class="request-row"><label>Method<select id="request-method"><option>GET</option><option>POST</option></select></label><label class="grow">Path<input id="request-path" value="/discover" required></label><button type="submit">Send</button></div><label>JSON body<textarea id="request-body" rows="4">{}</textarea></label></form><pre id="request-result"></pre></div>
+      </section>
+      <section id="view-logs" hidden><div class="title"><div><p class="eyebrow">Maintenance / System logs</p><h1>Logs</h1><p>Download sensor snapshots, commands and driver lifecycle events.</p></div></div><div class="panel" id="logs"></div></section>
+      <section id="view-settings" hidden><div class="title"><div><p class="eyebrow">Configuration / Settings</p><h1>Settings</h1></div></div><div class="panel"><h2>Administrator password</h2><p>Changing the password ends all management sessions. Sign in again with the new password.</p><form id="password-form"><label>Current password<input id="current-password" type="password" autocomplete="current-password" required maxlength="1024"></label><label>New password<input id="new-password" type="password" autocomplete="new-password" required minlength="12" maxlength="1024"></label><label>Confirm new password<input id="confirm-password" type="password" autocomplete="new-password" required minlength="12" maxlength="1024"></label><p id="password-error" role="alert"></p><button type="submit">Change password</button></form></div></section>
+    </div>
+  </main>
+  <dialog id="config-dialog"><form id="config-form"><div class="title"><h2 id="config-title">Driver configuration</h2><button id="close-config" type="button">Close</button></div><label>Hardware connection (TOML)<textarea id="config-text" rows="13" spellcheck="false"></textarea></label><fieldset><legend>Recovery policy</legend><div class="policy"><label>Maximum attempts<input id="policy-max_attempts" type="number" min="1" max="100" required></label><label>Attempt timeout (ms)<input id="policy-attempt_timeout_ms" type="number" min="1000" max="300000" required></label><label>Retry delay (ms)<input id="policy-retry_delay_ms" type="number" min="100" max="300000" required></label><label>Stale telemetry (ms)<input id="policy-stale_after_ms" type="number" min="500" max="60000" required></label></div></fieldset><p id="config-error" role="alert"></p><div class="actions"><button id="save-policy" type="button">Save recovery policy</button><button type="submit">Save connection &amp; retry</button></div></form></dialog>
+  <footer>HALo <span>Local hardware management</span></footer>
+</body>
+</html>

@@ -182,6 +182,20 @@ class ArmIK(Actuator):
             pass
 
     def apply(self, intent):
+        was_limp = bool(getattr(self.robot, "arm_limp_mode", False))
+        self.robot.arm_limp_mode = intent.arm_limp_mode
+        if intent.arm_limp_mode:
+            self._goto = None
+            for j in self.arm_joints:
+                p.setJointMotorControl2(self.robot.body_id, j, p.VELOCITY_CONTROL,
+                                       targetVelocity=0.0, force=0.0)
+            return
+        if was_limp:
+            # Hold the settled position; never jump to the old IK target.
+            self.joint_targets = {j: p.getJointState(self.robot.body_id, j)[0]
+                                  for j in self.arm_joints}
+            self.rel_pos, self.rel_eul = self._current_tcp_rel()
+            self._goto = None
         o = intent.ovis
         twist = (o.vx, o.vy, o.vz, o.wx, o.wy, o.wz)
         if any(abs(v) > 1e-6 for v in twist):

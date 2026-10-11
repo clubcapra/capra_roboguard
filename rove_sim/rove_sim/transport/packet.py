@@ -1,4 +1,4 @@
-"""rove_sensor_api wire codec -- byte-identical to src/protocol/packet.rs.
+"""HALo wire codec -- byte-identical to src/protocol/packet.rs.
 
     [version:1B | msg_type:1B | seq:2B little-endian | JSON payload]
 

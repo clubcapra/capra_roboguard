@@ -21,7 +21,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pybullet as p
 
-from rove_sim import runtime
 from rove_sim.world.render_sync import (apply_robot_state, read_robot_state,
                                         DEFAULT_STATE_FILE)
 from rove_sim.sensors.rtsp import RtspCameraFeeds
@@ -30,6 +29,8 @@ from rove_sim.sensors.rtsp import RtspCameraFeeds
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--profile", default="standard")
+    ap.add_argument("--world-config", default=None, help="World YAML (terrain and datum)")
+    ap.add_argument("--scene", default=None, help="Saved scene JSON (objects, friction and initial pose)")
     ap.add_argument("--terrain", nargs="?",
                     const="../free_dirt_road_through_forest.glb", default=None)
     ap.add_argument("--no-texture", action="store_true")
@@ -45,6 +46,7 @@ def main():
     ap.add_argument("--shared-server", action="store_true",
                     help="push to an already-running mediamtx on --port instead of "
                          "starting one (many workers share one server)")
+    from rove_sim.world.render_sync import apply_world_state
     args = ap.parse_args()
     try:
         sys.stdout.reconfigure(line_buffering=True)
@@ -53,13 +55,10 @@ def main():
     from rove_sim.core.util import die_with_parent
     die_with_parent()                    # no orphans if the fleet launcher is killed
 
-    overrides = {"friction": {"origin": (-25., -25.), "extent": (50., 50.), "cell": 0.25}}
-    if args.terrain:
-        overrides["terrain"] = {"source": args.terrain, "texture": not args.no_texture}
-    # render-only: build the world+robot but we never step_control (the authoritative
-    # sim owns physics; we just mirror its pose+joints and render).
-    sim = runtime.build(args.profile, mode="headless", world="mock",
-                        world_overrides=overrides)
+    from rove_sim.world.scene import build_configured_sim
+    sim = build_configured_sim(args.profile, world_config=args.world_config,
+                               scene_path=args.scene, terrain=args.terrain,
+                               texture=not args.no_texture, egl=True)
     p.setGravity(0, 0, 0)                          # no drift; we reset state anyway
 
     want = [n.strip() for n in args.cameras.split(",") if n.strip()]
@@ -94,7 +93,9 @@ def main():
     try:
         while True:
             t0 = time.time()
-            apply_robot_state(sim.robot, read_robot_state(args.state_file))
+            state = read_robot_state(args.state_file)
+            apply_robot_state(sim.robot, state)
+            apply_world_state(sim.world, state)
             for c in cams:                          # render ALL my cameras this tick
                 s = streams.get(c.name)
                 if s is not None:

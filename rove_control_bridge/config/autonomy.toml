@@ -1,13 +1,13 @@
 # capra_autonomy — engine config (GoTo vertical slice).
 #
-# The robot surface (sim or real) lives behind rove_sensor_api. In the current
+# The robot surface (sim or real) lives behind HALo. In the current
 # dev topology that is think2 = 192.168.2.4 (sim-backed). Point this at the real
 # robot's Jetson by changing robot_host only — the wire seams are identical.
 
 robot_host = "192.168.2.214"
-http_port  = 8080          # rove_sensor_api /discover (resolves data + command ports)
+http_port  = 8080          # HALo /discover (resolves data + command ports)
 
-# ---------- Pose source (VectorNav VN-300 via rove_sensor_api) ----------
+# ---------- Pose source (VectorNav VN-300 via HALo) ----------
 [datum]                    # Thun datum — must match rove_sim (devices.py DEFAULT_DATUM)
 lat = 46.7512
 lon = 7.6131
@@ -21,7 +21,7 @@ pose_stale_ms  = 500                # no fresh fix for this long -> stop driving
 [position]                          # PositionService filter over the noisy VN GNSS
 correction_gain = 0.05              # per-sample pull toward raw GNSS (~0.4 s smoothing @50Hz)
 
-# ---------- Drive (track ODrives via rove_sensor_api) -------------------
+# ---------- Drive (track ODrives via HALo) -------------------
 # Port of rove_control_bridge tracks_velocity strategy.
 [tracks]
 left_nodes    = [31, 34]
@@ -93,7 +93,7 @@ demo_forward_m    = 0.0
 waypoints         = [[15.0, 0.0]]
 
 # ---------- Front door (operator) + rove_ik_engine ----------------------
-# Front-door ports stay clear of rove_sensor_api's served block 5000-5017
+# Front-door ports stay clear of HALo's served block 5000-5017
 # (5005 = gripper cmd, 5006/5007 = odrive_31 data/cmd).
 [comms]
 teleop_port  = 5050

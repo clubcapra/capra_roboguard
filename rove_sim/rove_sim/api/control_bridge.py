@@ -1,6 +1,6 @@
 """RoveControlBridge: the robot-facing COMMAND sink (autonomy -> sim).
 
-The sim publishes telemetry in the rove_sensor_api format AND accepts control in
+The sim publishes telemetry in the HALo format AND accepts control in
 the same wire convention, so the autonomy stack drives the sim exactly as it
 drives the robot -- the only thing that changes in production is the transport
 endpoint. A control frame is the JSON image of RoveControl on the `control`
@@ -23,7 +23,7 @@ def encode_control(rc: RoveControl) -> dict:
             "ovis": {"vx": rc.ovis.vx, "vy": rc.ovis.vy, "vz": rc.ovis.vz,
                      "wx": rc.ovis.wx, "wy": rc.ovis.wy, "wz": rc.ovis.wz},
             "gripper": {"position": rc.gripper.position},
-            "timestamp_us": rc.timestamp_us}
+            "timestamp_us": rc.timestamp_us, "arm_limp_mode": rc.arm_limp_mode}
 
 
 def decode_control(d: dict) -> RoveControl:
@@ -37,7 +37,8 @@ def decode_control(d: dict) -> RoveControl:
                   float(o.get("vz", 0.0)), float(o.get("wx", 0.0)),
                   float(o.get("wy", 0.0)), float(o.get("wz", 0.0))),
         gripper=Gripper(int(g.get("position", 0))),
-        timestamp_us=int(d.get("timestamp_us", 0)))
+        timestamp_us=int(d.get("timestamp_us", 0)),
+        arm_limp_mode=d.get("arm_limp_mode") is True)
 
 
 @register_control_bridge("rove_control_bridge")

@@ -1,4 +1,4 @@
-"""M5: sim backs the real rove_sensor_api Rust binary.
+"""M5: sim backs the real HALo Rust binary.
 
 The Rust mock drivers are verbatim passthroughs of the sim's telemetry, so the
 sim must emit the EXACT field set each real driver's `data_schema()` declares.
@@ -20,7 +20,7 @@ from rove_sim.transport import InProcessTransport
 from rove_sim.transport.ports import PortMap
 from rove_sim.sensors.lidar import encode_imu_packet, decode_imu_packet
 
-# The real rove_sensor_api driver data_schema() field names (state.rs).
+# The real HALo driver data_schema() field names (state.rs).
 VECTORNAV_KEYS = {
     "port", "gps_tow", "gps_week", "ins_status_raw", "ins_mode", "ins_error",
     "gnss_fix", "gnss_compass_active", "gnss_heading_aiding", "yaw", "pitch",

@@ -1,5 +1,5 @@
 //! Bridge → rove_ik_engine: forward all control-proto motion to the engine, which
-//! resolves IK + self-collision and drives the actuators on rove_sensor_api.
+//! resolves IK + self-collision and drives the actuators on HALo.
 //!
 //! Three channels: the arm twist (`Ovis` proto on :9100) and drive teleop (flipper
 //! steps + drum velocities as JSON on :9102) are fire-and-forget UDP; named pose
@@ -31,7 +31,7 @@ fn norm(x: f32) -> f32 {
 /// A fire-and-forget UDP sender to the IK engine plus a blocking HTTP path for
 /// named poses. UDP channels: the arm twist (`Ovis` proto on the engine's :9100)
 /// and drive teleop (flipper steps + drum velocities as JSON on the engine's
-/// :9102). The engine translates both into rove_sensor_api commands (with its own
+/// :9102). The engine translates both into HALo commands (with its own
 /// output gates). Pose moves POST to the engine's HTTP API.
 pub struct IkForwarder {
     sock: UdpSocket,        // arm (Ovis) -> :9100

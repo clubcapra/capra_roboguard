@@ -1,7 +1,7 @@
 """M2 telemetry loop: mock SimSensorApi -> wire -> RoveSensorApiStateSource.
 
 Closes the loop in one process WITHOUT two pybullet instances: build one mock
-sim, publish its physics state as rove_sensor_api DATA frames, then decode them
+sim, publish its physics state as HALo DATA frames, then decode them
 back through the matching device codecs and assert the reconstructed RobotState
 matches the sim's joints. This exercises the BBH+JSON codec and the encode/decode
 symmetry that real-mode sync depends on.
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from rove_sim import runtime
 from rove_sim.api.devices import build_devices
 from rove_sim.api.sim_sensor_api import SimSensorApi
-from rove_sim.state.rove_sensor_api import RoveSensorApiStateSource
+from rove_sim.state.halo import RoveSensorApiStateSource
 from rove_sim.transport import InProcessTransport
 from rove_sim.transport.packet import decode, encode, MSG_DATA
 

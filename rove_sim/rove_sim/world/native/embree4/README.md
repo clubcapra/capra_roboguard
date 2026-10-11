@@ -1,0 +1,1 @@
+Public Embree 4.4.0 headers from https://github.com/RenderKit/embree/tree/v4.4.0/include/embree4, Apache-2.0. rtcore_config.h is generated from kernels/rtcore_config.h.in for the embreex 4.4.0 Linux CPU wheel (one instance level, shared library, no SYCL/minimum-width support). The native filter uses triangle geometry only.

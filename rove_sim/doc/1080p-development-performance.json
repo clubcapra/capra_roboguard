@@ -1,0 +1,6129 @@
+{
+  "duration_seconds": 120.11060251299932,
+  "minimum_camera_fps": 17.51237896541385,
+  "mean_camera_fps": 25.670609556855144,
+  "minimum_lidar_hz": 19.960910980523927,
+  "mean_lidar_hz": 26.231961232097053,
+  "samples": [
+    {
+      "seconds": 0.00030791199242230505,
+      "camera": {
+        "fps_per_camera": 26.84444308290201,
+        "stage_ms": {
+          "sync": 4.108548530680702,
+          "camera_submit": 22.10748060495035,
+          "observer": 4.716888099210337,
+          "camera_collect": 2.250839988083038
+        },
+        "render_ms_mean": 33.18159637094567,
+        "render_ms_p95": 42.25397801201325,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5499,
+        "measured_seconds": 223.5479072480084,
+        "static_cache_shift": {
+          "cam_front": 0.3668975830078125,
+          "cam_rear": 0.42926788330078125,
+          "cam_left": 0.4309844970703125,
+          "cam_right": 1.1061859130859375,
+          "cam_arm": 0.38417816162109375,
+          "observer": 0.3553032875061035
+        },
+        "static_cache_hits": 28754,
+        "static_cache_misses": 4240,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7494682431787031,
+                0.017487839553168814,
+                0.39022949890895714
+              ],
+              "dose_rate_usv_h": 0.5423983893332097,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.270424681356124,
+                  "dose_rate_usv_h": 0.038683011562584524
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.507085045070268,
+                  "dose_rate_usv_h": 0.0853683427462176
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.358963875800036,
+                  "dose_rate_usv_h": 0.08275189483639084
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1757766284641225,
+                  "dose_rate_usv_h": 0.08540355013017187
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.587778698425167,
+                  "dose_rate_usv_h": 0.0535006495482246
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.801134731512755,
+                  "dose_rate_usv_h": 0.09669094050962025
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.716343065701086,
+        "scans_per_lidar": 13361,
+        "measured_seconds": 519.2133060299966,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2128,
+          "livox_bottom": 2935
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.024219512939453125,
+      "gpu": "Quadro P600, 1241 MiB, 49 %"
+    },
+    {
+      "seconds": 3.0279122929932782,
+      "camera": {
+        "fps_per_camera": 26.46027113631682,
+        "stage_ms": {
+          "sync": 4.337840862353914,
+          "camera_submit": 21.86019213640975,
+          "observer": 4.727642737816495,
+          "camera_collect": 2.4560273757742834
+        },
+        "render_ms_mean": 33.37950198583712,
+        "render_ms_p95": 43.82294350143638,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5579,
+        "measured_seconds": 226.57130786200287,
+        "static_cache_shift": {
+          "cam_front": 0.41461944580078125,
+          "cam_rear": 0.38211822509765625,
+          "cam_left": 0.3865814208984375,
+          "cam_right": 0.4154205322265625,
+          "cam_arm": 0.36792755126953125,
+          "observer": 0.35480260848999023
+        },
+        "static_cache_hits": 29200,
+        "static_cache_misses": 4274,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7502740920615154,
+                0.01773839141790161,
+                0.3902295664166797
+              ],
+              "dose_rate_usv_h": 0.5423782703139718,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.27101848256066,
+                  "dose_rate_usv_h": 0.03867745742330503
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.507286842953102,
+                  "dose_rate_usv_h": 0.08536429281894323
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35903500318124,
+                  "dose_rate_usv_h": 0.0827504865636595
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.17558087506541,
+                  "dose_rate_usv_h": 0.08540820989598855
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.588594796965442,
+                  "dose_rate_usv_h": 0.053491542907498524
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.801346814745152,
+                  "dose_rate_usv_h": 0.09668628070457705
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.63411858594328,
+        "scans_per_lidar": 13439,
+        "measured_seconds": 522.2561256899935,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2114,
+          "livox_bottom": 2933
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02381157875061035,
+      "gpu": "Quadro P600, 1241 MiB, 54 %"
+    },
+    {
+      "seconds": 6.047977460999391,
+      "camera": {
+        "fps_per_camera": 27.099207597435555,
+        "stage_ms": {
+          "sync": 4.11599635383648,
+          "camera_submit": 20.726705962904195,
+          "observer": 4.407137280639557,
+          "camera_collect": 2.2817976705704406
+        },
+        "render_ms_mean": 31.52977358571129,
+        "render_ms_p95": 44.1095541966206,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5661,
+        "measured_seconds": 229.597226598009,
+        "static_cache_shift": {
+          "cam_front": 0.36037445068359375,
+          "cam_rear": 0.35465240478515625,
+          "cam_left": 0.35762786865234375,
+          "cam_right": 0.543365478515625,
+          "cam_arm": 0.39642333984375,
+          "observer": 0.35376548767089844
+        },
+        "static_cache_hits": 29659,
+        "static_cache_misses": 4307,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7516386698307346,
+                0.01801715734517193,
+                0.3902162875743764
+              ],
+              "dose_rate_usv_h": 0.542341200784929,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.271894663652622,
+                  "dose_rate_usv_h": 0.038669264218850766
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.507748257014239,
+                  "dose_rate_usv_h": 0.08535503367874948
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35928536475544,
+                  "dose_rate_usv_h": 0.08274552986438882
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.175388264577676,
+                  "dose_rate_usv_h": 0.08541279521936071
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.589899438261273,
+                  "dose_rate_usv_h": 0.053476989568486066
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.801560400139143,
+                  "dose_rate_usv_h": 0.09668158823509317
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.081963638174898,
+        "scans_per_lidar": 13521,
+        "measured_seconds": 525.2839711260021,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2114,
+          "livox_bottom": 2936
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.03174948692321777,
+      "gpu": "Quadro P600, 1241 MiB, 56 %"
+    },
+    {
+      "seconds": 9.074855699000182,
+      "camera": {
+        "fps_per_camera": 26.5811162655477,
+        "stage_ms": {
+          "sync": 4.212933563212573,
+          "camera_submit": 21.66384886168089,
+          "observer": 4.884083537945116,
+          "camera_collect": 2.3123352375478134
+        },
+        "render_ms_mean": 33.07091880014923,
+        "render_ms_p95": 44.57685820016195,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5741,
+        "measured_seconds": 232.60688199399738,
+        "static_cache_shift": {
+          "cam_front": 0.36792755126953125,
+          "cam_rear": 0.35327911376953125,
+          "cam_left": 0.42514801025390625,
+          "cam_right": 0.384979248046875,
+          "cam_arm": 0.35900115966796875,
+          "observer": 0.35743117332458496
+        },
+        "static_cache_hits": 30105,
+        "static_cache_misses": 4341,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7533190564996292,
+                0.018631279438311818,
+                0.39022190868370626
+              ],
+              "dose_rate_usv_h": 0.5423011545609779,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.273214622639113,
+                  "dose_rate_usv_h": 0.03865692614390129
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.508093732772169,
+                  "dose_rate_usv_h": 0.0853481020446633
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.359351965925342,
+                  "dose_rate_usv_h": 0.08274421135856158
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1748927039484816,
+                  "dose_rate_usv_h": 0.0854245943310771
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.591649864714276,
+                  "dose_rate_usv_h": 0.05345747280191467
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.802094849618216,
+                  "dose_rate_usv_h": 0.09666984788086005
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.737847437889332,
+        "scans_per_lidar": 13602,
+        "measured_seconds": 528.3133847760037,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2126,
+          "livox_bottom": 2930
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.022495746612548828,
+      "gpu": "Quadro P600, 1241 MiB, 58 %"
+    },
+    {
+      "seconds": 12.093646545996307,
+      "camera": {
+        "fps_per_camera": 26.485125872142017,
+        "stage_ms": {
+          "sync": 4.287343424584833,
+          "camera_submit": 21.320786499745736,
+          "observer": 4.500081675723777,
+          "camera_collect": 2.454523325286573
+        },
+        "render_ms_mean": 32.56065563728043,
+        "render_ms_p95": 43.777431252237875,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5821,
+        "measured_seconds": 235.62744532400393,
+        "static_cache_shift": {
+          "cam_front": 0.378570556640625,
+          "cam_rear": 0.3934478759765625,
+          "cam_left": 0.39493560791015625,
+          "cam_right": 0.37250518798828125,
+          "cam_arm": 0.353851318359375,
+          "observer": 0.3553926944732666
+        },
+        "static_cache_hits": 30542,
+        "static_cache_misses": 4384,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7551092884526305,
+                0.01961453565706233,
+                0.3902375352632188
+              ],
+              "dose_rate_usv_h": 0.5422655458846826,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.274913035406664,
+                  "dose_rate_usv_h": 0.03864105922691953
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.508188153241015,
+                  "dose_rate_usv_h": 0.08534620773698007
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.359126167498927,
+                  "dose_rate_usv_h": 0.08274868162607203
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.17404714294934,
+                  "dose_rate_usv_h": 0.0854447324652847
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.593689036870936,
+                  "dose_rate_usv_h": 0.053434750071469035
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.80299336875119,
+                  "dose_rate_usv_h": 0.0966501147579572
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.233045008162463,
+        "scans_per_lidar": 13678,
+        "measured_seconds": 531.3253082269948,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2123,
+          "livox_bottom": 2937
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02141118049621582,
+      "gpu": "Quadro P600, 1241 MiB, 54 %"
+    },
+    {
+      "seconds": 15.113415466999868,
+      "camera": {
+        "fps_per_camera": 27.18577482878214,
+        "stage_ms": {
+          "sync": 4.067245939329108,
+          "camera_submit": 21.14372146362013,
+          "observer": 4.49700454830635,
+          "camera_collect": 2.409689866287475
+        },
+        "render_ms_mean": 32.11550209752892,
+        "render_ms_p95": 43.262928249168915,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5903,
+        "measured_seconds": 238.6437286750006,
+        "static_cache_shift": {
+          "cam_front": 0.36060333251953125,
+          "cam_rear": 0.35831451416015625,
+          "cam_left": 0.37549495697021484,
+          "cam_right": 0.586395263671875,
+          "cam_arm": 0.36815643310546875,
+          "observer": 0.35657286643981934
+        },
+        "static_cache_hits": 31000,
+        "static_cache_misses": 4418,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7573450443318825,
+                0.019290434692065116,
+                0.3902124492640529
+              ],
+              "dose_rate_usv_h": 0.5421877019108671,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.275657078520434,
+                  "dose_rate_usv_h": 0.03863411130210661
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.509599521845974,
+                  "dose_rate_usv_h": 0.08531789971408169
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.360246832375068,
+                  "dose_rate_usv_h": 0.08272649871028392
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.174492473866373,
+                  "dose_rate_usv_h": 0.08543412544318311
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.5954134830234,
+                  "dose_rate_usv_h": 0.05341554567358663
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.802565031763272,
+                  "dose_rate_usv_h": 0.09665952106762513
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.346676835645304,
+        "scans_per_lidar": 13758,
+        "measured_seconds": 534.3617443019903,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2120,
+          "livox_bottom": 2932
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009130477905273438,
+      "gpu": "Quadro P600, 1241 MiB, 55 %"
+    },
+    {
+      "seconds": 18.143447131995345,
+      "camera": {
+        "fps_per_camera": 27.451461083920908,
+        "stage_ms": {
+          "sync": 3.9144149872387413,
+          "camera_submit": 21.0830183978142,
+          "observer": 4.364888686953247,
+          "camera_collect": 2.3469163502176595
+        },
+        "render_ms_mean": 31.707291145064215,
+        "render_ms_p95": 43.558275990653776,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 5986,
+        "measured_seconds": 241.6672471589991,
+        "static_cache_shift": {
+          "cam_front": 0.373992919921875,
+          "cam_rear": 0.39642333984375,
+          "cam_left": 0.4712677001953125,
+          "cam_right": 0.35888671875,
+          "cam_arm": 0.42743682861328125,
+          "observer": 0.35381317138671875
+        },
+        "static_cache_hits": 31449,
+        "static_cache_misses": 4467,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7599035261954404,
+                0.021108905947782537,
+                0.3902330972664631
+              ],
+              "dose_rate_usv_h": 0.5421458379313308,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.278451301442878,
+                  "dose_rate_usv_h": 0.038608035385995464
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.509389206703244,
+                  "dose_rate_usv_h": 0.08532211714204613
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.359549841349802,
+                  "dose_rate_usv_h": 0.08274029419735669
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1728831280429155,
+                  "dose_rate_usv_h": 0.08547246664429867
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.598546364449065,
+                  "dose_rate_usv_h": 0.05338068263190742
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.804262986514871,
+                  "dose_rate_usv_h": 0.09662224192972638
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.115180400070805,
+        "scans_per_lidar": 13837,
+        "measured_seconds": 537.3868047760043,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2132,
+          "livox_bottom": 2932
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.0110626220703125,
+      "gpu": "Quadro P600, 1241 MiB, 62 %"
+    },
+    {
+      "seconds": 21.186768389001372,
+      "camera": {
+        "fps_per_camera": 26.657058227803873,
+        "stage_ms": {
+          "sync": 4.125825712435471,
+          "camera_submit": 21.868002075098047,
+          "observer": 4.884869762645394,
+          "camera_collect": 2.426242449655547
+        },
+        "render_ms_mean": 33.302556399394234,
+        "render_ms_p95": 45.656204597617034,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6066,
+        "measured_seconds": 244.6683284979954,
+        "static_cache_shift": {
+          "cam_front": 0.5202484130859375,
+          "cam_rear": 0.46566009521484375,
+          "cam_left": 0.4193115234375,
+          "cam_right": 0.38829803466796875,
+          "cam_arm": 0.42469024658203125,
+          "observer": 0.3555774688720703
+        },
+        "static_cache_hits": 31879,
+        "static_cache_misses": 4517,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7620940895736245,
+                0.023200132210012825,
+                0.3902736156589161
+              ],
+              "dose_rate_usv_h": 0.5421214257702942,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.281318128635165,
+                  "dose_rate_usv_h": 0.03858130934892796
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.508766633539263,
+                  "dose_rate_usv_h": 0.08533460337090658
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.358472933203666,
+                  "dose_rate_usv_h": 0.08276161613920428
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.17099114911473,
+                  "dose_rate_usv_h": 0.0855175743387179
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.601511916665148,
+                  "dose_rate_usv_h": 0.0533477130837687
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.806251564050934,
+                  "dose_rate_usv_h": 0.09657860948876879
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.327938397587285,
+        "scans_per_lidar": 13919,
+        "measured_seconds": 540.3873970199929,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2110,
+          "livox_bottom": 2934
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.014379262924194336,
+      "gpu": "Quadro P600, 1241 MiB, 51 %"
+    },
+    {
+      "seconds": 24.211633168990375,
+      "camera": {
+        "fps_per_camera": 25.796279122202783,
+        "stage_ms": {
+          "sync": 3.8544766665346777,
+          "camera_submit": 22.81878764113525,
+          "observer": 4.714934218216699,
+          "camera_collect": 2.3822345765671717
+        },
+        "render_ms_mean": 33.76838085853542,
+        "render_ms_p95": 50.242443293245735,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6144,
+        "measured_seconds": 247.69202038900403,
+        "static_cache_shift": {
+          "cam_front": 0.3751373291015625,
+          "cam_rear": 0.364837646484375,
+          "cam_left": 0.37868499755859375,
+          "cam_right": 1.2792205810546875,
+          "cam_arm": 0.4964447021484375,
+          "observer": 0.3556251525878906
+        },
+        "static_cache_hits": 32300,
+        "static_cache_misses": 4564,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.763677950598639,
+                0.02451825829669202,
+                0.39027833020223823
+              ],
+              "dose_rate_usv_h": 0.542099892132146,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.283218424023083,
+                  "dose_rate_usv_h": 0.038563609109581974
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.508474992384016,
+                  "dose_rate_usv_h": 0.08534045342249715
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.357866368632795,
+                  "dose_rate_usv_h": 0.08277362927355777
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1698069167958165,
+                  "dose_rate_usv_h": 0.08554582643535401
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.603552992708432,
+                  "dose_rate_usv_h": 0.05332503914878111
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.80749531339144,
+                  "dose_rate_usv_h": 0.09655133474237403
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.19466327621024,
+        "scans_per_lidar": 14001,
+        "measured_seconds": 543.4026945130026,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2106,
+          "livox_bottom": 2936
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.023102998733520508,
+      "gpu": "Quadro P600, 1241 MiB, 58 %"
+    },
+    {
+      "seconds": 27.24904675599828,
+      "camera": {
+        "fps_per_camera": 19.539414422208125,
+        "stage_ms": {
+          "sync": 6.32175740004944,
+          "camera_submit": 31.78899559934507,
+          "observer": 6.676667351227176,
+          "camera_collect": 2.6518070827781535
+        },
+        "render_ms_mean": 47.4354881659868,
+        "render_ms_p95": 101.76836645259755,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6204,
+        "measured_seconds": 250.76273677300196,
+        "static_cache_shift": {
+          "cam_front": 0.5528640747070312,
+          "cam_rear": 0.42308807373046875,
+          "cam_left": 0.41187286376953125,
+          "cam_right": 0.368499755859375,
+          "cam_arm": 0.416107177734375,
+          "observer": 20.56293487548828
+        },
+        "static_cache_hits": 32622,
+        "static_cache_misses": 4602,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7650324826948692,
+                0.02536290349028336,
+                0.3902978849743155
+              ],
+              "dose_rate_usv_h": 0.5420750477890491,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.284593610125684,
+                  "dose_rate_usv_h": 0.03855080757933868
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.508465644543145,
+                  "dose_rate_usv_h": 0.0853406409414812
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.357607658731,
+                  "dose_rate_usv_h": 0.08277875387136517
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.169072943945864,
+                  "dose_rate_usv_h": 0.08556334377090602
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.605149335440288,
+                  "dose_rate_usv_h": 0.0533073157460615
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.808277584549014,
+                  "dose_rate_usv_h": 0.09653418587989661
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 24.790262152374574,
+        "scans_per_lidar": 14076,
+        "measured_seconds": 546.428075992997,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2117,
+          "livox_bottom": 2931
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.039176225662231445,
+      "gpu": "Quadro P600, 1241 MiB, 22 %"
+    },
+    {
+      "seconds": 30.310012297995854,
+      "camera": {
+        "fps_per_camera": 21.295386955517934,
+        "stage_ms": {
+          "sync": 4.29701117195691,
+          "camera_submit": 27.451010391359887,
+          "observer": 6.765212265236187,
+          "camera_collect": 2.9274224216351286
+        },
+        "render_ms_mean": 41.43856365590182,
+        "render_ms_p95": 106.6521412889415,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6268,
+        "measured_seconds": 253.76808249100577,
+        "static_cache_shift": {
+          "cam_front": 0.5118942260742188,
+          "cam_rear": 0.36060333251953125,
+          "cam_left": 0.35007476806640625,
+          "cam_right": 0.497589111328125,
+          "cam_arm": 0.4149627685546875,
+          "observer": 4.915571212768555
+        },
+        "static_cache_hits": 32932,
+        "static_cache_misses": 4676,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7665235169968669,
+                0.026898921349551366,
+                0.39031434210524335
+              ],
+              "dose_rate_usv_h": 0.5420611414877168,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.28664460419151,
+                  "dose_rate_usv_h": 0.038531726830370296
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50794693574401,
+                  "dose_rate_usv_h": 0.08535104728066929
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.356771637431024,
+                  "dose_rate_usv_h": 0.08279531726835378
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.167674249166605,
+                  "dose_rate_usv_h": 0.08559674056738688
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.607227249232384,
+                  "dose_rate_usv_h": 0.05328425893166093
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.809744044699402,
+                  "dose_rate_usv_h": 0.09650205060927565
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 19.960910980523927,
+        "scans_per_lidar": 14136,
+        "measured_seconds": 549.4339508279954,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2111,
+          "livox_bottom": 2950
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009500980377197266,
+      "gpu": "Quadro P600, 1241 MiB, 61 %"
+    },
+    {
+      "seconds": 33.331584966988885,
+      "camera": {
+        "fps_per_camera": 25.280289042777092,
+        "stage_ms": {
+          "sync": 4.041341356289769,
+          "camera_submit": 23.082154038045125,
+          "observer": 6.040581422176298,
+          "camera_collect": 2.318586210190245
+        },
+        "render_ms_mean": 35.480649369051925,
+        "render_ms_p95": 45.912405501439935,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6344,
+        "measured_seconds": 256.77437723199546,
+        "static_cache_shift": {
+          "cam_front": 0.44403076171875,
+          "cam_rear": 0.44620513916015625,
+          "cam_left": 0.4167938232421875,
+          "cam_right": 0.36746978759765625,
+          "cam_arm": 0.46222686767578125,
+          "observer": 39.397382736206055
+        },
+        "static_cache_hits": 33291,
+        "static_cache_misses": 4773,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.768478046199436,
+                0.028897198698508743,
+                0.39033629164975175
+              ],
+              "dose_rate_usv_h": 0.5420426261087298,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.289319752379916,
+                  "dose_rate_usv_h": 0.03850686074979708
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.507280567428804,
+                  "dose_rate_usv_h": 0.08536441875951543
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.355690330805142,
+                  "dose_rate_usv_h": 0.08281674767432737
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.165856211467797,
+                  "dose_rate_usv_h": 0.08564017929611964
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.609943087682677,
+                  "dose_rate_usv_h": 0.05325414616415765
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.811651597387572,
+                  "dose_rate_usv_h": 0.09646027346481265
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.260115579287312,
+        "scans_per_lidar": 14215,
+        "measured_seconds": 552.442315348002,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2121,
+          "livox_bottom": 2927
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.010856151580810547,
+      "gpu": "Quadro P600, 1241 MiB, 64 %"
+    },
+    {
+      "seconds": 36.3555767229991,
+      "camera": {
+        "fps_per_camera": 26.700594036806383,
+        "stage_ms": {
+          "sync": 3.8405206655568938,
+          "camera_submit": 21.73162711228037,
+          "observer": 5.124620653661601,
+          "camera_collect": 2.302086618362443
+        },
+        "render_ms_mean": 32.9968997654232,
+        "render_ms_p95": 45.625084996572696,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6425,
+        "measured_seconds": 259.8080176030053,
+        "static_cache_shift": {
+          "cam_front": 0.40340423583984375,
+          "cam_rear": 0.445404052734375,
+          "cam_left": 0.3687286376953125,
+          "cam_right": 0.5147552490234375,
+          "cam_arm": 0.35671234130859375,
+          "observer": 10.555440187454224
+        },
+        "static_cache_hits": 33688,
+        "static_cache_misses": 4862,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7705381542934362,
+                0.030601088018250164,
+                0.39036717326160264
+              ],
+              "dose_rate_usv_h": 0.5420141544986995,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.291783199348696,
+                  "dose_rate_usv_h": 0.03848398376038351
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506917454951731,
+                  "dose_rate_usv_h": 0.08537170636921781
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35491825496095,
+                  "dose_rate_usv_h": 0.08283205453019346
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.164333855706457,
+                  "dose_rate_usv_h": 0.08567657868082486
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.612592897152519,
+                  "dose_rate_usv_h": 0.053224790111601084
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.813261280090348,
+                  "dose_rate_usv_h": 0.09642504104647877
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.21016379707897,
+        "scans_per_lidar": 14294,
+        "measured_seconds": 555.4564132609958,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2133,
+          "livox_bottom": 2922
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01883387565612793,
+      "gpu": "Quadro P600, 1241 MiB, 64 %"
+    },
+    {
+      "seconds": 39.39049958498799,
+      "camera": {
+        "fps_per_camera": 24.735368837851173,
+        "stage_ms": {
+          "sync": 4.288239320158027,
+          "camera_submit": 23.643361439850803,
+          "observer": 4.864539879296596,
+          "camera_collect": 2.349628934171051
+        },
+        "render_ms_mean": 35.14378287965277,
+        "render_ms_p95": 51.939607494568904,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6500,
+        "measured_seconds": 262.8401130810089,
+        "static_cache_shift": {
+          "cam_front": 0.3936767578125,
+          "cam_rear": 0.3568267822265625,
+          "cam_left": 0.37570953369140625,
+          "cam_right": 0.591888427734375,
+          "cam_arm": 0.5587005615234375,
+          "observer": 0.3511667251586914
+        },
+        "static_cache_hits": 34098,
+        "static_cache_misses": 4902,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7724723507059592,
+                0.031729310352811776,
+                0.3903841157419026
+              ],
+              "dose_rate_usv_h": 0.5419771638204196,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.293678030841566,
+                  "dose_rate_usv_h": 0.038466401130783597
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50696976031871,
+                  "dose_rate_usv_h": 0.08537065655128516
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.354619884464471,
+                  "dose_rate_usv_h": 0.08283797103696366
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.163361291303439,
+                  "dose_rate_usv_h": 0.08569984475488239
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.614830919095215,
+                  "dose_rate_usv_h": 0.053200014972916286
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.814301857081935,
+                  "dose_rate_usv_h": 0.09640227537358849
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.763858580207152,
+        "scans_per_lidar": 14372,
+        "measured_seconds": 558.4839100840036,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2116,
+          "livox_bottom": 2926
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009766578674316406,
+      "gpu": "Quadro P600, 1241 MiB, 50 %"
+    },
+    {
+      "seconds": 42.41497435299971,
+      "camera": {
+        "fps_per_camera": 27.188694517560645,
+        "stage_ms": {
+          "sync": 3.467948488477992,
+          "camera_submit": 21.521464073441344,
+          "observer": 4.271867060352389,
+          "camera_collect": 2.273346707381013
+        },
+        "render_ms_mean": 31.53267295100505,
+        "render_ms_p95": 42.861646752862725,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6582,
+        "measured_seconds": 265.85607252499904,
+        "static_cache_shift": {
+          "cam_front": 0.38486480712890625,
+          "cam_rear": 0.3925323486328125,
+          "cam_left": 0.44094085693359375,
+          "cam_right": 0.4488372802734375,
+          "cam_arm": 0.39310455322265625,
+          "observer": 0.3528118133544922
+        },
+        "static_cache_hits": 34557,
+        "static_cache_misses": 4935,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7741085558392689,
+                0.032687297289106916,
+                0.39038508497793656
+              ],
+              "dose_rate_usv_h": 0.5419461394646412,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.295283846332286,
+                  "dose_rate_usv_h": 0.03845150978645213
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50700896282067,
+                  "dose_rate_usv_h": 0.08536986973287836
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.354362153162455,
+                  "dose_rate_usv_h": 0.08284308220333689
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1625325550258765,
+                  "dose_rate_usv_h": 0.08571967759434101
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.616725741170674,
+                  "dose_rate_usv_h": 0.05317905261326615
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.815185586380752,
+                  "dose_rate_usv_h": 0.09638294753436673
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.082022008905238,
+        "scans_per_lidar": 14454,
+        "measured_seconds": 561.5117489940021,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2123,
+          "livox_bottom": 2926
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.0022449493408203125,
+      "gpu": "Quadro P600, 1241 MiB, 67 %"
+    },
+    {
+      "seconds": 45.442453509996994,
+      "camera": {
+        "fps_per_camera": 26.5207879234456,
+        "stage_ms": {
+          "sync": 4.1233240479414235,
+          "camera_submit": 22.015938563708914,
+          "observer": 4.622429825030849,
+          "camera_collect": 2.3620761994607165
+        },
+        "render_ms_mean": 33.12164313665562,
+        "render_ms_p95": 47.32994594669435,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6662,
+        "measured_seconds": 268.8725741550006,
+        "static_cache_shift": {
+          "cam_front": 0.40637969970703125,
+          "cam_rear": 0.413360595703125,
+          "cam_left": 0.41393280029296875,
+          "cam_right": 0.35213470458984375,
+          "cam_arm": 0.4250335693359375,
+          "observer": 0.3510713577270508
+        },
+        "static_cache_hits": 34979,
+        "static_cache_misses": 4993,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7756035826802183,
+                0.0339261651790532,
+                0.39039561583154964
+              ],
+              "dose_rate_usv_h": 0.5419257317579012,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.297073586652763,
+                  "dose_rate_usv_h": 0.038434923023799146
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506742707396993,
+                  "dose_rate_usv_h": 0.08537521385749497
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.353798868918402,
+                  "dose_rate_usv_h": 0.08285425455184926
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.161424102847558,
+                  "dose_rate_usv_h": 0.08574621519785021
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.61864970117257,
+                  "dose_rate_usv_h": 0.053157780575987655
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.816356644287168,
+                  "dose_rate_usv_h": 0.09635734455092002
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.60839999150328,
+        "scans_per_lidar": 14534,
+        "measured_seconds": 564.5183183490008,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2102,
+          "livox_bottom": 2930
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.021613121032714844,
+      "gpu": "Quadro P600, 1241 MiB, 52 %"
+    },
+    {
+      "seconds": 48.473511157993926,
+      "camera": {
+        "fps_per_camera": 26.620437685588225,
+        "stage_ms": {
+          "sync": 3.9272922118470888,
+          "camera_submit": 22.562174275844882,
+          "observer": 4.5436298112690565,
+          "camera_collect": 2.1131419753146474
+        },
+        "render_ms_mean": 33.14412935051223,
+        "render_ms_p95": 45.94345110017456,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6742,
+        "measured_seconds": 271.87778394699853,
+        "static_cache_shift": {
+          "cam_front": 0.43910980224609375,
+          "cam_rear": 0.3559112548828125,
+          "cam_left": 0.39424896240234375,
+          "cam_right": 0.518646240234375,
+          "cam_arm": 0.3545379638671875,
+          "observer": 0.3545045852661133
+        },
+        "static_cache_hits": 35419,
+        "static_cache_misses": 5033,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7771986920848397,
+                0.03471489434237213,
+                0.3904034683816787
+              ],
+              "dose_rate_usv_h": 0.5418921663720017,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.298510850308208,
+                  "dose_rate_usv_h": 0.038421610675305445
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506904544495557,
+                  "dose_rate_usv_h": 0.08537196549720126
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35368152019841,
+                  "dose_rate_usv_h": 0.08285658236599563
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1607597465003625,
+                  "dose_rate_usv_h": 0.08576212654997227
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.62042023391577,
+                  "dose_rate_usv_h": 0.0531382161644292
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.817074038152109,
+                  "dose_rate_usv_h": 0.09634166511909781
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.39626233382202,
+        "scans_per_lidar": 14617,
+        "measured_seconds": 567.5479287019989,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2112,
+          "livox_bottom": 2939
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.008639097213745117,
+      "gpu": "Quadro P600, 1241 MiB, 58 %"
+    },
+    {
+      "seconds": 51.49972004699521,
+      "camera": {
+        "fps_per_camera": 25.80934955240471,
+        "stage_ms": {
+          "sync": 4.139740501555841,
+          "camera_submit": 22.887229191464705,
+          "observer": 4.564484757466767,
+          "camera_collect": 2.3875101144837503
+        },
+        "render_ms_mean": 33.97700330914141,
+        "render_ms_p95": 44.59853285370626,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6820,
+        "measured_seconds": 274.89994457300054,
+        "static_cache_shift": {
+          "cam_front": 0.35785675048828125,
+          "cam_rear": 0.35694122314453125,
+          "cam_left": 0.3549957275390625,
+          "cam_right": 0.42514801025390625,
+          "cam_arm": 0.40821075439453125,
+          "observer": 0.3510475158691406
+        },
+        "static_cache_hits": 35834,
+        "static_cache_misses": 5086,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7786629148622114,
+                0.036062987029021054,
+                0.39041517395248515
+              ],
+              "dose_rate_usv_h": 0.5418751784772516,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.300383288028083,
+                  "dose_rate_usv_h": 0.03840427799172139
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506532105867636,
+                  "dose_rate_usv_h": 0.08537944128483121
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.353008601057986,
+                  "dose_rate_usv_h": 0.08286993277150641
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.159544040891751,
+                  "dose_rate_usv_h": 0.08579125420099819
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.622375910215869,
+                  "dose_rate_usv_h": 0.053116618465409396
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.818356100653224,
+                  "dose_rate_usv_h": 0.09631365376278504
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.510015195910302,
+        "scans_per_lidar": 14697,
+        "measured_seconds": 570.5656561310025,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2112,
+          "livox_bottom": 2933
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.002869844436645508,
+      "gpu": "Quadro P600, 1241 MiB, 50 %"
+    },
+    {
+      "seconds": 54.52242203899368,
+      "camera": {
+        "fps_per_camera": 27.307831823591155,
+        "stage_ms": {
+          "sync": 3.9714010121448466,
+          "camera_submit": 20.3734872450629,
+          "observer": 4.711482426323417,
+          "camera_collect": 2.2733250605197988
+        },
+        "render_ms_mean": 31.32770289084874,
+        "render_ms_p95": 42.182745794707444,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6902,
+        "measured_seconds": 277.902746132997,
+        "static_cache_shift": {
+          "cam_front": 0.36678314208984375,
+          "cam_rear": 0.35465240478515625,
+          "cam_left": 0.3559112548828125,
+          "cam_right": 0.5060577392578125,
+          "cam_arm": 0.3609466552734375,
+          "observer": 0.3627300262451172
+        },
+        "static_cache_hits": 36290,
+        "static_cache_misses": 5122,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7802428182136952,
+                0.0369285060497203,
+                0.39042640670946693
+              ],
+              "dose_rate_usv_h": 0.5418437619366445,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.301881851266227,
+                  "dose_rate_usv_h": 0.0383904146181002
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50662328428908,
+                  "dose_rate_usv_h": 0.08537761101194868
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.352817285785235,
+                  "dose_rate_usv_h": 0.08287372896740394
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.158805493195122,
+                  "dose_rate_usv_h": 0.08580895665194445
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.62417426293146,
+                  "dose_rate_usv_h": 0.05309676980351004
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.819151527659407,
+                  "dose_rate_usv_h": 0.09629628088373726
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.485939894717067,
+        "scans_per_lidar": 14774,
+        "measured_seconds": 573.5869298339967,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2109,
+          "livox_bottom": 2932
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009471654891967773,
+      "gpu": "Quadro P600, 1241 MiB, 56 %"
+    },
+    {
+      "seconds": 57.543194140991545,
+      "camera": {
+        "fps_per_camera": 26.2640179848833,
+        "stage_ms": {
+          "sync": 4.117350456344636,
+          "camera_submit": 23.4690250501352,
+          "observer": 4.582023569692185,
+          "camera_collect": 2.320642075228764
+        },
+        "render_ms_mean": 34.48702621493265,
+        "render_ms_p95": 45.850838503974956,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 6981,
+        "measured_seconds": 280.9106636590004,
+        "static_cache_shift": {
+          "cam_front": 0.41759490966796875,
+          "cam_rear": 0.4259490966796875,
+          "cam_left": 0.37570953369140625,
+          "cam_right": 0.45124053955078125,
+          "cam_arm": 0.38669586181640625,
+          "observer": 0.35462379455566406
+        },
+        "static_cache_hits": 36729,
+        "static_cache_misses": 5157,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7818323431695429,
+                0.037581703668844765,
+                0.3904458277540262
+              ],
+              "dose_rate_usv_h": 0.5418071841555383,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.303197168347603,
+                  "dose_rate_usv_h": 0.03837825265986653
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506898931648177,
+                  "dose_rate_usv_h": 0.08537207815399307
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.352824173024985,
+                  "dose_rate_usv_h": 0.08287359230200954
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1582763274689345,
+                  "dose_rate_usv_h": 0.08582164373892284
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.625868579945324,
+                  "dose_rate_usv_h": 0.05307807957473281
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.819735117145719,
+                  "dose_rate_usv_h": 0.09628353772601349
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.6455923745812,
+        "scans_per_lidar": 14854,
+        "measured_seconds": 576.5893025669939,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2124,
+          "livox_bottom": 2930
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01029515266418457,
+      "gpu": "Quadro P600, 1241 MiB, 54 %"
+    },
+    {
+      "seconds": 60.577946414996404,
+      "camera": {
+        "fps_per_camera": 25.94740954808804,
+        "stage_ms": {
+          "sync": 4.3492637313857605,
+          "camera_submit": 23.4444176534546,
+          "observer": 4.755731088479456,
+          "camera_collect": 2.3469870513788638
+        },
+        "render_ms_mean": 34.894228795168694,
+        "render_ms_p95": 45.97565429940004,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7059,
+        "measured_seconds": 283.9167440870078,
+        "static_cache_shift": {
+          "cam_front": 0.3833770751953125,
+          "cam_rear": 0.35396575927734375,
+          "cam_left": 0.4959869384765625,
+          "cam_right": 0.5068588256835938,
+          "cam_arm": 0.41141510009765625,
+          "observer": 0.3529787063598633
+        },
+        "static_cache_hits": 37152,
+        "static_cache_misses": 5202,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7834173244796109,
+                0.0389897723261203,
+                0.3904411683639951
+              ],
+              "dose_rate_usv_h": 0.5417879313739227,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.305178407990109,
+                  "dose_rate_usv_h": 0.03835994421604762
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506536727848681,
+                  "dose_rate_usv_h": 0.08537934850393467
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35214024810562,
+                  "dose_rate_usv_h": 0.08288716526268196
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.157007495100397,
+                  "dose_rate_usv_h": 0.0858520762715593
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.62795805792746,
+                  "dose_rate_usv_h": 0.05305504386072615
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.8210720943946,
+                  "dose_rate_usv_h": 0.09625435325897305
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.896432587074543,
+        "scans_per_lidar": 14932,
+        "measured_seconds": 579.6013004449924,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2114,
+          "livox_bottom": 2930
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.008770465850830078,
+      "gpu": "Quadro P600, 1241 MiB, 54 %"
+    },
+    {
+      "seconds": 63.60721446099342,
+      "camera": {
+        "fps_per_camera": 26.42790392730078,
+        "stage_ms": {
+          "sync": 4.078195926376793,
+          "camera_submit": 22.027815986621135,
+          "observer": 4.789935413100466,
+          "camera_collect": 2.269853962388879
+        },
+        "render_ms_mean": 33.16368698870065,
+        "render_ms_p95": 46.01098335551796,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7139,
+        "measured_seconds": 286.9438475689967,
+        "static_cache_shift": {
+          "cam_front": 0.36540985107421875,
+          "cam_rear": 0.40271759033203125,
+          "cam_left": 0.35442352294921875,
+          "cam_right": 0.3710174560546875,
+          "cam_arm": 0.3719329833984375,
+          "observer": 0.3535032272338867
+        },
+        "static_cache_hits": 37589,
+        "static_cache_misses": 5245,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7851082421589359,
+                0.03985348846306413,
+                0.3904465689410515
+              ],
+              "dose_rate_usv_h": 0.54175299838133,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.306726985583268,
+                  "dose_rate_usv_h": 0.03834564308081822
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506686713811417,
+                  "dose_rate_usv_h": 0.08537633779216831
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.3519923217296,
+                  "dose_rate_usv_h": 0.08289010140200913
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.15627773750275,
+                  "dose_rate_usv_h": 0.08586958660350637
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.629849483637638,
+                  "dose_rate_usv_h": 0.053034204527940505
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.821861629281269,
+                  "dose_rate_usv_h": 0.0962371249748874
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.538291811174982,
+        "scans_per_lidar": 15012,
+        "measured_seconds": 582.6158124779904,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2130,
+          "livox_bottom": 2925
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.018182992935180664,
+      "gpu": "Quadro P600, 1241 MiB, 56 %"
+    },
+    {
+      "seconds": 66.63100864599983,
+      "camera": {
+        "fps_per_camera": 27.51121828758646,
+        "stage_ms": {
+          "sync": 3.836829964624134,
+          "camera_submit": 20.174743674263492,
+          "observer": 4.405042879614441,
+          "camera_collect": 2.3112066262976705
+        },
+        "render_ms_mean": 30.725902879676582,
+        "render_ms_p95": 39.72938959923339,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7222,
+        "measured_seconds": 289.9607986589981,
+        "static_cache_shift": {
+          "cam_front": 0.4264068603515625,
+          "cam_rear": 0.4309844970703125,
+          "cam_left": 0.4319000244140625,
+          "cam_right": 0.40592193603515625,
+          "cam_arm": 0.49724578857421875,
+          "observer": 0.36079883575439453
+        },
+        "static_cache_hits": 38046,
+        "static_cache_misses": 5286,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7866890966898513,
+                0.0409798659614644,
+                0.39045640006504406
+              ],
+              "dose_rate_usv_h": 0.54172739951367,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.308457442682109,
+                  "dose_rate_usv_h": 0.038329671745443564
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50656159632604,
+                  "dose_rate_usv_h": 0.0853788493007566
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.351566058430333,
+                  "dose_rate_usv_h": 0.08289856302694272
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.15528671297113,
+                  "dose_rate_usv_h": 0.0858933745419797
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.631786686466869,
+                  "dose_rate_usv_h": 0.053012873557320345
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.822918642428569,
+                  "dose_rate_usv_h": 0.09621406734122702
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.165666675511915,
+        "scans_per_lidar": 15094,
+        "measured_seconds": 585.6343284960021,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2119,
+          "livox_bottom": 2931
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01785421371459961,
+      "gpu": "Quadro P600, 1241 MiB, 74 %"
+    },
+    {
+      "seconds": 69.65176269700169,
+      "camera": {
+        "fps_per_camera": 27.292785464137555,
+        "stage_ms": {
+          "sync": 4.17400084341966,
+          "camera_submit": 20.283994952347186,
+          "observer": 4.42738710875982,
+          "camera_collect": 2.3520981446918414
+        },
+        "render_ms_mean": 31.23545567543633,
+        "render_ms_p95": 41.185368210426525,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7305,
+        "measured_seconds": 293.00189536600374,
+        "static_cache_shift": {
+          "cam_front": 0.416107177734375,
+          "cam_rear": 0.4309844970703125,
+          "cam_left": 0.40477752685546875,
+          "cam_right": 0.73883056640625,
+          "cam_arm": 0.48797607421875,
+          "observer": 0.3594636917114258
+        },
+        "static_cache_hits": 38500,
+        "static_cache_misses": 5330,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7881777528529158,
+                0.042127235082358924,
+                0.3904927062539913
+              ],
+              "dose_rate_usv_h": 0.5417048603288295,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.31016463192137,
+                  "dose_rate_usv_h": 0.03831392493785051
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50637678319117,
+                  "dose_rate_usv_h": 0.08538255929494219
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.351091559229712,
+                  "dose_rate_usv_h": 0.08290798369227796
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.154275526744249,
+                  "dose_rate_usv_h": 0.08591765661917514
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.63365739368167,
+                  "dose_rate_usv_h": 0.05299228699664106
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.824001763396478,
+                  "dose_rate_usv_h": 0.09619044878794267
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.622076941772512,
+        "scans_per_lidar": 15174,
+        "measured_seconds": 588.6393532420043,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2127,
+          "livox_bottom": 2914
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.018577098846435547,
+      "gpu": "Quadro P600, 1241 MiB, 62 %"
+    },
+    {
+      "seconds": 72.67301482299808,
+      "camera": {
+        "fps_per_camera": 24.931810567334963,
+        "stage_ms": {
+          "sync": 4.628075319924392,
+          "camera_submit": 22.99661529250443,
+          "observer": 5.658328200418812,
+          "camera_collect": 2.279890148395983
+        },
+        "render_ms_mean": 35.560976253861256,
+        "render_ms_p95": 49.41416960064088,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7380,
+        "measured_seconds": 296.0101004780008,
+        "static_cache_shift": {
+          "cam_front": 0.4035186767578125,
+          "cam_rear": 0.3755950927734375,
+          "cam_left": 0.3815460205078125,
+          "cam_right": 0.47435760498046875,
+          "cam_arm": 0.395965576171875,
+          "observer": 36.3971471786499
+        },
+        "static_cache_hits": 38880,
+        "static_cache_misses": 5400,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7895990515953455,
+                0.04307882125007868,
+                0.39049545645363887
+              ],
+              "dose_rate_usv_h": 0.5416805771232167,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.311666295966326,
+                  "dose_rate_usv_h": 0.03830008187820976
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50631498887289,
+                  "dose_rate_usv_h": 0.08538379982652745
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.350763319743315,
+                  "dose_rate_usv_h": 0.08291450146982254
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.153443281084799,
+                  "dose_rate_usv_h": 0.08593764944038706
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.63536659739032,
+                  "dose_rate_usv_h": 0.05297348821423887
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.824891380197819,
+                  "dose_rate_usv_h": 0.096171056294031
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.735947684091613,
+        "scans_per_lidar": 15252,
+        "measured_seconds": 591.6701334160025,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2116,
+          "livox_bottom": 2928
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.0009706020355224609,
+      "gpu": "Quadro P600, 1241 MiB, 51 %"
+    },
+    {
+      "seconds": 75.69019191399275,
+      "camera": {
+        "fps_per_camera": 25.8127617036363,
+        "stage_ms": {
+          "sync": 4.205335423018998,
+          "camera_submit": 23.706037000430605,
+          "observer": 5.233739564107218,
+          "camera_collect": 2.2103261028697045
+        },
+        "render_ms_mean": 35.35345571771568,
+        "render_ms_p95": 45.856352558621424,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7458,
+        "measured_seconds": 299.03186160900805,
+        "static_cache_shift": {
+          "cam_front": 0.4131317138671875,
+          "cam_rear": 0.36014556884765625,
+          "cam_left": 0.4245758056640625,
+          "cam_right": 0.4859161376953125,
+          "cam_arm": 0.36838531494140625,
+          "observer": 30.639314651489258
+        },
+        "static_cache_hits": 39304,
+        "static_cache_misses": 5444,
+        "layers": {
+          "lidar_points": 5037,
+          "lidar_age_seconds": 0.012393474578857422,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7906185474758887,
+                0.04336599609955476,
+                0.3904802410615071
+              ],
+              "dose_rate_usv_h": 0.5416545360133767,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.312392857693576,
+                  "dose_rate_usv_h": 0.0382933867765789
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.506598128940983,
+                  "dose_rate_usv_h": 0.08537811596273343
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.350883401079981,
+                  "dose_rate_usv_h": 0.08291211695261574
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.153227316890086,
+                  "dose_rate_usv_h": 0.08594283863250984
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.63638293525027,
+                  "dose_rate_usv_h": 0.05296231470176187
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.82513425361652,
+                  "dose_rate_usv_h": 0.09616576298717681
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.162174026412178,
+        "scans_per_lidar": 15334,
+        "measured_seconds": 594.6890375700023,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2122,
+          "livox_bottom": 2934
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.016887903213500977,
+      "gpu": "Quadro P600, 1241 MiB, 51 %"
+    },
+    {
+      "seconds": 78.71129324698995,
+      "camera": {
+        "fps_per_camera": 25.234163072546043,
+        "stage_ms": {
+          "sync": 4.207034314994847,
+          "camera_submit": 22.62371726350179,
+          "observer": 7.123829881541162,
+          "camera_collect": 2.2861193553437356
+        },
+        "render_ms_mean": 36.23867336749466,
+        "render_ms_p95": 49.59569425045629,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7534,
+        "measured_seconds": 302.0436516089976,
+        "static_cache_shift": {
+          "cam_front": 0.4154205322265625,
+          "cam_rear": 0.35007476806640625,
+          "cam_left": 0.352935791015625,
+          "cam_right": 0.5925750732421875,
+          "cam_arm": 0.35488128662109375,
+          "observer": 161.5302562713623
+        },
+        "static_cache_hits": 39689,
+        "static_cache_misses": 5515,
+        "layers": {
+          "lidar_points": 5048,
+          "lidar_age_seconds": 0.09121108055114746,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7916017399780044,
+                0.04389155659431202,
+                0.39050000168540056
+              ],
+              "dose_rate_usv_h": 0.5416345067937371,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.313314771673346,
+                  "dose_rate_usv_h": 0.038284894074912236
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50666998001631,
+                  "dose_rate_usv_h": 0.08537667368660223
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.350780416829073,
+                  "dose_rate_usv_h": 0.08291416195786792
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.15278499815265,
+                  "dose_rate_usv_h": 0.08595346814346454
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.637495442198876,
+                  "dose_rate_usv_h": 0.05295008796864523
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.825618014324252,
+                  "dose_rate_usv_h": 0.09615522096224496
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.08768189110974,
+        "scans_per_lidar": 15416,
+        "measured_seconds": 597.7162438230007,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2124,
+          "livox_bottom": 2945
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.006066560745239258,
+      "gpu": "Quadro P600, 1241 MiB, 73 %"
+    },
+    {
+      "seconds": 81.73306608200073,
+      "camera": {
+        "fps_per_camera": 25.615767658183024,
+        "stage_ms": {
+          "sync": 4.431516026576086,
+          "camera_submit": 22.42257083046504,
+          "observer": 6.2538971171968365,
+          "camera_collect": 2.230994038997436
+        },
+        "render_ms_mean": 35.33707449307919,
+        "render_ms_p95": 52.12605940178037,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7611,
+        "measured_seconds": 305.04961266499595,
+        "static_cache_shift": {
+          "cam_front": 0.39997100830078125,
+          "cam_rear": 0.4245758056640625,
+          "cam_left": 0.3705596923828125,
+          "cam_right": 0.40706634521484375,
+          "cam_arm": 0.385894775390625,
+          "observer": 9.479331970214844
+        },
+        "static_cache_hits": 40076,
+        "static_cache_misses": 5590,
+        "layers": {
+          "lidar_points": 5047,
+          "lidar_age_seconds": 0.10781431198120117,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7923836098932877,
+                0.044634437798737756,
+                0.3905052406178131
+              ],
+              "dose_rate_usv_h": 0.5416260197152465,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.3143353381437,
+                  "dose_rate_usv_h": 0.03827549587779689
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.50645371394365,
+                  "dose_rate_usv_h": 0.08538101493461209
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.35040198302633,
+                  "dose_rate_usv_h": 0.08292167734040333
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.152114943015884,
+                  "dose_rate_usv_h": 0.08596957422150578
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.638551905727843,
+                  "dose_rate_usv_h": 0.05293848108586627
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.82632689683484,
+                  "dose_rate_usv_h": 0.09613977625506205
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.520518181865587,
+        "scans_per_lidar": 15496,
+        "measured_seconds": 600.7327761339984,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2128,
+          "livox_bottom": 2932
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.023789405822753906,
+      "gpu": "Quadro P600, 1241 MiB, 67 %"
+    },
+    {
+      "seconds": 84.7620999589999,
+      "camera": {
+        "fps_per_camera": 24.52282657232048,
+        "stage_ms": {
+          "sync": 4.506318702919383,
+          "camera_submit": 23.534873269995472,
+          "observer": 6.938232729963429,
+          "camera_collect": 2.427213283718211
+        },
+        "render_ms_mean": 37.40417317513257,
+        "render_ms_p95": 48.15722769344574,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7685,
+        "measured_seconds": 308.0672093430039,
+        "static_cache_shift": {
+          "cam_front": 0.36449432373046875,
+          "cam_rear": 0.37158966064453125,
+          "cam_left": 0.37273406982421875,
+          "cam_right": 0.3591156005859375,
+          "cam_arm": 0.36449432373046875,
+          "observer": 10.586357116699219
+        },
+        "static_cache_hits": 40425,
+        "static_cache_misses": 5685,
+        "layers": {
+          "lidar_points": 5056,
+          "lidar_age_seconds": 0.05299878120422363,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7929813697545331,
+                0.04671804261944323,
+                0.3905380722568772
+              ],
+              "dose_rate_usv_h": 0.5416532106130127,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.316458460603927,
+                  "dose_rate_usv_h": 0.03825595554283235
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.505027383242247,
+                  "dose_rate_usv_h": 0.08540965488345256
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.34874390566944,
+                  "dose_rate_usv_h": 0.08295461743536797
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.150134814232305,
+                  "dose_rate_usv_h": 0.08601719693194759
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.640162609475949,
+                  "dose_rate_usv_h": 0.05292079236215081
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.828383307673588,
+                  "dose_rate_usv_h": 0.09609499345726154
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.4891641551746,
+        "scans_per_lidar": 15576,
+        "measured_seconds": 603.7528789779899,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2107,
+          "livox_bottom": 2931
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.02860426902770996,
+      "gpu": "Quadro P600, 1241 MiB, 68 %"
+    },
+    {
+      "seconds": 87.79819359700195,
+      "camera": {
+        "fps_per_camera": 25.030074284664217,
+        "stage_ms": {
+          "sync": 4.528082104546852,
+          "camera_submit": 23.78159032894856,
+          "observer": 6.851791934566695,
+          "camera_collect": 2.2925651187267104
+        },
+        "render_ms_mean": 37.452128261831696,
+        "render_ms_p95": 48.2567202525388,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7761,
+        "measured_seconds": 311.10355670400895,
+        "static_cache_shift": {
+          "cam_front": 0.3806304931640625,
+          "cam_rear": 0.41896820068359375,
+          "cam_left": 0.39127349853515625,
+          "cam_right": 0.5072021484375,
+          "cam_arm": 0.4749298095703125,
+          "observer": 4.678678512573242
+        },
+        "static_cache_hits": 40811,
+        "static_cache_misses": 5755,
+        "layers": {
+          "lidar_points": 5049,
+          "lidar_age_seconds": 0.08557438850402832,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.793568436913408,
+                0.04764428090770746,
+                0.3905576480526655
+              ],
+              "dose_rate_usv_h": 0.5416549462234599,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.31755145150941,
+                  "dose_rate_usv_h": 0.03824590194366222
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.504560326476147,
+                  "dose_rate_usv_h": 0.08541903626263062
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.348128868970312,
+                  "dose_rate_usv_h": 0.08296684101607792
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.149276925573448,
+                  "dose_rate_usv_h": 0.08603784170650221
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.641151311658025,
+                  "dose_rate_usv_h": 0.05290993884096195
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.829284107136745,
+                  "dose_rate_usv_h": 0.09607538645362496
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 25.404963842061374,
+        "scans_per_lidar": 15653,
+        "measured_seconds": 606.7837827210024,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2107,
+          "livox_bottom": 2921
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.021806716918945312,
+      "gpu": "Quadro P600, 1241 MiB, 62 %"
+    },
+    {
+      "seconds": 90.82828460399469,
+      "camera": {
+        "fps_per_camera": 25.217607454757704,
+        "stage_ms": {
+          "sync": 4.152008710278958,
+          "camera_submit": 24.69914763174816,
+          "observer": 5.873428434010987,
+          "camera_collect": 2.446446618896995
+        },
+        "render_ms_mean": 37.16911250031492,
+        "render_ms_p95": 51.95345425454434,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7837,
+        "measured_seconds": 314.117323975006,
+        "static_cache_shift": {
+          "cam_front": 0.4785919189453125,
+          "cam_rear": 0.49072265625,
+          "cam_left": 0.42240142822265625,
+          "cam_right": 0.43670654296875,
+          "cam_arm": 0.36655426025390625,
+          "observer": 4.678678512573242
+        },
+        "static_cache_hits": 41194,
+        "static_cache_misses": 5828,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7939537476914189,
+                0.05018419683444607,
+                0.3906083003774801
+              ],
+              "dose_rate_usv_h": 0.5416991764635835,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.319980660216508,
+                  "dose_rate_usv_h": 0.038223571671849484
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.502646875956817,
+                  "dose_rate_usv_h": 0.08545748628711536
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.345980820687894,
+                  "dose_rate_usv_h": 0.08300955372257923
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.146843055617174,
+                  "dose_rate_usv_h": 0.08609645236102717
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.642824235899006,
+                  "dose_rate_usv_h": 0.05289158184533931
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.83180580209855,
+                  "dose_rate_usv_h": 0.09602053057567292
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.38594844448564,
+        "scans_per_lidar": 15736,
+        "measured_seconds": 609.8145340629999,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2144,
+          "livox_bottom": 2933
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.03881716728210449,
+      "gpu": "Quadro P600, 1241 MiB, 67 %"
+    },
+    {
+      "seconds": 93.85858608499984,
+      "camera": {
+        "fps_per_camera": 17.51237896541385,
+        "stage_ms": {
+          "sync": 6.9278421326329545,
+          "camera_submit": 35.169496565325765,
+          "observer": 8.732116679037166,
+          "camera_collect": 2.6292843782048636
+        },
+        "render_ms_mean": 53.45413498229013,
+        "render_ms_p95": 114.17264519841409,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7890,
+        "measured_seconds": 317.14375459900475,
+        "static_cache_shift": {
+          "cam_front": 0.402374267578125,
+          "cam_rear": 0.37296295166015625,
+          "cam_left": 0.43304443359375,
+          "cam_right": 0.8815383911132812,
+          "cam_arm": 0.35579681396484375,
+          "observer": 91.46714210510254
+        },
+        "static_cache_hits": 41457,
+        "static_cache_misses": 5883,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7942364667488743,
+                0.051363351916462796,
+                0.39062048225469587
+              ],
+              "dose_rate_usv_h": 0.5417165945407231,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.32115625693867,
+                  "dose_rate_usv_h": 0.03821277213150219
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.501810205427663,
+                  "dose_rate_usv_h": 0.0854743070056967
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.345020647312511,
+                  "dose_rate_usv_h": 0.08302865688650875
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1457175105766035,
+                  "dose_rate_usv_h": 0.08612357715759691
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.64368881496596,
+                  "dose_rate_usv_h": 0.05288209856451067
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.832971755923097,
+                  "dose_rate_usv_h": 0.09599518279490786
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 24.083133784876207,
+        "scans_per_lidar": 15809,
+        "measured_seconds": 612.8457010470011,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2134,
+          "livox_bottom": 2935
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.020896196365356445,
+      "gpu": "Quadro P600, 1241 MiB, 66 %"
+    },
+    {
+      "seconds": 96.89482715299528,
+      "camera": {
+        "fps_per_camera": 25.81451396600302,
+        "stage_ms": {
+          "sync": 4.11999106402688,
+          "camera_submit": 23.351750897209293,
+          "observer": 5.0972322310255365,
+          "camera_collect": 2.218924256456562
+        },
+        "render_ms_mean": 34.78593456402917,
+        "render_ms_p95": 45.31220089629642,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 7968,
+        "measured_seconds": 320.16531061600836,
+        "static_cache_shift": {
+          "cam_front": 0.3680419921875,
+          "cam_rear": 0.36838531494140625,
+          "cam_left": 0.37410736083984375,
+          "cam_right": 0.4099273681640625,
+          "cam_arm": 0.40958404541015625,
+          "observer": 4.864978790283203
+        },
+        "static_cache_hits": 41830,
+        "static_cache_misses": 5978,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7945148895626573,
+                0.05421215027218436,
+                0.3906722552778036
+              ],
+              "dose_rate_usv_h": 0.5417715153481975,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.32380959768896,
+                  "dose_rate_usv_h": 0.03818841421119008
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.499584249570233,
+                  "dose_rate_usv_h": 0.08551908259532814
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.34255287675734,
+                  "dose_rate_usv_h": 0.08307778476914386
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1429765217142025,
+                  "dose_rate_usv_h": 0.08618968658905733
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.64543539718084,
+                  "dose_rate_usv_h": 0.052862948662705585
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.835806450389565,
+                  "dose_rate_usv_h": 0.09593359852077243
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 23.90248990397714,
+        "scans_per_lidar": 15881,
+        "measured_seconds": 615.8579395330016,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2111,
+          "livox_bottom": 2925
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.017174959182739258,
+      "gpu": "Quadro P600, 1241 MiB, 72 %"
+    },
+    {
+      "seconds": 99.92008217699185,
+      "camera": {
+        "fps_per_camera": 26.15730075033698,
+        "stage_ms": {
+          "sync": 4.504378049492931,
+          "camera_submit": 23.530101241680935,
+          "observer": 4.854706328589162,
+          "camera_collect": 2.2858032406693845
+        },
+        "render_ms_mean": 35.17320056949135,
+        "render_ms_p95": 49.021642311708995,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8047,
+        "measured_seconds": 323.1854999220086,
+        "static_cache_shift": {
+          "cam_front": 0.36037445068359375,
+          "cam_rear": 0.3604888916015625,
+          "cam_left": 0.413360595703125,
+          "cam_right": 0.5130386352539062,
+          "cam_arm": 0.43704986572265625,
+          "observer": 339.33582305908203
+        },
+        "static_cache_hits": 42222,
+        "static_cache_misses": 6060,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7952111983470496,
+                0.056398400059809464,
+                0.3906950369616168
+              ],
+              "dose_rate_usv_h": 0.5417985376217357,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.326069135512046,
+                  "dose_rate_usv_h": 0.038167689795761676
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.498122614291644,
+                  "dose_rate_usv_h": 0.08554850284807881
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.340838000234092,
+                  "dose_rate_usv_h": 0.08311194987064256
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.1409012947323625,
+                  "dose_rate_usv_h": 0.0862397892709501
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.647184874792964,
+                  "dose_rate_usv_h": 0.05284377744110459
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.837961081031343,
+                  "dose_rate_usv_h": 0.09588682839519795
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.84310192116884,
+        "scans_per_lidar": 15965,
+        "measured_seconds": 618.8748447699909,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2088,
+          "livox_bottom": 2924
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.01452016830444336,
+      "gpu": "Quadro P600, 1241 MiB, 55 %"
+    },
+    {
+      "seconds": 102.94570119198761,
+      "camera": {
+        "fps_per_camera": 25.54597949769095,
+        "stage_ms": {
+          "sync": 4.409631039923081,
+          "camera_submit": 22.791151557565218,
+          "observer": 5.410151220117272,
+          "camera_collect": 2.4590763123932766
+        },
+        "render_ms_mean": 35.068018806231954,
+        "render_ms_p95": 48.8142763992073,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8124,
+        "measured_seconds": 326.1996728570084,
+        "static_cache_shift": {
+          "cam_front": 0.35099029541015625,
+          "cam_rear": 0.39882659912109375,
+          "cam_left": 0.41645050048828125,
+          "cam_right": 0.42697906494140625,
+          "cam_arm": 0.4538726806640625,
+          "observer": 18.71674954891205
+        },
+        "static_cache_hits": 42617,
+        "static_cache_misses": 6127,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7960144941268198,
+                0.05760409433325072,
+                0.39072229490181953
+              ],
+              "dose_rate_usv_h": 0.5417997969314695,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.327510037035509,
+                  "dose_rate_usv_h": 0.038154482696836474
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.497536302845685,
+                  "dose_rate_usv_h": 0.08556030857506022
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.340053355879606,
+                  "dose_rate_usv_h": 0.08312758919263623
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.139788008432017,
+                  "dose_rate_usv_h": 0.08626668560486732
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.64850551908135,
+                  "dose_rate_usv_h": 0.05282931239123898
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.839132339742115,
+                  "dose_rate_usv_h": 0.09586141847083028
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.110591898470666,
+        "scans_per_lidar": 16044,
+        "measured_seconds": 621.9004368479946,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2124,
+          "livox_bottom": 2919
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.011925220489501953,
+      "gpu": "Quadro P600, 1241 MiB, 47 %"
+    },
+    {
+      "seconds": 105.96951334799815,
+      "camera": {
+        "fps_per_camera": 26.502282900121337,
+        "stage_ms": {
+          "sync": 3.9418343741999706,
+          "camera_submit": 21.911502050352283,
+          "observer": 5.637613863109436,
+          "camera_collect": 2.4171976998331957
+        },
+        "render_ms_mean": 33.90622022507159,
+        "render_ms_p95": 44.88391285340185,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8204,
+        "measured_seconds": 329.21828073699726,
+        "static_cache_shift": {
+          "cam_front": 0.36632537841796875,
+          "cam_rear": 0.3678131103515625,
+          "cam_left": 0.3504180908203125,
+          "cam_right": 0.6611251831054688,
+          "cam_arm": 0.357513427734375,
+          "observer": 11.972570419311523
+        },
+        "static_cache_hits": 43038,
+        "static_cache_misses": 6186,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7969110455222762,
+                0.0589382389298136,
+                0.3907465568742978
+              ],
+              "dose_rate_usv_h": 0.5418010616904064,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.329107832604729,
+                  "dose_rate_usv_h": 0.03813984554306964
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.496890632171697,
+                  "dose_rate_usv_h": 0.0855733123627885
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.339187100611444,
+                  "dose_rate_usv_h": 0.08314486028903907
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.13855545389487,
+                  "dose_rate_usv_h": 0.08629647806774025
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.649973277727042,
+                  "dose_rate_usv_h": 0.05281324296165255
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.840427954346884,
+                  "dose_rate_usv_h": 0.09583332246611634
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.17920634514232,
+        "scans_per_lidar": 16123,
+        "measured_seconds": 624.9180989939923,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2102,
+          "livox_bottom": 2920
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.023815155029296875,
+      "gpu": "Quadro P600, 1241 MiB, 58 %"
+    },
+    {
+      "seconds": 108.9928516499931,
+      "camera": {
+        "fps_per_camera": 25.326810835282586,
+        "stage_ms": {
+          "sync": 4.119999868347996,
+          "camera_submit": 23.462290499178618,
+          "observer": 5.581333606019861,
+          "camera_collect": 2.3952803952086374
+        },
+        "render_ms_mean": 35.55686022350289,
+        "render_ms_p95": 46.01436724624364,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8280,
+        "measured_seconds": 332.21905333700124,
+        "static_cache_shift": {
+          "cam_front": 0.355224609375,
+          "cam_rear": 0.407867431640625,
+          "cam_left": 0.39825439453125,
+          "cam_right": 0.4534149169921875,
+          "cam_arm": 0.38074493408203125,
+          "observer": 5.351650714874268
+        },
+        "static_cache_hits": 43434,
+        "static_cache_misses": 6246,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7980170358201425,
+                0.060483598924233106,
+                0.3907536977268655
+              ],
+              "dose_rate_usv_h": 0.5418006970775173,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.330989256119016,
+                  "dose_rate_usv_h": 0.03812262091405865
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.496174059057047,
+                  "dose_rate_usv_h": 0.08558774759455522
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.338205480192006,
+                  "dose_rate_usv_h": 0.08316443800201649
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.137127789065731,
+                  "dose_rate_usv_h": 0.08633100589814129
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.651730206716355,
+                  "dose_rate_usv_h": 0.05279401725387326
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.84192529071769,
+                  "dose_rate_usv_h": 0.09580086741487238
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.138671217904697,
+        "scans_per_lidar": 16205,
+        "measured_seconds": 627.9396175989968,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2110,
+          "livox_bottom": 2932
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.003175497055053711,
+      "gpu": "Quadro P600, 1241 MiB, 52 %"
+    },
+    {
+      "seconds": 112.01412570399407,
+      "camera": {
+        "fps_per_camera": 26.076621623229467,
+        "stage_ms": {
+          "sync": 4.71466211502623,
+          "camera_submit": 22.571964152385718,
+          "observer": 4.9877415946832135,
+          "camera_collect": 2.332681619792092
+        },
+        "render_ms_mean": 34.604891494750575,
+        "render_ms_p95": 47.34922119823748,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8359,
+        "measured_seconds": 335.24858688400127,
+        "static_cache_shift": {
+          "cam_front": 0.40065765380859375,
+          "cam_rear": 0.44036865234375,
+          "cam_left": 0.40409088134765625,
+          "cam_right": 0.46875,
+          "cam_arm": 0.3861236572265625,
+          "observer": 44.11725997924805
+        },
+        "static_cache_hits": 43854,
+        "static_cache_misses": 6300,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.7996013590451326,
+                0.0617855609370239,
+                0.39077279313943514
+              ],
+              "dose_rate_usv_h": 0.5417792283937496,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.332877278684512,
+                  "dose_rate_usv_h": 0.03810534759726592
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.49591089842171,
+                  "dose_rate_usv_h": 0.08559304983351065
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.337627716660403,
+                  "dose_rate_usv_h": 0.08317596431282084
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.135971753504068,
+                  "dose_rate_usv_h": 0.08635897960665243
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.653763789502019,
+                  "dose_rate_usv_h": 0.052771777286308386
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.843160346247451,
+                  "dose_rate_usv_h": 0.09577410975719142
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.96918819691248,
+        "scans_per_lidar": 16286,
+        "measured_seconds": 630.9430450439977,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2107,
+          "livox_bottom": 2922
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.012159347534179688,
+      "gpu": "Quadro P600, 1241 MiB, 61 %"
+    },
+    {
+      "seconds": 115.039600256001,
+      "camera": {
+        "fps_per_camera": 25.429487657712837,
+        "stage_ms": {
+          "sync": 4.07013935040737,
+          "camera_submit": 22.961143168957918,
+          "observer": 5.95604912899495,
+          "camera_collect": 2.3722635064646
+        },
+        "render_ms_mean": 35.357363532069016,
+        "render_ms_p95": 47.374629994737916,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8436,
+        "measured_seconds": 338.27656766900327,
+        "static_cache_shift": {
+          "cam_front": 0.3503608703613281,
+          "cam_rear": 0.37181854248046875,
+          "cam_left": 0.3769683837890625,
+          "cam_right": 0.44231414794921875,
+          "cam_arm": 0.44116973876953125,
+          "observer": 777.7552604675293
+        },
+        "static_cache_hits": 44246,
+        "static_cache_misses": 6370,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.8018909447152158,
+                0.06297333548822205,
+                0.3907840000648443
+              ],
+              "dose_rate_usv_h": 0.5417325485345129,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.334991124070655,
+                  "dose_rate_usv_h": 0.038086022177964404
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.496107333412601,
+                  "dose_rate_usv_h": 0.08558909195611202
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.337419010339026,
+                  "dose_rate_usv_h": 0.08318012856720006
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.134972855371976,
+                  "dose_rate_usv_h": 0.08638316186036142
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.65633439657941,
+                  "dose_rate_usv_h": 0.05274368433877316
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.844252398017781,
+                  "dose_rate_usv_h": 0.09575045963410192
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 26.883067670371876,
+        "scans_per_lidar": 16367,
+        "measured_seconds": 633.9560940380034,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2115,
+          "livox_bottom": 2918
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.009764432907104492,
+      "gpu": "Quadro P600, 1241 MiB, 61 %"
+    },
+    {
+      "seconds": 118.05613868799992,
+      "camera": {
+        "fps_per_camera": 27.09176753817108,
+        "stage_ms": {
+          "sync": 3.8670451215627355,
+          "camera_submit": 20.530150951633072,
+          "observer": 5.331265610194106,
+          "camera_collect": 2.4601512804354835
+        },
+        "render_ms_mean": 32.186606719489376,
+        "render_ms_p95": 42.75821135743172,
+        "width": 1920,
+        "height": 1080,
+        "cameras": [
+          "cam_front",
+          "cam_rear",
+          "cam_left",
+          "cam_right",
+          "cam_arm"
+        ],
+        "frames_total": 8518,
+        "measured_seconds": 341.30331739599933,
+        "static_cache_shift": {
+          "cam_front": 0.3993415832519531,
+          "cam_rear": 0.36724090576171875,
+          "cam_left": 0.3589153289794922,
+          "cam_right": 0.3763890266418457,
+          "cam_arm": 0.3749004006385803,
+          "observer": 12.842166423797607
+        },
+        "static_cache_hits": 44681,
+        "static_cache_misses": 6427,
+        "layers": {
+          "lidar_points": 0,
+          "lidar_age_seconds": null,
+          "radiation_sources": [
+            {
+              "id": "radiation_1",
+              "position": [
+                3.0640262648127274,
+                -7.3170868452175934,
+                0.1428467165177474
+              ],
+              "dose_rate_at_1m_usv_h": 2.645915066831339
+            },
+            {
+              "id": "radiation_2",
+              "position": [
+                3.5989409863905166,
+                7.153305105603973,
+                -1.2041183557910917
+              ],
+              "dose_rate_at_1m_usv_h": 6.178149304173478
+            },
+            {
+              "id": "radiation_3",
+              "position": [
+                2.350498430152275,
+                7.616768939230955,
+                -1.195144422046984
+              ],
+              "dose_rate_at_1m_usv_h": 5.78206332464927
+            },
+            {
+              "id": "radiation_4",
+              "position": [
+                -0.3215672005506043,
+                7.00187201902049,
+                -1.199439822974158
+              ],
+              "dose_rate_at_1m_usv_h": 4.3975799794127255
+            },
+            {
+              "id": "radiation_5",
+              "position": [
+                7.382405208302043,
+                -5.057204254465481,
+                0.17660672394657514
+              ],
+              "dose_rate_at_1m_usv_h": 4.918073979839244
+            },
+            {
+              "id": "radiation_6",
+              "position": [
+                -1.1653758937525756,
+                -8.768628537098524,
+                0.08831493422690746
+              ],
+              "dose_rate_at_1m_usv_h": 7.489677598892374
+            }
+          ],
+          "camera_frustums": 5,
+          "radiation_readings": [
+            {
+              "position": [
+                -0.804668698144689,
+                0.06286330728733774,
+                0.39076993909056473
+              ],
+              "dose_rate_usv_h": 0.5416407138756282,
+              "contributions": [
+                {
+                  "id": "radiation_1",
+                  "distance_m": 8.33618203341077,
+                  "dose_rate_usv_h": 0.03807514099530768
+                },
+                {
+                  "id": "radiation_2",
+                  "distance_m": 8.497635660711655,
+                  "dose_rate_usv_h": 0.08555830777382278
+                },
+                {
+                  "id": "radiation_3",
+                  "distance_m": 8.338566679271535,
+                  "dose_rate_usv_h": 0.08315723334226667
+                },
+                {
+                  "id": "radiation_4",
+                  "distance_m": 7.135264259006261,
+                  "dose_rate_usv_h": 0.08637610624129122
+                },
+                {
+                  "id": "radiation_5",
+                  "distance_m": 9.658630175612647,
+                  "dose_rate_usv_h": 0.052718613816010854
+                },
+                {
+                  "id": "radiation_6",
+                  "distance_m": 8.844028319062776,
+                  "dose_rate_usv_h": 0.09575531170692902
+                }
+              ],
+              "t": 0.0
+            }
+          ]
+        },
+        "encoder": "h264_nvenc"
+      },
+      "lidar": {
+        "hz_per_lidar": 27.058812570027452,
+        "scans_per_lidar": 16449,
+        "measured_seconds": 636.9865300480014,
+        "rays_per_scan": 4000,
+        "points_last_scan": {
+          "livox_top": 2106,
+          "livox_bottom": 2933
+        },
+        "raycaster": "embree"
+      },
+      "physics_state_age_seconds": 0.014172077178955078,
+      "gpu": "Quadro P600, 1241 MiB, 69 %"
+    }
+  ]
+}

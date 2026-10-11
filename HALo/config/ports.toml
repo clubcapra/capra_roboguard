@@ -1,0 +1,24 @@
+# Canonical sim ⇄ HALo port map (single source of truth).
+#
+# Read by BOTH the Rust HALo (in sim-backend mode) and the Python
+# simulator (`sim_server --rsa-backend --ports <this file>`), so the two sides
+# can never drift into a port overlap.
+#
+# Backend channel order is stable: vectornav=0, kinova=1, robotiq=2,
+# odrive_31..34=3..6, odrive_41..44=7..10, pmic=11, livox_40=12, livox_41=13.
+# HALo exposes 13 driver mocks, including both lidars; the simulator additionally emits PMIC telemetry.
+# Served ports seed NEW identities. Persisted ports.sim.json / ports.hardware.json
+# are authoritative after commissioning; use the console to change those ports.
+
+served_base   = 5000     # HALo → autonomy (data=base+2i, cmd=base+2i+1)
+backend_base  = 6000     # sim → mock drivers (telemetry)
+# control_port MUST be clear of the served range: 13 sensors occupy 5000-5025, so
+# 5020 would collide with odrive_44's data port. 5100 leaves headroom for ~50 sensors.
+control_port  = 5100     # autonomy → sim (aggregate RoveControl)
+# Legacy native IMU output is retained for standalone simulator clients.
+livox_imu_port = 56401   # sim → livox_imu mock (native Livox UDP IMU packets) [sim-only]
+
+# Optional per-sensor pins to dodge a specific conflict. Unset → base+offset rule.
+# [overrides.vectornav_sim]
+# served_data = 5100
+# backend     = 6100

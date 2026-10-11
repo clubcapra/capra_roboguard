@@ -1,0 +1,13 @@
+# Copy to kinova.toml and set the controller network for this installation.
+local_ip = "192.0.2.1"
+robot_ip = "192.0.2.2"
+local_subnet = "255.255.255.0"
+local_cmd_port = 25015
+local_bcast_port = 25025
+robot_port = 55000
+rx_timeout_ms = 50
+command_rate_hz = 75
+use_usb = false
+# lib_dir = "../vendor/kinova/aarch64"
+joint_offsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+gravity_vector = [0.0, 0.0, -9.81]

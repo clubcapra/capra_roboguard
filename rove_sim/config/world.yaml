@@ -17,3 +17,24 @@ datum:
   lat_deg: 46.7512
   lon_deg: 7.6131
   alt_m: 560.0
+
+# Forest contact solver budget; keeps the 240 Hz integration step unchanged.
+solver_iterations: 12
+
+# Local CC0 sky panorama; sun extraction and diffuse lighting are computed once.
+environment:
+  hdri: ../assets/environment/kloofendal_48d_partly_cloudy_puresky_2k.hdr
+  rotation_deg: 180
+  strength: 1.0
+
+# Visualization metadata for future radiation sensors; no dose model yet.
+# Each source needs an id and world-space position (metres).
+# Example: [{id: test_source, position: [2, 0, 0.3], isotope: Cs-137}]
+radiation_sources: []
+
+radiation:
+  seed: 26
+  random_count: 6
+  centre: [0, 0]
+  radius_m: [2, 10]
+  dose_rate_at_1m_usv_h: [1, 8]

@@ -1,7 +1,7 @@
 //! Differential-track control — normalised (left,right) -> per-ODrive commands.
 //!
 //! Port of `rove_control_bridge/strategies/tracks_velocity.py`. Each track node
-//! receives `{"axis_state":8,"input_vel":<rev/s>}`; the rove_sensor_api odrive
+//! receives `{"axis_state":8,"input_vel":<rev/s>}`; the HALo odrive
 //! mock applies `input_vel` to the sim *only while armed* (axis_state==8), so we
 //! carry axis_state on every packet and stream at the loop rate. Idle/estop send
 //! zero velocity then `axis_state=1`.

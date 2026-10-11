@@ -1,4 +1,4 @@
-//! Bridge → rove_sensor_api gripper, DIRECT (not via the IK engine — the engine
+//! Bridge → HALo gripper, DIRECT (not via the IK engine — the engine
 //! has no gripper). The Robotiq 2F-140 is a REST sensor: POST a position byte
 //! (0 = open .. 255 = closed) to `/<id>/command`. Only flippers, arm (ovis) and
 //! tracks route through the engine; the gripper goes straight to the robot API.

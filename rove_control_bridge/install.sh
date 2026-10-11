@@ -69,14 +69,14 @@ cat > "$UNIT_DST" <<EOF
 [Unit]
 Description=Capra Roboguard control bridge / orchestrator (rove_control_bridge)
 Documentation=file://${PROJECT_DIR}/README.md
-After=network-online.target rove-sensor-api.service rove-ik-engine.service
+After=network-online.target halo.service rove-ik-engine.service
 Wants=network-online.target
 # The bridge resolves telemetry + gripper ports from /discover at startup, and
 # sensor_api assigns them DYNAMICALLY — a sensor_api restart shuffles the map
 # and leaves the bridge subscribed to the wrong devices. PartOf propagates
 # sensor_api restarts here so the bridge always re-discovers. No-op if
 # sensor_api isn't a service on this host.
-PartOf=rove-sensor-api.service
+PartOf=halo.service
 # Always retry: the bridge exits if /discover is down at startup, and it is an
 # always-on teleop front door (so even a clean mission-complete exit should come
 # back). The default start-rate limit would park it in 'failed' after a few rapid
@@ -89,7 +89,7 @@ User=${RUN_USER}
 Group=${RUN_USER}
 WorkingDirectory=${PROJECT_DIR}
 
-# The bridge WAITS internally for rove_sensor_api /discover (retries, doesn't
+# The bridge WAITS internally for HALo /discover (retries, doesn't
 # exit), so it no longer crash-loops if sensor_api is slow to come up. A short
 # settle for the network is still cheap.
 ExecStartPre=/bin/sleep 2

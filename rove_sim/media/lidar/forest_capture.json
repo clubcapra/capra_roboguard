@@ -1,0 +1,30 @@
+{
+  "world": "config/world.yaml",
+  "scene": "scenes/forest_demo.json",
+  "capture_seconds": 10.000189653001144,
+  "source": "HALo /discover + standard UDP subscriptions",
+  "frame": "simulator world; +Y up",
+  "window_metres": 25,
+  "sensors": {
+    "livox_top": {
+      "points": 611180,
+      "packets": 4855,
+      "sensor_world": [
+        0.2762068776942573,
+        -0.0024566480424848547,
+        0.8408202055581844
+      ],
+      "image": "forest_livox_top.png"
+    },
+    "livox_bottom": {
+      "points": 835150,
+      "packets": 6635,
+      "sensor_world": [
+        0.27448588981602773,
+        6.011003443272267e-05,
+        0.7621461505041527
+      ],
+      "image": "forest_livox_bottom.png"
+    }
+  }
+}

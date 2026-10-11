@@ -72,7 +72,7 @@ fi
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Rove IK Engine (ForgeBOT IK solver + simulation layer)
-After=network.target rove-sensor-api.service
+After=network.target halo.service
 Wants=network.target
 # The engine resolves every drive/arm port from sensor_api's /discover at
 # startup, and sensor_api assigns those ports DYNAMICALLY — after a sensor_api
@@ -80,7 +80,7 @@ Wants=network.target
 # commands once drove a flipper). PartOf propagates sensor_api restarts to this
 # unit so the engine always re-discovers. No-op if sensor_api isn't a service
 # on this host.
-PartOf=rove-sensor-api.service
+PartOf=halo.service
 # Never give up restarting: the engine self-exits after a run of solver failures
 # so systemd hands it a fresh process. The default start-rate limit would instead
 # park it in a permanent 'failed' state (needing a manual reset / reinstall after

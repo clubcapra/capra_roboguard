@@ -16,16 +16,11 @@ cd "$HERE"
 
 FLEET_PID=""
 cleanup() {
-  set +e   # a no-match pkill returns 1 -> must NOT abort the rest of cleanup
-  # kill the workers DIRECTLY (don't rely on a child trap -- a bash blocked in
-  # sleep defers it) + reap the orphaned ffmpeg pushers and the RTSP server.
-  [ -n "$FLEET_PID" ] && kill "$FLEET_PID" 2>/dev/null
-  pkill -9 -f "tools/cam_worker.py"      2>/dev/null
-  pkill -9 -f "tools/pyrender_worker.py" 2>/dev/null
-  pkill -9 -f "tools/lidar_worker.py"    2>/dev/null
-  pkill -9 -f "rtsp://127.0.0.1"      2>/dev/null   # orphaned ffmpeg pushers
-  pkill -9 -x mediamtx 2>/dev/null
-  rm -f /dev/shm/rove_robot_state.json
+  trap - EXIT INT TERM
+  if [ -n "$FLEET_PID" ]; then
+    kill "$FLEET_PID" 2>/dev/null || true
+    wait "$FLEET_PID" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT INT TERM
 
@@ -39,5 +34,5 @@ FLEET_PID=$!
 # heavy pyrender workers together saturate the GPU and the GUI's X connection dies
 # ("XIO fatal IO error / Timer expired"). The realistic view IS the camera feeds;
 # the GUI is just for driving. Set GUI_TEXTURE=1 to force a textured GUI.
-GUITEX=${GUI_TEXTURE:+}; [ -z "$GUI_TEXTURE" ] && GUITEX="--no-texture"
+GUITEX=${GUI_TEXTURE:+}; [ -z "${GUI_TEXTURE:-}" ] && GUITEX="--no-texture"
 DISPLAY=${DISPLAY:-:0} tools/live_host.sh "$@" --sensors --publish-state $GUITEX

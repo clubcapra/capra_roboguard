@@ -32,6 +32,9 @@ class MockWorld(World):
 
         self.terrain_id: int | None = None       # terrain COLLISION body (mesh mode)
         self.terrain_vis_id: int | None = None    # terrain visual body
+        self.terrain_manifest = None
+        self.obstacle_ids = []
+        self.foliage_ids = []
         self.friction = None                      # FrictionField or None
         self.objects: dict = {}                    # scene-object id -> body_id
         self.scene_objects: list = []              # SceneObject specs (for capture)
@@ -100,9 +103,13 @@ class MockWorld(World):
         tspec = self.spec.get("terrain")
         if not tspec:
             return
-        src = self._resolve_source(tspec.get("source", ""))
-        if not src:
-            return
+        source = tspec.get("source", "")
+        if not source:
+            raise ValueError("Configured terrain requires a source")
+        # Exported assets can be deployed without the original GLB. build_assets
+        # validates its cache before requiring the source; missing terrain must
+        # never silently turn a forest run into a flat-world simulation.
+        src = self._resolve_source(source) or source
         root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         out_dir = os.path.join(root, "assets", "terrain")
         # 60k (the full ground mesh) instead of 20k: decimating to 20k punched
@@ -110,6 +117,11 @@ class MockWorld(World):
         # res) that the robot fell through. Override via terrain.collision_faces.
         manifest = terrain.build_assets(src, out_dir,
                                         int(tspec.get("collision_faces", 60000)))
+        self.terrain_manifest = manifest
+        # Kinematic camera/ray workers load the shared asset representation in
+        # their own renderer, without duplicating millions of Bullet triangles.
+        if not tspec.get("collisions", True) and not tspec.get("visuals", True):
+            return
         data = json.load(open(manifest))
         # The manifest stores ABSOLUTE asset paths; if the stack was copied from
         # another machine those point at the old root. Rebase every cached path
@@ -120,6 +132,8 @@ class MockWorld(World):
         def _local(pth):
             if not pth:
                 return pth
+            if not os.path.isabs(pth) and os.path.exists(os.path.join(cache_dir, pth)):
+                return os.path.join(cache_dir, pth)
             parts = pth.replace("\\", "/").split("/" + cache_name + "/", 1)
             return os.path.join(cache_dir, parts[1]) if len(parts) == 2 else pth
         data["collision"] = _local(data["collision"])
@@ -165,7 +179,7 @@ class MockWorld(World):
         # drives on the collision mesh, which is untouched.
         _Z_LAYER = {"ground": 0, "rock": 1, "grass": 2, "foliage": 3}
         self.terrain_vis_ids = []
-        for i, v in enumerate(data["visual"]):
+        for i, v in enumerate(data["visual"] if tspec.get("visuals", True) else []):
             textured = want_tex and v.get("tex")
             rgba = [1, 1, 1, 1] if textured else v["color"]
             vis = p.createVisualShape(p.GEOM_MESH, fileName=v["obj"],
@@ -195,7 +209,7 @@ class MockWorld(World):
         self.obstacle_ids = []          # hard (robot + lidar)
         self.foliage_ids = []           # soft (lidar only; robot pass-through)
         hard = set(tspec.get("collide_categories", ("trunk",)))
-        soft = set(tspec.get("lidar_categories", ("foliage",)))
+        soft = set(tspec.get("lidar_categories", ("foliage",))) if tspec.get("lidar_collisions", True) else set()
         for v in data["visual"]:
             cat = v.get("category")
             if cat not in hard and cat not in soft:

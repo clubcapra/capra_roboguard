@@ -1,6 +1,6 @@
 """Kinova arm state subscriber.
 
-rove_sensor_api uses a subscribe-push UDP protocol:
+HALo uses a subscribe-push UDP protocol:
 
     4-byte header: version(0x01) | msg_type | seq (u16 LE)
     body:          JSON
@@ -11,7 +11,7 @@ Message types we use here:
     0x03 DATA        sensor -> client   (the stream we read)
 
 For the kinova_arm sensor the data port defaults to 5002 (see
-rove_sensor_api/config/kinova.toml). Body shape on DATA frames:
+HALo/config/kinova.toml). Body shape on DATA frames:
 
     {
         "joint_1_pos": <degrees>,
@@ -105,7 +105,7 @@ class _KinovaStateProtocol(asyncio.DatagramProtocol):
         self.state.latest_kinova_t = time.monotonic()
 
     def error_received(self, exc: Exception) -> None:
-        # Fires on ICMP "port unreachable" — typically rove_sensor_api died.
+        # Fires on ICMP "port unreachable" — typically HALo died.
         # Signal the watchdog so it'll tear down + reconnect.
         _log.warning("kinova UDP transport error: %s", exc)
         if self.on_error is not None:
@@ -160,7 +160,7 @@ class _CmdSenderProtocol(asyncio.DatagramProtocol):
 
 
 class KinovaCommandSender:
-    """Per-tick velocity sender to rove_sensor_api's kinova_arm cmd port.
+    """Per-tick velocity sender to HALo's kinova_arm cmd port.
 
     Reads state.joint_velocities (radians/s from IK), converts to deg/s,
     applies the same per-joint sign captured at Sync, clamps to a config
@@ -362,19 +362,19 @@ _WATCHDOG_TICK_S = 1.0
 
 
 class KinovaStateListener:
-    """Subscribe to rove_sensor_api kinova_arm and keep the subscription alive.
+    """Subscribe to HALo kinova_arm and keep the subscription alive.
 
     One UDP socket: SUBSCRIBE goes out, DATA frames come back to the same
     ephemeral port. A watchdog task wakes once per second and:
 
     * if no frames have arrived in _STALENESS_THRESHOLD_S, re-sends SUBSCRIBE
-      (covers rove_sensor_api restart and lost initial SUBSCRIBE);
+      (covers HALo restart and lost initial SUBSCRIBE);
     * if the transport itself errored (ICMP unreachable, ``connection_lost``),
       tears down and rebuilds it before re-subscribing.
 
     First-time connection failures are also handled here — ``start()`` no
     longer raises on initial connect failure; the watchdog keeps retrying
-    so the engine boots even if rove_sensor_api isn't up yet.
+    so the engine boots even if HALo isn't up yet.
     """
 
     def __init__(
@@ -504,7 +504,7 @@ class KinovaStateListener:
                         )
                         self._link_state = "stale"
                     # Re-send SUBSCRIBE, no more than once per 2s, so
-                    # rove_sensor_api restarting fully picks us up.
+                    # HALo restarting fully picks us up.
                     if now - self._last_subscribe_t > 2.0:
                         try:
                             self._transport.sendto(

@@ -8,7 +8,7 @@
 # Any extra args are forwarded verbatim to the binary. Ctrl-C stops it cleanly
 # (the bridge idles + disarms on shutdown).
 #
-# Prereqs for motion: rove_sensor_api up on :8080 (the bridge hits /discover at
+# Prereqs for motion: HALo up on :8080 (the bridge hits /discover at
 # startup and exits if it's down) and the rove_ik_engine running (tracks/flippers/
 # ovis are forwarded to it; the gripper goes straight to the API).
 set -euo pipefail

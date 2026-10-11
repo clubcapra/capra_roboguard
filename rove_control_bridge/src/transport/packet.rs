@@ -1,6 +1,6 @@
-//! rove_sensor_api UDP wire codec.
+//! HALo UDP wire codec.
 //!
-//! Mirrors `rove_sensor_api/src/protocol/packet.rs` and the sim's
+//! Mirrors `HALo/src/protocol/packet.rs` and the sim's
 //! `rove_sim/rove_sim/transport/packet.py`:
 //!
 //! ```text

@@ -10,7 +10,7 @@ from pathlib import Path
 @dataclass
 class RobotConfig:
     forgebot: str = "data/scene.forgebot"
-    urdf: str = "data/robot.urdf"
+    urdf: str = "../robot_doc/ik_legacy/robot.urdf"
 
 
 @dataclass
@@ -53,9 +53,9 @@ class OutputConfig:
 
 @dataclass
 class HardwareConfig:
-    """Optional bridge to rove_sensor_api's `kinova_arm` sensor.
+    """Optional bridge to HALo's `kinova_arm` sensor.
 
-    rove_sensor_api uses a subscribe-push model: the engine sends a
+    HALo uses a subscribe-push model: the engine sends a
     SUBSCRIBE packet to (sensor_api_host, kinova_data_port) and the sensor
     pushes DATA frames back to our ephemeral port at `subscribe_interval_ms`.
 
@@ -72,7 +72,7 @@ class HardwareConfig:
     """
 
     enabled: bool = False
-    # rove_sensor_api endpoint. Defaults match the standard kinova driver:
+    # HALo endpoint. Defaults match the standard kinova driver:
     # data_port = 5002 (UDP), reachable from the engine host.
     sensor_api_host: str = "127.0.0.1"
     kinova_data_port: int = 5002
@@ -110,7 +110,7 @@ class FlipperNode:
 
     node_id: int                 # ODrive node id (31-34 drums, 41-44 flippers)
     joint: str                   # model joint entity NAME (e.g. "FlipperFL")
-    data_port: int               # rove_sensor_api served data port for this node
+    data_port: int               # HALo served data port for this node
     sign: float = 1.0            # +1/-1 to align motor direction with model axis
     # Per-node override of the bank gear ratio (motor revs per joint rev).
     # None -> use FlippersConfig.gear_ratio.
@@ -119,7 +119,7 @@ class FlipperNode:
     # Whether this node may receive position commands. Drums stay False; only
     # flippers opt in. Still gated by FlippersConfig.output_enabled (master).
     output: bool = False
-    cmd_port: int = 0            # rove_sensor_api served COMMAND port for this node
+    cmd_port: int = 0            # HALo served COMMAND port for this node
     # Command mode: "position" (flippers — input_pos rev, control_mode 3) or
     # "velocity" (drums — input_vel rev/s, control_mode 2). Drums are continuous
     # drive wheels and must be velocity-commanded.
@@ -170,7 +170,7 @@ class FlippersConfig:
     step_rate_deg_s: float = 20.0
     # Drive watchdog: if no drive frame (drums/flipper steps) arrives within this
     # many seconds, the engine self-stops the drives — zero drum velocity and halt
-    # flipper ramps. Clones the old rove_control_bridge_py idle watchdog (0.5 s).
+    # flipper ramps. Uses a drive-intent idle timeout (0.5 s).
     # Make it comfortably longer than the worst-case inter-packet gap on the
     # (low-bandwidth) operator link, or it will stop-start during driving.
     drive_idle_timeout_s: float = 0.5

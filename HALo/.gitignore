@@ -1,0 +1,8 @@
+target/
+
+config/password.hash
+config/*.tmp
+config/ports.hardware.json
+config/ports.sim.json
+config/*.recovery.toml
+logs/

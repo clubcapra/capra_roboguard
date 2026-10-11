@@ -9,8 +9,8 @@ and rove_ik.py use).
 Concrete sources:
   * ManualStateSource / ReplayStateSource (state/manual.py) -- no hardware, for
     tests and canned trajectories.
-  * RoveSensorApiStateSource (state/rove_sensor_api.py) -- subscribes to the real
-    `rove_sensor_api` wire format (kinova/odrive/robotiq/vectornav), which the
+  * RoveSensorApiStateSource (state/halo.py) -- subscribes to the real
+    `HALo` wire format (kinova/odrive/robotiq/vectornav), which the
     mock SimSensorApi ALSO speaks, so the same source drives an offline mock->real
     loop or the real robot.
 """

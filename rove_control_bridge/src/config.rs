@@ -31,6 +31,9 @@ pub struct Config {
 /// axis used to derive body tilt + yaw rate from the VN accel/gyro.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Vn {
+    /// Use fused roll/pitch for tilt instead of acceleration (which includes motion).
+    #[serde(default)]
+    pub use_attitude_for_tilt: bool,
     /// "x" | "y" | "z" — which VN sensor axis points up on the robot. Default "z".
     #[serde(default = "default_vn_up_axis")]
     pub up_axis: String,
@@ -42,7 +45,7 @@ pub struct Vn {
 
 impl Default for Vn {
     fn default() -> Self {
-        Self { up_axis: default_vn_up_axis(), gyro_yaw_sign: default_gyro_yaw_sign() }
+        Self { up_axis: default_vn_up_axis(), gyro_yaw_sign: default_gyro_yaw_sign(), use_attitude_for_tilt: false }
     }
 }
 
@@ -149,13 +152,13 @@ impl Default for Comms {
 }
 
 fn default_telemetry_out_port() -> u16 {
-    5053 // clear of rove_sensor_api served block 5000-5017 (5010 = odrive_41 data)
+    5053 // clear of HALo served block 5000-5017 (5010 = odrive_41 data)
 }
 fn default_telemetry_out_hz() -> f64 {
     20.0
 }
 fn default_mission_http_port() -> u16 {
-    8088 // bridge REST API (clear of rove_sensor_api :8080 and the engine :9101)
+    8088 // bridge REST API (clear of HALo :8080 and the engine :9101)
 }
 
 fn default_engine_host() -> String {
@@ -171,7 +174,7 @@ fn default_engine_http_port() -> u16 {
     9101
 }
 
-// Front-door ports stay clear of rove_sensor_api's served block (5000-5017):
+// Front-door ports stay clear of HALo's served block (5000-5017):
 // 5005 = gripper cmd, 5006/5007 = odrive_31 data/cmd. Use the 5050+ band.
 fn default_teleop_port() -> u16 {
     5050
@@ -251,11 +254,11 @@ pub struct Perception {
     pub obstacle_stop_m: f64,    // hold if a solid object is within this
     pub cliff_stop_m: f64,       // hold if a ground edge/hole is within this
     pub min_ground_per_bin: u32, // ground-return floor per range bin (below => drop-off)
-    /// "lvxsub" (sim world-frame LVX2) | "lvxr" (real Mid-360 via the livox_bridge
-    /// sidecar — IMU-leveled proximity reflex). Default "lvxsub".
+    /// "lvxsub" (sim world-frame LVX2) | "lvxr" (real Mid-360 via the sensor API
+    /// Livox driver — IMU-leveled proximity reflex). Default "lvxsub".
     #[serde(default = "default_perception_source")]
     pub source: String,
-    /// livox_bridge LVXR ports (source = "lvxr"): points + IMU.
+    /// Livox driver LVXR ports (source = "lvxr"): points + IMU.
     #[serde(default = "default_lvxr_pts_port")]
     pub lvxr_pts_port: u16,
     #[serde(default = "default_lvxr_imu_port")]

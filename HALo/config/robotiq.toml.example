@@ -1,0 +1,7 @@
+# Copy to robotiq.toml. Use a stable udev device path for this adapter.
+port = "/dev/serial/by-id/replace-with-gripper-adapter"
+baudrate = 115200
+slave_id = 9
+poll_interval_ms = 50
+auto_activate = true
+activation_timeout_ms = 5000

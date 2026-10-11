@@ -2,7 +2,7 @@
 # Launch the headless sim_server on the HOST (outside the flatpak/IDE sandbox) so
 # it has the GPU (EGL render for the camera feeds) plus ffmpeg + mediamtx on PATH
 # for the RTSP streams. This is the sim the autonomy stack + vision model hook up
-# to: rove_sensor_api telemetry/control over UDP, camera RTSP, Livox point clouds.
+# to: HALo telemetry/control over UDP, camera RTSP, Livox point clouds.
 #
 # Same python3.13-vs-3.14 reason as live_host.sh (the venv is a cp313 build):
 #     sudo dnf install python3.13      # once

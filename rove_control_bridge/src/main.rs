@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
     );
 
     // --- resolve ports off the live API -----------------------------------
-    // Wait for rove_sensor_api's /discover rather than exiting if it isn't up yet
+    // Wait for HALo's /discover rather than exiting if it isn't up yet
     // — as a service we may boot before it. Retry until it answers (or we're asked
     // to stop), so systemd doesn't crash-loop us at boot. (Teleop can't do anything
     // useful before sensor_api + the engine are up anyway.)
@@ -142,17 +142,25 @@ async fn main() -> Result<()> {
             .await
             .context("discover task")?;
             match res {
-                Ok(d) => {
+                Ok(d) if d.contains_key(&cfg.telemetry.vectornav_id)
+                    && cfg.tracks.left_nodes.iter().chain(&cfg.tracks.right_nodes)
+                        .all(|node|d.contains_key(&format!("odrive_{node}"))) => {
                     if attempt > 0 {
                         tracing::info!("/discover up after {attempt} attempt(s)");
                     }
                     break d;
                 }
+                Ok(_) => {
+                    attempt += 1;
+                    if attempt == 1 || attempt % 5 == 0 {
+                        tracing::info!("HALo is responding; waiting for configured hardware to become ready (attempt {attempt})");
+                    }
+                }
                 Err(e) => {
                     attempt += 1;
                     if attempt == 1 || attempt % 5 == 0 {
                         tracing::warn!(
-                            "/discover not ready ({e:#}) — waiting for rove_sensor_api at {}:{} (attempt {attempt})",
+                            "/discover not ready ({e:#}) — waiting for HALo at {}:{} (attempt {attempt})",
                             cfg.robot_host, cfg.http_port,
                         );
                     }
@@ -231,6 +239,7 @@ async fn main() -> Result<()> {
             UpAxis::parse(&cfg.vn.up_axis),
             cfg.vn.gyro_yaw_sign,
         );
+        possvc.use_attitude_for_tilt(cfg.vn.use_attitude_for_tilt);
         let agg = tele_agg.clone();
         let gnss_rx = gnss_rx.clone();
         let gnss_stale = Duration::from_millis(cfg.gnss.stale_ms);
@@ -276,7 +285,7 @@ async fn main() -> Result<()> {
         let off = cfg.goto.drive_offset_deg;
         let pose_rx = pose_rx.clone();
         if p.source.eq_ignore_ascii_case("lvxr") {
-            // Real Mid-360 via the livox_bridge sidecar: IMU-leveled proximity
+            // Real Mid-360 via the HALo Livox driver: IMU-leveled proximity
             // reflex (no cost map / planner yet — drives straight, stops on hazard).
             let _ = costmap_tx; // planner off in lvxr mode
             tokio::spawn(async move {

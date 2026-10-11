@@ -5,7 +5,7 @@ Runs the mock-physics sim and speaks the robot's wire seams so the autonomy stac
 + vision model hook up unchanged -- in production the ONLY difference is the
 transport endpoint (real hardware vs this). It serves, all at once:
 
-  * rove_sensor_api TELEMETRY out (UDP)  -- vectornav/kinova/robotiq/odrive_3x/pmic
+  * HALo TELEMETRY out (UDP)  -- vectornav/kinova/robotiq/odrive_3x/pmic
   * rove_control_bridge CONTROL in (UDP) -- drive/flippers/arm/gripper from autonomy
   * camera RTSP feeds                    -- rtsp://host:8554/<cam>  (vision model)
   * Livox point clouds (binary UDP)      -- livox_top/bottom  (SLAM / mapping)
@@ -28,14 +28,13 @@ import pybullet as p
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rove_sim import runtime
 from rove_sim.core.util import die_with_parent
 from rove_sim.api.sim_sensor_api import SimSensorApi
 from rove_sim.api.control_bridge import RoveControlBridge
 from rove_sim.transport import build_transport
 from rove_sim.transport.udp import DEFAULT_PORTS
 from rove_sim.transport.ports import PortMap
-from rove_sim.sensors.lidar import LidarUdpPublisher, LivoxImuUdpPublisher
+from rove_sim.sensors.lidar import LidarUdpPublisher, LivoxImuUdpPublisher, HaloLivoxPublisher
 from rove_sim.sensors.rtsp import RtspCameraFeeds
 from rove_sim.world.render_sync import publish_robot_state, DEFAULT_STATE_FILE
 
@@ -43,6 +42,8 @@ from rove_sim.world.render_sync import publish_robot_state, DEFAULT_STATE_FILE
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--profile", default="standard")
+    ap.add_argument("--world-config", default=None, help="World YAML (terrain and datum)")
+    ap.add_argument("--scene", default=None, help="Saved scene JSON (objects, friction and initial pose)")
     ap.add_argument("--terrain", nargs="?",
                     const="../free_dirt_road_through_forest.glb", default=None)
     ap.add_argument("--host", default="127.0.0.1", help="bind/target host for UDP+RTSP")
@@ -60,11 +61,11 @@ def main():
     ap.add_argument("--rtsp-encoder", default="auto",
                     help="auto|libx264|h264_nvenc (auto prefers GPU nvenc)")
     ap.add_argument("--rsa-backend", action="store_true",
-                    help="back the real rove_sensor_api Rust binary: publish telemetry "
+                    help="back the real HALo Rust binary: publish telemetry "
                          "on the shared backend ports (6000+) its mock drivers subscribe "
                          "to, and emit the native Livox IMU stream")
     ap.add_argument("--ports", default=None,
-                    help="path to the shared ports.toml (default: rove_sensor_api/config/ports.toml)")
+                    help="path to the shared ports.toml (default: HALo/config/ports.toml)")
     ap.add_argument("--telemetry-hz", type=float, default=50.0)
     ap.add_argument("--imu-hz", type=float, default=200.0,
                     help="Livox IMU publish rate (rsa-backend mode)")
@@ -83,18 +84,19 @@ def main():
         pass
     die_with_parent()                    # no orphans if the fleet launcher is killed
 
-    overrides = {"friction": {"origin": (-25., -25.), "extent": (50., 50.), "cell": 0.25}}
-    if args.terrain:
-        overrides["terrain"] = {"source": args.terrain, "texture": not args.no_texture}
-    # No GPU unless we render cameras inline (--no-rtsp -> cameras offloaded to the
-    # pyrender fleet -> physics runs CPU-only, freeing all VRAM for the renderer).
-    sim = runtime.build(args.profile, mode="headless", world="mock",
-                        world_overrides=overrides, egl=not args.no_rtsp,
-                        solver_iterations=8 if args.tiny else None)
+    from rove_sim.world.scene import build_configured_sim
+    sim = build_configured_sim(args.profile, world_config=args.world_config,
+                               scene_path=args.scene, terrain=args.terrain,
+                               texture=not args.no_texture, purpose="physics" if args.no_rtsp and args.no_lidar else "full",
+                               egl=not args.no_rtsp, solver_iterations=8 if args.tiny else None)
+
+    print(f"[sim_server] world={args.world_config or 'profile'}, scene={args.scene or 'none'}, "
+          f"terrain={'loaded' if sim.world.terrain_id is not None else 'flat'}, "
+          f"objects={list(sim.world.objects)}")
 
     # --- wire seams ---------------------------------------------------------
     # In rsa-backend mode telemetry moves to the shared backend ports (6000+) the
-    # rove_sensor_api Rust mock drivers subscribe to; control stays on its port.
+    # HALo Rust mock drivers subscribe to; control stays on its port.
     port_map = PortMap.load(args.ports) if args.rsa_backend else None
     ctrl_port = port_map.control_port if port_map else DEFAULT_PORTS["control"]
     tele_spec = {"mode": "udp", "host": args.host, "role": "pub"}
@@ -118,21 +120,16 @@ def main():
     for s in livox:                      # lighter ray budget for realtime serving
         if hasattr(s, "set_rays") and args.lidar_rays > 0:
             s.set_rays(min(args.lidar_rays, s.rays_per_scan))
-    # Livox-style: the publisher binds its port and streams to whoever subscribes
-    # (no preconfigured host) -- so the cloud isn't soft-locked to one consumer.
-    lidar_pubs = {s.name: LidarUdpPublisher(DEFAULT_PORTS.get(s.name, 5022))
+    # HALo owns the hardware connection and downstream fanout in backend mode.
+    # Keep the standalone simulator's LVX2/native IMU interfaces compatible.
+    halo_livox = {s.name: HaloLivoxPublisher(args.host,
+                    port_map.backend_telemetry_ports()["livox_41" if "top" in s.name else "livox_40"],
+                    41 if "top" in s.name else 40)
+                  for s in all_livox} if port_map else {}
+    lidar_pubs = {s.name: halo_livox[s.name] if port_map else LidarUdpPublisher(DEFAULT_PORTS.get(s.name, 5022))
                   for s in livox}
-    # The Livox Mid-360 built-in IMU is part of the LIDAR subsystem -- completely
-    # separate from the rove_sensor_api (which is only Pi-board hardware). It is
-    # CHEAP (one getLinkState) and needs the sim's REAL physics velocities, so the
-    # authoritative sim always emits it on its own native Livox UDP stream -- even
-    # when the point-cloud raycast is delegated to lidar_worker (--no-lidar).
-    imu_pub = None
-    imu_sensors = []
-    if all_livox:
-        imu_sensors = sorted(all_livox, key=lambda s: 0 if "top" in s.name else 1)
-        imu_port = port_map.livox_imu_port if port_map else 56401
-        imu_pub = LivoxImuUdpPublisher(imu_port)
+    imu_sensors = sorted(all_livox, key=lambda s: 0 if "top" in s.name else 1)
+    imu_pub = LivoxImuUdpPublisher(port_map.livox_imu_port if port_map else 56401) if all_livox else None
     gt = next((d for d in api.devices if getattr(d, "channel", "") == "vectornav"), None)
 
     feeds = None
@@ -154,12 +151,12 @@ def main():
 
     tele_ports = (port_map.backend_telemetry_ports() if port_map else DEFAULT_PORTS)
     print(f"[sim_server] up on {args.host}"
-          f"{'  [RSA-BACKEND: feeding the rove_sensor_api Rust binary]' if port_map else ''}")
+          f"{'  [RSA-BACKEND: feeding the HALo Rust binary]' if port_map else ''}")
     print(f"  telemetry UDP : {', '.join(f'{c}:{tele_ports[c]}' for c in tele_ports if c not in ('control','ground_truth','robot_state') and not c.startswith('livox'))}")
     print(f"  control  UDP  : control:{ctrl_port}")
-    print(f"  lidar    UDP  : {', '.join(f'{n}:{DEFAULT_PORTS.get(n)}' for n in lidar_pubs)}")
+    print(f"  lidar    UDP  : {', '.join(f'{n}:{lidar_pubs[n].port}' for n in lidar_pubs)}")
     if imu_pub and imu_sensors:
-        print(f"  livox IMU UDP : {imu_sensors[0].name}:{imu_pub.port} (native Livox @ {args.imu_hz:.0f} Hz, separate from the API)")
+        print(f"  livox IMU UDP : {imu_sensors[0].name}:{imu_pub.port} (native Livox @ {args.imu_hz:.0f} Hz, legacy standalone output)")
     print(f"  ground-truth  : ground_truth:{DEFAULT_PORTS['ground_truth']}")
     if feeds:
         print(f"  camera RTSP   : {', '.join(feeds.urls())}")
@@ -220,7 +217,7 @@ def main():
             sim.set_intent(bridge.poll())              # autonomy command (or hold)
             sim.step_control(1)
             rt_ticks += 1
-            publish_robot_state(sim.robot, args.state_file)  # for cam_workers
+            publish_robot_state(sim.robot, args.state_file, world=sim.world)  # for cam_workers
             if time.time() - rt_t0 >= 5.0:             # report achieved rate
                 rate = rt_ticks / (time.time() - rt_t0)
                 print(f"[sim_server] {rate:.0f} Hz control "
@@ -229,9 +226,14 @@ def main():
             acc_t += dt; acc_l += dt; acc_i += dt
             if imu_pub and imu_sensors and acc_i >= 1.0 / args.imu_hz:  # Livox IMU
                 acc_i = 0.0
-                gyro, accel = imu_sensors[0].imu_sample()
-                imu_pub.publish(gyro, accel, time.time_ns())
-            if acc_t >= 1.0 / args.telemetry_hz:        # rove_sensor_api telemetry
+                for sensor in imu_sensors:
+                    gyro, accel = sensor.imu_sample()
+                    ts_ns = time.time_ns()
+                    if sensor is imu_sensors[0]:
+                        imu_pub.publish(gyro, accel, ts_ns)
+                    if port_map:
+                        halo_livox[sensor.name].publish_imu(gyro, accel, ts_ns)
+            if acc_t >= 1.0 / args.telemetry_hz:        # HALo telemetry
                 acc_t = 0.0
                 api.publish()
                 if gt is not None:                      # true pose for scoring
@@ -250,7 +252,7 @@ def main():
     finally:
         if feeds:
             feeds.stop()
-        for lp in lidar_pubs.values():
+        for lp in set(lidar_pubs.values()) | set(halo_livox.values()):
             lp.close()
         if imu_pub:
             imu_pub.close()

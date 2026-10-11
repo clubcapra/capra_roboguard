@@ -207,6 +207,57 @@ def load_scene_sim(path_or_scene, profile: str, mode: str = "headless",
     return sim
 
 
+def build_configured_sim(profile: str, *, world_config=None, scene_path=None,
+                         terrain=None, texture=True, mode="headless", purpose="full", **build_kwargs):
+    """One world/scene composition for physics, raycast and camera processes.
+
+    World YAML supplies terrain and datum; a scene adds friction, objects and
+    initial pose. Explicit terrain overrides win. Omission keeps the flat world.
+    """
+    from pathlib import Path
+    import yaml
+    from .. import runtime
+    if purpose not in ("full", "physics", "render", "raycast"):
+        raise ValueError(f"Unknown simulation purpose: {purpose}")
+    overrides = {"friction": {"origin": (-25., -25.), "extent": (50., 50.), "cell": 0.25}}
+    if world_config:
+        path = Path(world_config).resolve()
+        data = yaml.safe_load(path.read_text())
+        if not isinstance(data, dict):
+            raise ValueError(f"World configuration must be a mapping: {path}")
+        if data.get("terrain"):
+            data["terrain"] = dict(data["terrain"])
+            source = Path(data["terrain"]["source"])
+            if not source.is_absolute():
+                data["terrain"]["source"] = str((path.parent / source).resolve())
+        overrides.update(data)
+    scene = Scene.load(scene_path) if scene_path else None
+    if scene:
+        scene_overrides = scene.build_overrides()
+        if scene_overrides.get("terrain"):
+            scene_overrides["terrain"] = {**overrides.get("terrain", {}), **scene_overrides["terrain"]}
+        overrides.update(scene_overrides)
+    if terrain:
+        overrides["terrain"] = {**overrides.get("terrain", {}), "source": terrain}
+    if overrides.get("terrain"):
+        overrides["terrain"]["texture"] = texture
+        overrides["terrain"]["visuals"] = purpose == "full"
+        overrides["terrain"]["collisions"] = purpose in ("full", "physics")
+        overrides["terrain"]["lidar_collisions"] = purpose == "full"
+    if purpose in ("render", "raycast"):
+        if overrides.get("terrain"):
+            overrides["ground_plane"] = False
+        build_kwargs.setdefault("settle_seconds", 0)
+        build_kwargs.setdefault("safety", False)
+    sim = runtime.build(profile, mode=mode, world="mock",
+                        world_overrides=overrides, **build_kwargs)
+    if scene:
+        apply_scene(sim, scene)
+    from .radiation import configure_radiation
+    configure_radiation(sim)
+    return sim
+
+
 # Static trunk obstacles on the road, so autonomy can drive at them and the lidar
 # forward-hazard reflex stops in time. Spawned in EVERY sim instance that raycasts/
 # collides against them (sim_server physics AND each lidar_worker). Default demo
